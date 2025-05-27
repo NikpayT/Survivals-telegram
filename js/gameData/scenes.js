@@ -235,7 +235,7 @@ const GameScenes = {
             }
         ]
     },
-
+    
     // --- Сцена проигрыша ---
     player_death: {
         name: "Конец Игры",
@@ -253,4 +253,88 @@ const GameScenes = {
 
     // Добавьте больше сцен здесь по мере развития игры
     // Например: ruined_city, forest_camp, military_checkpoint и т.д.
+    ruined_city: {
+        name: "Разрушенный Город",
+        description: "Останки некогда великого города, теперь лишь скелет из бетона и стали. Здесь много опасностей, но и потенциальных находок.",
+        onEnter: (player, community) => {
+            window.addGameLog("Вход в разрушенный город всегда сопряжен с риском. Будьте осторожны.");
+            if (Math.random() < 0.2) { // 20% шанс столкнуться с зомби
+                window.addGameLog("Вы слышите странные звуки... Похоже, здесь зомби!");
+                window.combatManager.startCombat({enemies: ['zombie'], loot: {food: 2, materials: 1}});
+            }
+        },
+        options: [
+            {
+                text: "Обыскать жилые дома",
+                customAction: () => {
+                    window.addGameLog("Вы обыскиваете уцелевшие дома.");
+                    const player = window.gameState.player;
+                    const community = window.gameState.community;
+                    if (player.useStamina(20)) {
+                        const roll = Math.random();
+                        if (roll < 0.5) {
+                            community.addResourceOrItem('food', Math.floor(Math.random() * 7) + 3);
+                            community.addResourceOrItem('materials', Math.floor(Math.random() * 3) + 1);
+                            window.addGameLog("Вы нашли немного еды и материалов.");
+                        } else {
+                            window.addGameLog("Большинство домов уже разграблено.");
+                        }
+                    } else {
+                        window.addGameLog("Слишком устал для обыска.");
+                    }
+                    window.loadScene('ruined_city', false);
+                }
+            },
+            {
+                text: "Проверить магазины",
+                customAction: () => {
+                    window.addGameLog("Вы заглядываете в разрушенные магазины.");
+                    const player = window.gameState.player;
+                    const community = window.gameState.community;
+                    if (player.useStamina(25)) {
+                        const roll = Math.random();
+                        if (roll < 0.4) {
+                            community.addResourceOrItem('water', Math.floor(Math.random() * 5) + 2);
+                            community.addResourceOrItem('medicine', Math.floor(Math.random() * 2) + 1);
+                            window.addGameLog("Найдено немного воды и медикаментов.");
+                        } else {
+                            window.addGameLog("Ничего не нашли, кроме пустых витрин.");
+                        }
+                    } else {
+                        window.addGameLog("Выносливости не хватает.");
+                    }
+                    window.loadScene('ruined_city', false);
+                }
+            },
+            {
+                text: "Попытаться скрыться",
+                customAction: () => {
+                    window.addGameLog("Вы пытаетесь найти укрытие и избежать неприятностей.");
+                    const player = window.gameState.player;
+                    if (player.useStamina(10)) {
+                        if (Math.random() < 0.7) {
+                            window.addGameLog("Вы успешно скрылись и избежали потенциальных угроз.");
+                        } else {
+                            player.takeDamage(5);
+                            window.addGameLog("Вы привлекли чье-то внимание и получили небольшое ранение.");
+                        }
+                    } else {
+                        window.addGameLog("Вы слишком устали, чтобы эффективно скрываться.");
+                    }
+                    window.loadScene('ruined_city', false);
+                }
+            },
+            {
+                text: "Вернуться в убежище",
+                nextScene: 'abandoned_building_after_backpack'
+            },
+            {
+                text: "Отдохнуть до следующего дня",
+                customAction: () => {
+                    window.addGameLog("Вы решили отдохнуть. Надеемся, ночь пройдет спокойно...");
+                    window.nextGameDay();
+                }
+            }
+        ]
+    }
 };
