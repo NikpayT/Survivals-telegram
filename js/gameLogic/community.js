@@ -1,199 +1,195 @@
-// /js/gameLogic/community.js
-// Объект, управляющий состоянием и развитием общины/убежища игрока
+// js/gameLogic/community.js
 
 class Community {
     constructor() {
-        this.survivors = 1; // Начальное количество выживших (сам игрок)
-        this.morale = 100; // Мораль общины (0-100)
-        this.security = 50; // Безопасность убежища (0-100)
-        this.resources = { // Ресурсы на складе общины
-            food: 0, // Количество еды (единиц)
-            water: 0, // Количество воды (единиц)
-            materials_metal: 0, // Металл
-            materials_wood: 0, // Дерево
-            medical_supplies: 0, // Медикаменты
-            ammunition: 0, // Боеприпасы
-            fuel: 0 // Топливо
+        this.survivors = 1;
+        this.morale = 100;
+        this.security = 50;
+        this.resources = {
+            food: 0,
+            water: 0,
+            materials: 0,
+            medicine: 0
         };
-        this.facilities = { // Постройки и улучшения в убежище
-            shelter_level: 1, // Уровень убежища
-            water_source_level: 0, // Например, очистка воды
-            farm_level: 0,        // Производство еды
-            workbench_built: false, // Наличие верстака для крафта
-            medical_station_built: false, // Наличие медпункта
-            // Добавим другие станции по мере необходимости
-            chemistry_station_built: false // Для примера крафта таблеток очистки
+        this.storage = {}; // Отдельное хранилище для предметов (не ресурсов)
+        this.facilities = {
+            shelter_level: 0, // Уровень убежища
+            water_source_level: 0,
+            farm_level: 0,
+            workshop_level: 0,
+            watchtower_level: 0
         };
-        this.needsPerSurvivor = { // Потребности каждого выжившего в день
-            food: 1,
-            water: 1
-        };
-        this.events = []; // Очередь событий, влияющих на общину
-    }
-
-    /**
-     * Добавляет выживших в общину.
-     * @param {number} count - Количество добавляемых выживших.
-     */
-    addSurvivors(count) {
-        this.survivors += count;
-        window.addGameLog(`К общине присоединилось ${count} выживших. Всего: ${this.survivors}`);
-        window.uiManager.updateCommunityStatus();
-    }
-
-    /**
-     * Удаляет выживших из общины.
-     * @param {number} count - Количество удаляемых выживших.
-     */
-    removeSurvivors(count) {
-        this.survivors -= count;
-        if (this.survivors < 1) {
-            this.survivors = 0; // Теперь может быть 0, если игрок не в общине
-            // Если игрок был единственным выжившим, это Game Over.
-            // Проверка на Game Over будет в main.js
-        }
-        window.addGameLog(`Общину покинуло ${count} выживших. Всего: ${this.survivors}`);
-        window.uiManager.updateCommunityStatus();
-    }
-
-    /**
-     * Изменяет мораль общины.
-     * @param {number} amount - Количество, на которое изменяется мораль.
-     */
-    adjustMorale(amount) {
-        this.morale += amount;
-        if (this.morale > 100) this.morale = 100;
-        if (this.morale < 0) this.morale = 0;
-        window.uiManager.updateCommunityStatus();
-        if (amount < 0) {
-             window.addGameLog(`Мораль общины понизилась на ${Math.abs(amount)}. Текущая: ${this.morale}`);
-        } else if (amount > 0) {
-             window.addGameLog(`Мораль общины повысилась на ${amount}. Текущая: ${this.morale}`);
-        }
-    }
-
-    /**
-     * Изменяет безопасность убежища.
-     * @param {number} amount - Количество, на которое изменяется безопасность.
-     */
-    adjustSecurity(amount) {
-        this.security += amount;
-        if (this.security > 100) this.security = 100;
-        if (this.security < 0) this.security = 0;
-        window.uiManager.updateCommunityStatus();
-        if (amount < 0) {
-            window.addGameLog(`Безопасность убежища понизилась на ${Math.abs(amount)}. Текущая: ${this.security}`);
-        } else if (amount > 0) {
-            window.addGameLog(`Безопасность убежища повысилась на ${amount}. Текущая: ${this.security}`);
-        }
-    }
-
-    /**
-     * Добавляет ресурс на склад общины.
-     * @param {string} resourceType - Тип ресурса (например, 'food', 'water').
-     * @param {number} quantity - Количество.
-     */
-    addResource(resourceType, quantity) {
-        if (this.resources[resourceType] !== undefined) {
-            this.resources[resourceType] += quantity;
-            window.addGameLog(`На склад добавлено: ${resourceType} x${quantity}`);
-            window.uiManager.updateCommunityStatus(); // Обновляем UI
+        // Уведомление UI Manager'у об инициализации, если он доступен
+        if (window.uiManager && typeof window.uiManager.addGameLog === 'function') {
+            window.uiManager.addGameLog('Community инициализирована.');
         } else {
-            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Неизвестный тип ресурса для добавления на склад: ${resourceType}`);
+            console.log('Community инициализирована (UI Manager недоступен).');
         }
     }
 
-    /**
-     * Удаляет ресурс со склада общины.
-     * @param {string} resourceType - Тип ресурса.
-     * @param {number} quantity - Количество для удаления.
-     * @returns {boolean} - true, если удаление успешно, false иначе.
-     */
-    removeResource(resourceType, quantity) {
-        if (this.resources[resourceType] !== undefined && this.resources[resourceType] >= quantity) {
-            this.resources[resourceType] -= quantity;
-            window.addGameLog(`Со склада удалено: ${resourceType} x${quantity}`);
-            window.uiManager.updateCommunityStatus();
-            return true;
+    addResource(type, amount) {
+        if (this.resources.hasOwnProperty(type)) {
+            this.resources[type] += amount;
+            window.uiManager.addGameLog(`Община получила ${amount} ед. ${type}.`);
+        } else {
+            window.uiManager.addGameLog(`Ошибка: Неизвестный тип ресурса: ${type}.`);
         }
-        window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Недостаточно ${resourceType} на складе.`);
-        return false;
     }
 
-    /**
-     * Проверяет наличие ресурса на складе.
-     * @param {string} resourceType - Тип ресурса.
-     * @param {number} quantity - Требуемое количество.
-     * @returns {boolean}
-     */
-    hasResource(resourceType, quantity) {
-        return this.resources[resourceType] !== undefined && this.resources[resourceType] >= quantity;
-    }
-
-    /**
-     * Строит или улучшает объект в убежище.
-     * @param {string} facilityType - Тип объекта (например, 'workbench_built', 'shelter_level').
-     * @param {number} levelIncrease - На сколько уровней увеличить (для многоуровневых).
-     */
-    buildFacility(facilityType, levelIncrease = 1) {
-        if (this.facilities[facilityType] !== undefined) {
-            if (typeof this.facilities[facilityType] === 'boolean') {
-                this.facilities[facilityType] = true;
-                window.addGameLog(`Построен объект: ${facilityType}`);
+    removeResource(type, amount) {
+        if (this.resources.hasOwnProperty(type)) {
+            if (this.resources[type] >= amount) {
+                this.resources[type] -= amount;
+                window.uiManager.addGameLog(`Община использовала ${amount} ед. ${type}.`);
+                return true;
             } else {
-                this.facilities[facilityType] += levelIncrease;
-                window.addGameLog(`Объект ${facilityType} улучшен до уровня ${this.facilities[facilityType]}`);
+                window.uiManager.addGameLog(`Недостаточно ${type} у общины.`);
+                return false;
             }
-            window.uiManager.updateCommunityStatus(); // Обновляем UI
         } else {
-            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Неизвестный тип объекта для постройки: ${facilityType}`);
+            window.uiManager.addGameLog(`Ошибка: Неизвестный тип ресурса: ${type}.`);
+            return false;
         }
     }
 
-    /**
-     * Ежедневное потребление ресурсов общиной.
-     * Вызывается каждый "день" игрового цикла.
-     */
-    dailyConsumption() {
-        const requiredFood = this.survivors * this.needsPerSurvivor.food;
-        const requiredWater = this.survivors * this.needsPerSurvivor.water;
+    hasResource(type, amount) {
+        return this.resources.hasOwnProperty(type) && this.resources[type] >= amount;
+    }
 
-        let foodConsumed = 0;
-        if (this.resources.food >= requiredFood) {
-            this.removeResource('food', requiredFood);
-            foodConsumed = requiredFood;
+    // Метод для добавления или ресурса, или предмета на склад общины
+    addResourceOrItem(itemId, quantity = 1) {
+        const itemData = GameItems[itemId];
+        if (!itemData) {
+            console.warn(`Предмет с ID "${itemId}" не найден.`);
+            return;
+        }
+
+        if (itemData.isResource) { // Предполагаем, что GameItems может иметь флаг isResource
+            this.addResource(itemId, quantity); // Если это ресурс, используем addResource
         } else {
-            foodConsumed = this.resources.food;
-            this.removeResource('food', this.resources.food); // Используем все что есть
-            this.adjustMorale(-10); // Снижаем мораль из-за нехватки еды
-            const potentialCasualties = Math.ceil((requiredFood - foodConsumed) / 5); // 1 смерть на 5 единиц нехватки еды
-            if (potentialCasualties > 0 && this.survivors > 1) { // Игрок всегда считается выжившим
-                const actualCasualties = Math.min(potentialCasualties, this.survivors -1); // Не убиваем игрока
-                this.removeSurvivors(actualCasualties);
-                window.addGameLog(`Недостаточно еды! ${actualCasualties} выживших покинули общину или погибли.`);
+            // Если это обычный предмет, добавляем на склад (storage)
+            this.storage[itemId] = (this.storage[itemId] || 0) + quantity;
+            window.uiManager.addGameLog(`Община получила ${quantity} ${itemData.name}.`);
+        }
+    }
+
+    // Метод для удаления или ресурса, или предмета со склада общины
+    removeResourceOrItem(itemId, quantity = 1) {
+        const itemData = GameItems[itemId];
+        if (!itemData) {
+            console.warn(`Предмет с ID "${itemId}" не найден.`);
+            return false;
+        }
+
+        if (itemData.isResource) {
+            return this.removeResource(itemId, quantity);
+        } else {
+            if (this.storage[itemId] && this.storage[itemId] >= quantity) {
+                this.storage[itemId] -= quantity;
+                if (this.storage[itemId] === 0) {
+                    delete this.storage[itemId];
+                }
+                window.uiManager.addGameLog(`Община использовала ${quantity} ${itemData.name}.`);
+                return true;
             } else {
-                 window.addGameLog('Недостаточно еды! Мораль падает.');
+                window.uiManager.addGameLog(`Недостаточно ${itemData.name} на складе общины.`);
+                return false;
+            }
+        }
+    }
+
+    // Ежедневные события для общины
+    passDay() {
+        // Уменьшение ресурсов (еда, вода) в зависимости от количества выживших
+        const foodNeeded = this.survivors * 2; // Пример: 2 ед. еды на выжившего в день
+        const waterNeeded = this.survivors * 3; // Пример: 3 ед. воды на выжившего в день
+
+        if (this.resources.food < foodNeeded) {
+            const missingFood = foodNeeded - this.resources.food;
+            this.resources.food = 0;
+            this.morale -= missingFood * 2; // Уменьшение морали за голод
+            window.uiManager.addGameLog(`Община голодает! Мораль падает на ${missingFood * 2}.`);
+        } else {
+            this.resources.food -= foodNeeded;
+        }
+
+        if (this.resources.water < waterNeeded) {
+            const missingWater = waterNeeded - this.resources.water;
+            this.resources.water = 0;
+            this.morale -= missingWater * 3; // Уменьшение морали за жажду
+            window.uiManager.addGameLog(`Община испытывает жажду! Мораль падает на ${missingWater * 3}.`);
+        } else {
+            this.resources.water -= waterNeeded;
+        }
+
+        // Мораль не может быть ниже 0 или выше 100
+        this.morale = Math.max(0, Math.min(100, this.morale));
+
+        // Выжившие могут умереть от низкой морали
+        if (this.morale < 20 && this.survivors > 1) { // Если мораль очень низкая
+            if (Math.random() < 0.1) { // 10% шанс потери выжившего
+                this.survivors--;
+                window.uiManager.addGameLog('Один из выживших покинул общину из-за низкой морали.');
             }
         }
 
-        let waterConsumed = 0;
-        if (this.resources.water >= requiredWater) {
-            this.removeResource('water', requiredWater);
-            waterConsumed = requiredWater;
-        } else {
-            waterConsumed = this.resources.water;
-            this.removeResource('water', this.resources.water); // Используем все что есть
-            this.adjustMorale(-15); // Снижаем мораль еще сильнее из-за нехватки воды
-            const potentialCasualties = Math.ceil((requiredWater - waterConsumed) / 3); // 1 смерть на 3 единицы нехватки воды
-             if (potentialCasualties > 0 && this.survivors > 1) {
-                const actualCasualties = Math.min(potentialCasualties, this.survivors - 1);
-                this.removeSurvivors(actualCasualties);
-                window.addGameLog(`Недостаточно воды! ${actualCasualties} выживших покинули общину или погибли.`);
-            } else {
-                window.addGameLog('Недостаточно воды! Мораль падает.');
-            }
+        // Обновление UI
+        window.uiManager.updateAllStatus();
+        window.uiManager.addGameLog('Община пережила еще один день.');
+    }
+
+    // Метод для отображения деталей общины (для вкладки "Община")
+    displayCommunityDetails() {
+        const communityDetailsElement = document.getElementById('community-details');
+        if (!communityDetailsElement) {
+            console.warn("Community: Элемент #community-details не найден.");
+            return;
         }
-        window.addGameLog(`Ежедневное потребление: ${foodConsumed} еды, ${waterConsumed} воды.`);
-        window.uiManager.updateCommunityStatus();
+
+        communityDetailsElement.innerHTML = `
+            <h3>Состояние общины</h3>
+            <p>Выживших: ${this.survivors}</p>
+            <p>Мораль: ${this.morale}%</p>
+            <p>Безопасность: ${this.security}%</p>
+            
+            <h3>Ресурсы</h3>
+            <ul>
+                <li>Еда: ${this.resources.food}</li>
+                <li>Вода: ${this.resources.water}</li>
+                <li>Материалы: ${this.resources.materials}</li>
+                <li>Медикаменты: ${this.resources.medicine}</li>
+            </ul>
+
+            <h3>Постройки</h3>
+            <ul>
+                <li>Убежище: Уровень ${this.facilities.shelter_level}</li>
+                <li>Источник воды: Уровень ${this.facilities.water_source_level}</li>
+                <li>Ферма: Уровень ${this.facilities.farm_level}</li>
+                <li>Мастерская: Уровень ${this.facilities.workshop_level}</li>
+                <li>Сторожевая вышка: Уровень ${this.facilities.watchtower_level}</li>
+            </ul>
+            
+            <h3>Действия общины</h3>
+            <button onclick="window.community.upgradeFacility('shelter')">Улучшить Убежище</button>
+            <button onclick="window.community.exploreForSurvivors()">Искать выживших</button>
+            `;
+    }
+
+    // Пример метода для улучшения постройки
+    upgradeFacility(facilityType) {
+        // Здесь будет логика улучшения: проверка ресурсов, увеличение уровня, изменение характеристик общины
+        window.uiManager.addGameLog(`Попытка улучшить ${facilityType}. (Функция еще не реализована полностью)`);
+        // После улучшения, нужно обновить UI
+        this.displayCommunityDetails();
+        window.uiManager.updateAllStatus();
+    }
+
+    // Пример метода для поиска выживших
+    exploreForSurvivors() {
+        window.uiManager.addGameLog(`Община ищет выживших. (Функция еще не реализована)`);
+        // ... логика поиска ...
+        // После завершения, обновить UI
+        this.displayCommunityDetails();
+        window.uiManager.updateAllStatus();
     }
 }
