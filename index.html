@@ -1,1 +1,46 @@
 
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Текстовая игра "Постапокалипсис"</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <h1 id="game-title">Выживание в Пустоши</h1>
+            <div class="game-status">
+                <span id="current-day">День: 1</span>
+            </div>
+        </header>
+
+        <div class="resource-panel">
+            <div class="resource-item">Еда: <span id="food-amount">100</span></div>
+            <div class="resource-item">Вода: <span id="water-amount">50</span></div>
+            <div class="resource-item">Материалы: <span id="materials-amount">200</span></div>
+            <div class="resource-item">Население: <span id="population-amount">10</span></div>
+            <div class="resource-item">Мораль: <span id="morale-amount">80%</span></div>
+            <div class="resource-item">Безопасность: <span id="security-amount">50%</span></div>
+            <div class="resource-item">Энергия: <span id="energy-amount">10</span></div>
+        </div>
+
+        <main class="main-content">
+            <div id="game-messages" class="game-messages">
+                <p>Добро пожаловать в Пустошь. Ваша небольшая община только что основала убежище в руинах старого мира. Ресурсы ограничены, а опасности подстерегают на каждом шагу. Ваша задача - выжить и построить процветающее поселение.</p>
+                <p>Начните с исследования ближайших районов или улучшения вашего убежища.</p>
+            </div>
+        </main>
+
+        <footer class="action-panel">
+            <button class="action-button" data-action="explore">Исследовать</button>
+            <button class="action-button" data-action="build">Строить</button>
+            <button class="action-button" data-action="manage">Управление</button>
+            <button class="action-button" data-action="trade">Торговать</button>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
