@@ -1,6 +1,6 @@
 // script.js
 
-const GAME_VERSION = "0.4.3"; // Версия: UI Склада, начало рефакторинга
+const GAME_VERSION = "0.4.3"; // Версия: UI Склада, начало рефакторинга, адаптивность бургер
 
 // Используем gameState и domElements, определенные в game_state.js и dom_elements.js
 // Предполагается, что эти файлы загружены РАНЬШЕ script.js в index.html
@@ -20,7 +20,7 @@ const game = {
         if (!gameState.discoveredLocations || Object.keys(gameState.discoveredLocations).length === 0) {
             gameState.discoveredLocations = {}; 
         }
-        const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
+        const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
         if (!gameState.discoveredLocations["base_surroundings"] || 
             gameState.discoveredLocations["base_surroundings"].searchAttemptsLeft === undefined) {
             gameState.discoveredLocations["base_surroundings"] = { 
@@ -51,8 +51,8 @@ const game = {
         domElements.inventoryFilters.querySelectorAll('button').forEach(button => {
             button.addEventListener('click', (e) => this.filterPlayerInventory(e.target.dataset.filter));
         });
-        // Фильтры для склада
-        if (domElements.baseInventoryFilters) { // Проверка, что элемент существует
+        
+        if (domElements.baseInventoryFilters) { 
             domElements.baseInventoryFilters.querySelectorAll('button').forEach(button => {
                 button.addEventListener('click', (e) => this.filterBaseInventory(e.target.dataset.filter));
             });
@@ -60,11 +60,20 @@ const game = {
 
 
         domElements.mainNav.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', (e) => this.openTab(e.target.dataset.tab, e.target));
+            link.addEventListener('click', (e) => {
+                this.openTab(e.target.dataset.tab, e.target);
+                if (window.innerWidth <= 768 && domElements.sidebar.classList.contains('open')) { // Закрыть сайдбар на мобильных после выбора
+                    this.toggleSidebar();
+                }
+            });
         });
         
         domElements.toggleLogButton.addEventListener('click', () => this.toggleLogVisibility());
         this.applyLogVisibility();
+
+        // Логика для бургер-меню
+        domElements.burgerMenuButton.onclick = () => this.toggleSidebar();
+
 
         this.log("Игра началась. Пустошь ждет.", "event-neutral");
         const defaultNavLink = domElements.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
@@ -75,13 +84,19 @@ const game = {
         }
     },
 
+    toggleSidebar: function() {
+        domElements.sidebar.classList.toggle('open');
+    },
+
     initializeStructures: function() {
         gameState.structures = {}; 
-        for (const key in BASE_STRUCTURE_DEFINITIONS) {
-            const def = BASE_STRUCTURE_DEFINITIONS[key];
-            gameState.structures[key] = {
-                level: def.initialLevel || 0,
-            };
+        if (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') {
+            for (const key in BASE_STRUCTURE_DEFINITIONS) {
+                const def = BASE_STRUCTURE_DEFINITIONS[key];
+                gameState.structures[key] = {
+                    level: def.initialLevel || 0,
+                };
+            }
         }
     },
 
@@ -136,7 +151,7 @@ const game = {
         } else if (tabName === 'explore-tab') {
             this.updateExploreTab(); 
         } else if (tabName === 'storage-tab') {
-            this.filterBaseInventory('all'); // Отобразить склад при открытии вкладки
+            this.filterBaseInventory('all'); 
         }
     },
     
@@ -385,13 +400,12 @@ const game = {
                  this.renderPlayerInventory(domElements.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all');
             }
         }
-        if (document.getElementById('storage-tab')?.style.display === 'block') { // Обновляем склад, если он открыт
+        if (document.getElementById('storage-tab')?.style.display === 'block') { 
             this.renderBaseInventory(domElements.baseInventoryFilters?.querySelector('button.active')?.dataset.filter || 'all');
         }
         this.updateDisplay(); 
     },
 
-    // Функции для склада базы
     filterBaseInventory: function(filterType) {
         if (domElements.baseInventoryFilters) {
             domElements.baseInventoryFilters.querySelectorAll('button').forEach(b => b.classList.remove('active'));
@@ -402,7 +416,7 @@ const game = {
     },
 
     renderBaseInventory: function(filterType = 'all') {
-        if (!domElements.baseInventoryList) return; // Если элемента нет, выходим
+        if (!domElements.baseInventoryList) return; 
         domElements.baseInventoryList.innerHTML = '';
         const inventoryToDisplay = gameState.baseInventory;
 
@@ -428,10 +442,9 @@ const game = {
             
             somethingRendered = true;
             const itemDiv = document.createElement('div');
-            itemDiv.className = 'inventory-item'; // Используем тот же стиль
+            itemDiv.className = 'inventory-item'; 
 
             let itemActionsHTML = '';
-            // Кнопка "Взять со склада"
             itemActionsHTML += `<button onclick="game.transferItem('${itemSlot.itemId}', ${index}, gameState.baseInventory, gameState.inventory, 1)">Взять (1)</button>`;
             if (itemSlot.quantity > 1) {
                  itemActionsHTML += `<button onclick="game.transferItem('${itemSlot.itemId}', ${index}, gameState.baseInventory, gameState.inventory, ${itemSlot.quantity})">Взять (Все)</button>`;
@@ -440,7 +453,7 @@ const game = {
             itemDiv.innerHTML = `
                 <div class="item-info">
                     <h4>${itemDef.name} <span class="item-quantity">(x${itemSlot.quantity})</span></h4>
-                    <p>${itemDef.description}</p> <!-- Убрали вес, т.к. на складе он не важен -->
+                    <p>${itemDef.description}</p> 
                 </div>
                 <div class="item-actions">
                     ${itemActionsHTML}
@@ -514,13 +527,10 @@ const game = {
         if (savedGame) {
             const loadedState = JSON.parse(savedGame);
             
-            // Глубокое копирование gameState из loadedState, сохраняя структуру gameState по умолчанию
-            for (const key in initialGameState) { // Итерируемся по ключам дефолтного состояния
+            for (const key in initialGameState) { 
                 if (loadedState.hasOwnProperty(key)) {
                     if (typeof initialGameState[key] === 'object' && initialGameState[key] !== null && !Array.isArray(initialGameState[key])) {
-                        // Для объектов (кроме массивов) делаем слияние
                          gameState[key] = { ...initialGameState[key], ...loadedState[key] };
-                         // Особая обработка для discoveredLocations, чтобы сохранить searchAttemptsLeft и т.д.
                          if (key === 'discoveredLocations') {
                             for (const locId in loadedState.discoveredLocations) {
                                 if (gameState.discoveredLocations[locId]) {
@@ -540,16 +550,16 @@ const game = {
                     } else {
                         gameState[key] = loadedState[key];
                     }
-                } else { // Если в сохранении нет ключа, берем из дефолтного
+                } else { 
                     gameState[key] = JSON.parse(JSON.stringify(initialGameState[key]));
                 }
             }
              if (!gameState.baseInventory) gameState.baseInventory = []; 
 
             if (!gameState.currentLocationId) gameState.currentLocationId = "base_surroundings";
+            const baseLocDefDefault = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
             if (!gameState.discoveredLocations || Object.keys(gameState.discoveredLocations).length === 0) {
-                const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
-                gameState.discoveredLocations = { "base_surroundings": { discovered: true, name: baseLocDef.name, searchAttemptsLeft: baseLocDef.initialSearchAttempts, foundSpecialItems: {} } };
+                gameState.discoveredLocations = { "base_surroundings": { discovered: true, name: baseLocDefDefault.name, searchAttemptsLeft: baseLocDefDefault.initialSearchAttempts, foundSpecialItems: {} } };
             } else { 
                  for (const locId in gameState.discoveredLocations) {
                      if (gameState.discoveredLocations[locId].discovered) {
@@ -567,7 +577,7 @@ const game = {
             if (gameState.flags === undefined) gameState.flags = {};
             const defaultStructureKeys = (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') ? Object.keys(BASE_STRUCTURE_DEFINITIONS) : [];
             defaultStructureKeys.forEach(key => {
-                if (!gameState.structures[key]) { // Если структура отсутствует в сохранении (например, добавлена в новой версии)
+                if (!gameState.structures[key]) { 
                     gameState.structures[key] = { level: BASE_STRUCTURE_DEFINITIONS[key].initialLevel || 0 };
                 }
             });
@@ -654,8 +664,8 @@ const game = {
         });
 
         for (let i = 0; i < inventory.length && amountFulfilled < amountNeeded; ) { 
-            const slot = inventory[i]; // Получаем текущий слот
-            if (!slot) { i++; continue; } // Если слот каким-то образом стал undefined, пропускаем
+            const slot = inventory[i]; 
+            if (!slot) { i++; continue; } 
 
             const itemDef = ITEM_DEFINITIONS[slot.itemId];
             let itemValue = 0;
@@ -682,12 +692,10 @@ const game = {
                 amountFulfilled += canConsumeFromSlot * itemValue;
                 
                 const originalLength = inventory.length;
+                const originalItemId = slot.itemId; // Сохраняем itemId перед возможным удалением
                 this.removeItemFromInventory(gameState.baseInventory, slot.itemId, canConsumeFromSlot, i);
                 
-                // Если элемент был удален (длина массива изменилась или элемент на этом месте другой),
-                // то i не инкрементируем. Иначе инкрементируем.
-                if (inventory.length < originalLength || (inventory[i] && inventory[i].itemId !== slot.itemId)) {
-                    // i остается тем же
+                if (inventory.length < originalLength || (inventory[i] && inventory[i].itemId !== originalItemId)) {
                 } else {
                     i++;
                 }
@@ -908,7 +916,8 @@ const game = {
             const waterNeed = gameState.survivors * 15;
             let foodConsumed = this.consumeResourceFromBase('food', foodNeed);
             let waterConsumed = this.consumeResourceFromBase('water', waterNeed);
-            if (foodConsumed < foodNeed && !gameState.gameOver) { // Добавил проверку на gameOver
+
+            if (foodConsumed < foodNeed && !gameState.gameOver) { 
                 this.log("Выжившие голодают после вылазки!", "event-negative");
                  if (Math.random() < 0.2 * gameState.survivors) { 
                     if (gameState.survivors > 0) {
@@ -918,7 +927,7 @@ const game = {
                     }
                 }
             }
-            if (waterConsumed < waterNeed && !gameState.gameOver) { // Добавил проверку на gameOver
+            if (waterConsumed < waterNeed && !gameState.gameOver) { 
                 this.log("Выжившие страдают от жажды после вылазки!", "event-negative");
                  if (Math.random() < 0.25 * gameState.survivors) { 
                     if (gameState.survivors > 0) {
@@ -928,7 +937,6 @@ const game = {
                     }
                 }
             }
-
 
             this.updateDisplay(); 
             this.triggerRandomEvent(); 
@@ -1138,7 +1146,7 @@ const game = {
             choices: [
                 { 
                     text: "Укрепить оборону (-5 дерева, -3 металла со склада)", 
-                    action: function() {
+                    action: function() { 
                         if (game.countItemInInventory(gameState.baseInventory, "wood") >=5 && game.countItemInInventory(gameState.baseInventory, "scrap_metal") >=3){
                             game.removeItemFromInventory(gameState.baseInventory, "wood", 5);
                             game.removeItemFromInventory(gameState.baseInventory, "scrap_metal", 3);
@@ -1247,20 +1255,18 @@ const game = {
         const [major, minor] = GAME_VERSION.split('.').map(Number);
         localStorage.removeItem(`zombieSurvivalGame_v${major}.${minor}`);
         
-        // Глубокое копирование из initialGameState для сброса
         gameState = JSON.parse(JSON.stringify(initialGameState));
-        // Переинициализация специфичных полей, которые могут зависеть от внешних определений
-        const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
+        const baseLocDefDefault = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
         gameState.discoveredLocations = { 
             "base_surroundings": { 
                 discovered: true, 
-                name: baseLocDef.name,
-                searchAttemptsLeft: baseLocDef.initialSearchAttempts,
+                name: baseLocDefDefault.name,
+                searchAttemptsLeft: baseLocDefDefault.initialSearchAttempts,
                 foundSpecialItems: {}
             } 
         };
         
-        this.initializeStructures(); // Переинициализация структур
+        this.initializeStructures(); 
         this.addInitialItemsToPlayer(); 
         this.addInitialItemsToBase();
 
@@ -1298,10 +1304,13 @@ const game = {
 window.onload = () => {
     if (typeof ITEM_DEFINITIONS !== 'undefined' && 
         typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined' &&
-        typeof LOCATION_DEFINITIONS !== 'undefined') {
+        typeof LOCATION_DEFINITIONS !== 'undefined' &&
+        typeof gameState !== 'undefined' && // Проверяем gameState
+        typeof domElements !== 'undefined' // Проверяем domElements
+        ) {
         game.init();
     } else {
-        console.error("Один или несколько файлов определений (items, buildings, locations) не загружены!");
-        document.body.innerHTML = "<p style='color:red; font-size:18px; text-align:center; margin-top: 50px;'>Ошибка загрузки игровых данных. Пожалуйста, проверьте консоль и обновите страницу.</p>";
+        console.error("Один или несколько файлов определений (items, buildings, locations, game_state, dom_elements) не загружены или загружены не в том порядке!");
+        document.body.innerHTML = "<p style='color:red; font-size:18px; text-align:center; margin-top: 50px;'>Ошибка загрузки игровых данных. Пожалуйста, проверьте консоль (F12) и обновите страницу.</p>";
     }
 };
