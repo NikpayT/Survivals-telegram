@@ -1,6 +1,6 @@
 // script.js
 
-const GAME_VERSION = "0.5.2"; // Версия: Рефакторинг Location и Event Manager, исправление ошибок
+const GAME_VERSION = "0.5.3"; // Версия: Завершение рефакторинга менеджеров
 
 // Используем gameState, domElements, UIManager, InventoryManager, LocationManager, EventManager
 // Предполагается, что эти файлы загружены РАНЬШЕ script.js в index.html
@@ -14,10 +14,13 @@ const game = {
         const [major, minor] = GAME_VERSION.split('.').map(Number);
         const savedVersionKey = `zombieSurvivalGame_v${major}.${minor}`;
 
+        // Инициализация состояния локаций, если его нет или оно неполное
         if (!gameState.discoveredLocations || Object.keys(gameState.discoveredLocations).length === 0) {
             gameState.discoveredLocations = {}; 
         }
-        const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5, entryLoot: []};
+        const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) 
+                           ? LOCATION_DEFINITIONS["base_surroundings"] 
+                           : {name: "Окрестности Базы", initialSearchAttempts: 5, entryLoot: []}; // Fallback
         if (!gameState.discoveredLocations["base_surroundings"] || 
             gameState.discoveredLocations["base_surroundings"].searchAttemptsLeft === undefined) {
             gameState.discoveredLocations["base_surroundings"] = { 
@@ -40,7 +43,7 @@ const game = {
             this.addInitialItemsToBase(); 
         }
         
-        // Проверяем, что менеджеры определены перед вызовом их методов
+        // Первоначальное обновление UI через UIManager
         if (typeof UIManager !== 'undefined') {
             UIManager.updateDisplay(); 
             UIManager.updateBuildActions();
@@ -49,6 +52,7 @@ const game = {
             LocationManager.updateExploreTab(); 
         }
         
+        // Навешивание событий на статические элементы DOM
         if (domElements.inventoryButton && typeof InventoryManager !== 'undefined') {
             domElements.inventoryButton.onclick = () => InventoryManager.openInventoryModal();
         }
@@ -83,7 +87,6 @@ const game = {
         if (domElements.burgerMenuButton && typeof UIManager !== 'undefined') {
             domElements.burgerMenuButton.onclick = () => UIManager.toggleSidebar(); 
         }
-
 
         this.log("Игра началась. Пустошь ждет.", "event-neutral");
         const defaultNavLink = domElements.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
@@ -139,6 +142,7 @@ const game = {
     },
 
     log: function(message, type = "event-neutral") {
+        if (!domElements || !domElements.logMessages) return; // Защита, если DOM еще не готов
         const p = document.createElement('p');
         p.innerHTML = `[Д:${gameState.day}] ${message}`; 
         p.className = type;
@@ -146,7 +150,7 @@ const game = {
         if (domElements.logMessages.children.length > 30) {
             domElements.logMessages.removeChild(domElements.logMessages.lastChild);
         }
-        if(gameState.logVisible && domElements.logMessages) domElements.logMessages.scrollTop = 0; 
+        if(gameState.logVisible) domElements.logMessages.scrollTop = 0; 
     },
 
     toggleLogVisibility: function() { 
@@ -165,17 +169,21 @@ const game = {
         if (savedGame) {
             const loadedState = JSON.parse(savedGame);
             
+            // Глубокое копирование с сохранением структуры initialGameState
             for (const key in initialGameState) { 
                 if (loadedState.hasOwnProperty(key)) {
+                    // Для объектов (кроме массивов, которые копируются целиком, если есть) делаем слияние
                     if (typeof initialGameState[key] === 'object' && initialGameState[key] !== null && !Array.isArray(initialGameState[key])) {
                          gameState[key] = { ...initialGameState[key], ...loadedState[key] };
+                         // Особая обработка для discoveredLocations, чтобы сохранить searchAttemptsLeft и т.д.
                          if (key === 'discoveredLocations') {
                             for (const locId in loadedState.discoveredLocations) {
-                                if (gameState.discoveredLocations[locId]) {
+                                if (gameState.discoveredLocations[locId]) { // Если такая локация уже есть в gameState (например, из initialGameState)
                                     gameState.discoveredLocations[locId] = { ...gameState.discoveredLocations[locId], ...loadedState.discoveredLocations[locId] };
-                                } else {
+                                } else { // Если это новая локация из сохранения
                                     gameState.discoveredLocations[locId] = loadedState.discoveredLocations[locId];
                                 }
+                                // Убедимся, что у всех загруженных локаций есть нужные поля
                                 const locDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[locId] : null;
                                 if (locDef && gameState.discoveredLocations[locId].searchAttemptsLeft === undefined) {
                                     gameState.discoveredLocations[locId].searchAttemptsLeft = locDef.initialSearchAttempts;
@@ -185,19 +193,30 @@ const game = {
                                 }
                             }
                         }
-                    } else {
+                    } else { // Для примитивов и массивов просто присваиваем значение из сохранения
                         gameState[key] = loadedState[key];
                     }
-                } else { 
+                } else { // Если в сохранении нет ключа, берем из дефолтного
                     gameState[key] = JSON.parse(JSON.stringify(initialGameState[key]));
                 }
             }
+            // Гарантируем наличие baseInventory
              if (!gameState.baseInventory) gameState.baseInventory = []; 
 
+            // Проверка и установка currentLocationId и discoveredLocations, если они отсутствуют или некорректны
             if (!gameState.currentLocationId) gameState.currentLocationId = "base_surroundings";
-            const baseLocDefDefault = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5, entryLoot: []};
-            if (!gameState.discoveredLocations || Object.keys(gameState.discoveredLocations).length === 0) {
-                gameState.discoveredLocations = { "base_surroundings": { discovered: true, name: baseLocDefDefault.name, searchAttemptsLeft: baseLocDefDefault.initialSearchAttempts, foundSpecialItems: {} } };
+            const baseLocDefDefault = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) 
+                                      ? LOCATION_DEFINITIONS["base_surroundings"] 
+                                      : {name: "Окрестности Базы", initialSearchAttempts: 5, entryLoot: []}; // Fallback
+            if (!gameState.discoveredLocations || Object.keys(gameState.discoveredLocations).length === 0 || !gameState.discoveredLocations["base_surroundings"]) {
+                gameState.discoveredLocations = { 
+                    "base_surroundings": { 
+                        discovered: true, 
+                        name: baseLocDefDefault.name, 
+                        searchAttemptsLeft: baseLocDefDefault.initialSearchAttempts, 
+                        foundSpecialItems: {} 
+                    } 
+                };
             } else { 
                  for (const locId in gameState.discoveredLocations) {
                      if (gameState.discoveredLocations[locId].discovered) {
@@ -350,7 +369,7 @@ const game = {
                     }
                 }
             }
-        } else { return false; } // Если InventoryManager не определен, крафт невозможен
+        } else { return false; } 
         return true;
     },
 
@@ -445,10 +464,9 @@ const game = {
                  button.disabled = false;
             }
         });
-        
         if (typeof UIManager !== 'undefined') {
-            UIManager.updateBuildActions();
-            UIManager.updateExploreTabDisplay(); 
+            UIManager.updateBuildActions(); // Перепроверить кнопки строительства
+            UIManager.updateExploreTabDisplay(); // Перепроверить кнопки разведки
         }
 
 
@@ -468,6 +486,7 @@ const game = {
 };
 
 window.onload = () => {
+    // Убедимся, что все глобальные объекты (включая менеджеры) определены
     if (typeof ITEM_DEFINITIONS !== 'undefined' && 
         typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined' &&
         typeof LOCATION_DEFINITIONS !== 'undefined' &&
