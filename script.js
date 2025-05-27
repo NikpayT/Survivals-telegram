@@ -1,6 +1,6 @@
 // script.js
 
-const GAME_VERSION = "0.3.1"; // Обновляем версию
+const GAME_VERSION = "0.3.2"; // Версия: Прогресс-бары и Тултипы CSS
 
 const game = {
     state: {
@@ -8,9 +8,9 @@ const game = {
         survivors: 1,
         gameOver: false,
         currentEvent: null,
-        structures: {}, // Заполняется из buildings.js
+        structures: {}, 
         
-        inventory: [], // Массив объектов { itemId: "id", quantity: N }
+        inventory: [], 
         player: {
             health: 100,
             maxHealth: 100,
@@ -19,14 +19,13 @@ const game = {
             thirst: 100, 
             maxThirst: 100,
             carryWeight: 0,
-            maxCarryWeight: 25, // кг
+            maxCarryWeight: 25, 
             condition: "В порядке", 
         },
         discoveredLocations: {}, 
-        logVisible: true, // Для скрытия/показа лога
+        logVisible: true, 
     },
 
-    // --- GETTERS для вычисляемых свойств ---
     get maxSurvivors() {
         let max = 0;
         if (this.state.structures.shelter && this.state.structures.shelter.level > 0) {
@@ -38,7 +37,7 @@ const game = {
     getHungerThresholds: function() { return { critical: 20, low: 40, normal: 100 }; },
     getThirstThresholds: function() { return { critical: 15, low: 35, normal: 100 }; },
 
-    getTotalResourceValue: function(type) { // type: 'food', 'water_source' (для общего отображения)
+    getTotalResourceValue: function(type) { 
         let totalValue = 0;
         this.state.inventory.forEach(itemSlot => {
             const itemDef = ITEM_DEFINITIONS[itemSlot.itemId];
@@ -53,35 +52,41 @@ const game = {
         return totalValue;
     },
 
-    // --- DOM ELEMENTS ---
     dom: {
         gameVersionDisplay: document.getElementById('game-version'),
         day: document.getElementById('day'),
         survivors: document.getElementById('survivors'),
         maxSurvivors: document.getElementById('max-survivors'),
         
-        hungerStatus: document.getElementById('hunger-status'),
         totalFoodValue: document.getElementById('total-food-value'),
-        thirstStatus: document.getElementById('thirst-status'),
         totalWaterValue: document.getElementById('total-water-value'),
-        healthStatus: document.getElementById('health-status'),
-        playerCondition: document.getElementById('player-condition'), // В main-header
+        playerCondition: document.getElementById('player-condition'),
+
+        healthBarOuter: document.getElementById('health-bar-outer'),
+        healthBarInner: document.getElementById('health-bar-inner'),
+        healthBarText: document.getElementById('health-bar-text'),
+        hungerBarOuter: document.getElementById('hunger-bar-outer'),
+        hungerBarInner: document.getElementById('hunger-bar-inner'),
+        hungerBarText: document.getElementById('hunger-bar-text'),
+        thirstBarOuter: document.getElementById('thirst-bar-outer'),
+        thirstBarInner: document.getElementById('thirst-bar-inner'),
+        thirstBarText: document.getElementById('thirst-bar-text'),
 
         logMessages: document.getElementById('log-messages'),
-        buildActions: document.getElementById('build-actions'), // Вкладка База
-        eventActionsContainer: document.getElementById('event-actions-container'), // На вкладке Обзор
+        buildActions: document.getElementById('build-actions'), 
+        eventActionsContainer: document.getElementById('event-actions-container'), 
         eventTextDisplay: document.getElementById('event-text-display'),
         eventActions: document.getElementById('event-actions'), 
         
-        inventoryButton: document.getElementById('inventory-button'), // В сайдбаре
+        inventoryButton: document.getElementById('inventory-button'), 
         inventoryModal: document.getElementById('inventory-modal'),
         inventoryItemsList: document.getElementById('inventory-items-list'),
         inventoryWeight: document.getElementById('inventory-weight'),
         inventoryMaxWeight: document.getElementById('inventory-max-weight'),
         inventoryFilters: document.querySelector('.inventory-filters'),
 
-        discoveredLocationsContainer: document.getElementById('discovered-locations'), // Вкладка Разведка
-        craftingRecipesContainer: document.getElementById('crafting-recipes'), // Вкладка Крафт
+        discoveredLocationsContainer: document.getElementById('discovered-locations'), 
+        craftingRecipesContainer: document.getElementById('crafting-recipes'), 
         
         sidebar: document.getElementById('sidebar'),
         mainNav: document.getElementById('main-nav'),
@@ -93,17 +98,19 @@ const game = {
         toggleLogButton: document.getElementById('toggle-log'),
     },
 
-    // --- INITIALIZATION ---
     init: function() {
         this.dom.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
         this.initializeStructures();
         this.loadGame(); 
         
-        if (!localStorage.getItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`)) { 
+        const [major, minor] = GAME_VERSION.split('.').map(Number);
+        const savedVersionKey = `zombieSurvivalGame_v${major}.${minor}`;
+
+        if (!localStorage.getItem(savedVersionKey)) { 
             this.addInitialItems();
         }
         
-        this.updateDisplay(); // Важно вызвать после загрузки и добавления предметов
+        this.updateDisplay(); 
         this.updateBuildActions();
         
         this.dom.inventoryButton.onclick = () => this.openInventoryModal();
@@ -119,7 +126,14 @@ const game = {
         this.applyLogVisibility();
 
         this.log("Игра началась. Пустошь ждет.", "event-neutral");
-        this.openTab('main-tab', this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]'));
+        const defaultNavLink = this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
+        if (defaultNavLink) {
+            this.openTab('main-tab', defaultNavLink);
+        } else {
+             console.error("Default nav link for main-tab not found during init.");
+             // Fallback if somehow the default link is not found
+             this.openTab('main-tab', null);
+        }
     },
 
     initializeStructures: function() {
@@ -140,7 +154,6 @@ const game = {
         this.addItemToInventory("wood", 5);
     },
 
-    // --- TABS ---
     openTab: function(tabName, clickedLinkElement) {
         this.dom.tabContentArea.querySelectorAll('.tab-content').forEach(tc => tc.style.display = "none");
         this.dom.mainNav.querySelectorAll('.nav-link').forEach(tl => tl.classList.remove("active"));
@@ -150,8 +163,7 @@ const game = {
             tabElement.style.display = "block";
         } else {
             console.error("Tab not found: " + tabName);
-            // Открыть первую вкладку по умолчанию, если запрошенная не найдена
-            document.getElementById('main-tab').style.display = "block";
+            document.getElementById('main-tab').style.display = "block"; // Fallback to main tab
             const defaultLink = this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
             if (defaultLink) defaultLink.classList.add('active');
             return;
@@ -175,47 +187,57 @@ const game = {
         }
     },
     
-    // --- PLAYER STATUS & CONSUMPTION ---
     updatePlayerStatus: function() {
+        const player = this.state.player;
+
+        const healthPercent = Math.max(0, (player.health / player.maxHealth) * 100);
+        this.dom.healthBarInner.style.width = `${healthPercent}%`;
+        this.dom.healthBarText.textContent = `${player.health}/${player.maxHealth}`;
+        this.dom.healthBarInner.classList.remove('critical', 'low');
+        if (healthPercent <= 25) this.dom.healthBarInner.classList.add('critical');
+        else if (healthPercent <= 50) this.dom.healthBarInner.classList.add('low');
+
         const hungerTh = this.getHungerThresholds();
-        if (this.state.player.hunger <= 0) {
-            this.state.player.hunger = 0;
-            this.dom.hungerStatus.textContent = "Смертельный голод";
-            this.dom.hungerStatus.className = 'status-critical';
-            this.takeDamage(5, "голод"); 
-        } else if (this.state.player.hunger <= hungerTh.critical) {
-            this.dom.hungerStatus.textContent = "Истощение";
-            this.dom.hungerStatus.className = 'status-critical';
-        } else if (this.state.player.hunger <= hungerTh.low) {
-            this.dom.hungerStatus.textContent = "Голод";
-            this.dom.hungerStatus.className = 'status-needed';
-        } else {
-            this.dom.hungerStatus.textContent = "Сыт";
-            this.dom.hungerStatus.className = 'status-ok';
+        const hungerPercent = Math.max(0, (player.hunger / player.maxHunger) * 100);
+        this.dom.hungerBarInner.style.width = `${hungerPercent}%`;
+        this.dom.hungerBarInner.classList.remove('critical', 'low');
+        let hungerText = "Сыт";
+        if (player.hunger <= 0) {
+            hungerText = "Истощение!";
+            this.dom.hungerBarInner.classList.add('critical');
+            if (!this.state.gameOver) this.takeDamage(5, "голод"); 
+        } else if (player.hunger <= hungerTh.critical) {
+            hungerText = "Истощение";
+            this.dom.hungerBarInner.classList.add('critical');
+        } else if (player.hunger <= hungerTh.low) {
+            hungerText = "Голод";
+            this.dom.hungerBarInner.classList.add('low');
         }
+        this.dom.hungerBarText.textContent = hungerText;
 
         const thirstTh = this.getThirstThresholds();
-        if (this.state.player.thirst <= 0) {
-            this.state.player.thirst = 0;
-            this.dom.thirstStatus.textContent = "Смертельная жажда";
-            this.dom.thirstStatus.className = 'status-critical';
-            this.takeDamage(10, "обезвоживание"); 
-        } else if (this.state.player.thirst <= thirstTh.critical) {
-            this.dom.thirstStatus.textContent = "Сильная жажда";
-            this.dom.thirstStatus.className = 'status-critical';
-        } else if (this.state.player.thirst <= thirstTh.low) {
-            this.dom.thirstStatus.textContent = "Жажда";
-            this.dom.thirstStatus.className = 'status-needed';
-        } else {
-            this.dom.thirstStatus.textContent = "Норма";
-            this.dom.thirstStatus.className = 'status-ok';
+        const thirstPercent = Math.max(0, (player.thirst / player.maxThirst) * 100);
+        this.dom.thirstBarInner.style.width = `${thirstPercent}%`;
+        this.dom.thirstBarInner.classList.remove('critical', 'low');
+        let thirstText = "Норма";
+        if (player.thirst <= 0) {
+            thirstText = "Обезвожен!";
+            this.dom.thirstBarInner.classList.add('critical');
+            if (!this.state.gameOver) this.takeDamage(10, "обезвоживание"); 
+        } else if (player.thirst <= thirstTh.critical) {
+            thirstText = "Сильная жажда";
+            this.dom.thirstBarInner.classList.add('critical');
+        } else if (player.thirst <= thirstTh.low) {
+            thirstText = "Жажда";
+            this.dom.thirstBarInner.classList.add('low');
         }
+        this.dom.thirstBarText.textContent = thirstText;
         
-        this.dom.healthStatus.textContent = `${this.state.player.health} / ${this.state.player.maxHealth}`;
-        this.dom.playerCondition.textContent = this.state.player.condition; // Обновление состояния в хедере
+        this.dom.playerCondition.textContent = this.state.player.condition;
 
         if (this.dom.inventoryModal.style.display === 'block') {
-            this.renderInventory();
+            const activeFilter = this.dom.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all';
+            this.renderInventory(activeFilter);
         }
     },
 
@@ -249,7 +271,7 @@ const game = {
         if (consumed) {
             this.removeItemFromInventory(itemId, 1, inventoryItemIndex); 
         }
-        this.updateDisplay(); // Обновит все, включая PlayerStatus и вес в инвентаре
+        this.updateDisplay(); 
     },
 
     takeDamage: function(amount, source) {
@@ -260,10 +282,9 @@ const game = {
             this.state.player.health = 0;
             this.gameOver(`Вы погибли от ${source}. Пустошь беспощадна.`);
         }
-        this.updatePlayerStatus();
+        this.updatePlayerStatus(); // Обновит бары и текст
     },
 
-    // --- INVENTORY MANAGEMENT ---
     addItemToInventory: function(itemId, quantity = 1) {
         if (!ITEM_DEFINITIONS[itemId]) {
             console.error(`Попытка добавить несуществующий предмет: ${itemId}`);
@@ -350,17 +371,22 @@ const game = {
             return;
         }
         
-        let SOmethingRendered = false;
+        let somethingRendered = false;
         this.state.inventory.forEach((itemSlot, index) => {
             const itemDef = ITEM_DEFINITIONS[itemSlot.itemId];
             if (!itemDef) return;
 
-            if (filterType !== 'all' && itemDef.type !== filterType) {
-                if (filterType === 'water_source' && itemDef.type !== 'water' && itemDef.type !== 'water_source') return; // Особый случай для воды
-                else if (filterType !== 'water_source') return; 
+            let passesFilter = (filterType === 'all');
+            if (!passesFilter) {
+                if (filterType === 'water_source' && (itemDef.type === 'water' || itemDef.type === 'water_source')) {
+                    passesFilter = true;
+                } else if (itemDef.type === filterType) {
+                    passesFilter = true;
+                }
             }
-            SOmethingRendered = true;
-
+            if (!passesFilter) return;
+            
+            somethingRendered = true;
             const itemDiv = document.createElement('div');
             itemDiv.className = 'inventory-item';
 
@@ -381,7 +407,7 @@ const game = {
             this.dom.inventoryItemsList.appendChild(itemDiv);
         });
 
-        if(!SOmethingRendered && filterType !== 'all') {
+        if(!somethingRendered && filterType !== 'all') {
              this.dom.inventoryItemsList.innerHTML = `<p>Нет предметов типа '${filterType}'.</p>`;
         }
         this.updateInventoryWeightDisplay();
@@ -392,7 +418,6 @@ const game = {
         this.dom.inventoryMaxWeight.textContent = this.state.player.maxCarryWeight;
     },
 
-    // --- GAME LOGIC (Next Day, Scavenge, Build) ---
     updateDisplay: function() {
         this.dom.day.textContent = this.state.day;
         this.dom.survivors.textContent = this.state.survivors;
@@ -438,10 +463,12 @@ const game = {
     },
 
     saveGame: function() {
-        localStorage.setItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`, JSON.stringify(this.state));
+        const [major, minor] = GAME_VERSION.split('.').map(Number);
+        localStorage.setItem(`zombieSurvivalGame_v${major}.${minor}`, JSON.stringify(this.state));
     },
     loadGame: function() {
-        const savedGame = localStorage.getItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`);
+        const [major, minor] = GAME_VERSION.split('.').map(Number);
+        const savedGame = localStorage.getItem(`zombieSurvivalGame_v${major}.${minor}`);
         if (savedGame) {
             const loadedState = JSON.parse(savedGame);
             
@@ -467,7 +494,7 @@ const game = {
             } else {
                 this.state.logVisible = true; 
             }
-            // this.applyLogVisibility(); // Вызывается в init после loadGame
+            // applyLogVisibility будет вызван в init после loadGame
 
             this.log("Сохраненная игра загружена.", "event-discovery");
         } else {
@@ -485,14 +512,14 @@ const game = {
         this.state.day++;
         this.log(`--- Наступил День ${this.state.day} ---`, "event-neutral");
 
-        this.state.player.hunger -= (15 + this.state.survivors * 3); // Уменьшил потребление на выжившего
-        this.state.player.thirst -= (20 + this.state.survivors * 4); // Уменьшил потребление на выжившего
+        this.state.player.hunger -= (15 + this.state.survivors * 3); 
+        this.state.player.thirst -= (20 + this.state.survivors * 4); 
         this.state.player.hunger = Math.max(0, this.state.player.hunger);
         this.state.player.thirst = Math.max(0, this.state.player.thirst);
         
         this.triggerRandomEvent();
         
-        if (!this.state.currentEvent) {
+        if (!this.state.currentEvent && document.getElementById('main-tab').style.display === 'block') {
              this.dom.eventActionsContainer.style.display = 'none';
              this.dom.eventTextDisplay.textContent = '';
              this.dom.eventActions.innerHTML = '';
@@ -540,9 +567,8 @@ const game = {
              this.log("Разведка не принесла результатов.", "event-neutral");
         }
         
-        if(!foundSomething && !(encounter < 0.7)) { // Если не нашли и не было опасности (т.е. просто "ничего")
-            // Уже залогировано как "не принесла результатов"
-        } else if (!foundSomething && encounter < 0.7) { // Если был шанс найти, но addItemToInventory вернул false (перевес)
+        if(!foundSomething && !(encounter < 0.7)) { 
+        } else if (!foundSomething && encounter < 0.7) { 
              this.log("Что-то нашли, но не смогли унести.", "event-warning");
         }
 
@@ -594,37 +620,52 @@ const game = {
             if (!definition) continue;
 
             const btn = document.createElement('button');
-            let costString = "";
+            btn.classList.add('tooltip-host'); 
+
+            let costStringForTooltip = "";
             let canAffordAll = true;
             let atMaxLevel = currentStructureState.level >= definition.maxLevel;
 
             if (!atMaxLevel) {
                 const costDef = getStructureUpgradeCost(key, currentStructureState.level);
-                const costs = [];
+                const costsForTooltip = [];
                 for (const itemId in costDef) {
                     const required = costDef[itemId];
                     const has = this.countItemInInventory(itemId);
-                    costs.push(`${ITEM_DEFINITIONS[itemId]? ITEM_DEFINITIONS[itemId].name.substring(0,10) : itemId}: ${has}/${required}`);
+                    costsForTooltip.push(`${ITEM_DEFINITIONS[itemId]? ITEM_DEFINITIONS[itemId].name : itemId}: ${has}/${required}`);
                     if (has < required) canAffordAll = false;
                 }
-                costString = costs.length > 0 ? `(${costs.join('; ')})` : "";
+                costStringForTooltip = costsForTooltip.length > 0 ? costsForTooltip.join('; ') : "";
             } else {
-                costString = "(МАКС)";
+                costStringForTooltip = "Достигнут максимальный уровень.";
             }
             
-            btn.innerHTML = `${definition.name} [${currentStructureState.level}] <small>${costString}</small>`;
-            if (definition.description) btn.title = definition.description;
+            btn.innerHTML = `${definition.name} [${currentStructureState.level}]`; 
+            
+            const tooltipSpan = document.createElement('span');
+            tooltipSpan.classList.add('tooltip-text');
+            let tooltipContent = definition.description;
+            if (!atMaxLevel && costStringForTooltip) {
+                 tooltipContent += `<br>Стоимость: ${costStringForTooltip}`; 
+            } else if (atMaxLevel && costStringForTooltip !== "Достигнут максимальный уровень.") { // Если макс уровень, но costStringForTooltip все равно был сформирован (ошибка логики)
+                tooltipContent += `<br>${costStringForTooltip}`;
+            } else if (atMaxLevel) {
+                 // Уже учтено в costStringForTooltip
+            }
+
+            tooltipSpan.innerHTML = tooltipContent;
+            btn.appendChild(tooltipSpan);
+            
             btn.onclick = () => this.build(key);
             btn.disabled = !canAffordAll || atMaxLevel || this.state.currentEvent !== null || this.state.gameOver;
             this.dom.buildActions.appendChild(btn);
         }
     },
 
-    // --- EVENTS ---
     possibleEvents: [
          {
             id: "found_survivor",
-            condition: () => game.state.survivors < game.maxSurvivors && Math.random() < 0.08, // Уменьшил шанс
+            condition: () => game.state.survivors < game.maxSurvivors && Math.random() < 0.08,
             text: "Вы слышите стук в ворота. Одинокий путник просит убежища.",
             choices: [
                 { text: "Принять (+1 выживший)", action: () => {
@@ -667,22 +708,24 @@ const game = {
                         game.log("Оборона усилена. Зомби не решились атаковать.", "event-positive");
                     } else {
                          game.log("Не хватило материалов для укрепления! Зомби прорвались!", "event-negative");
-                         game.takeDamage(10 * game.state.survivors, "атака зомби");
-                         if(Math.random() < 0.2 * game.state.survivors && game.state.survivors > 0){
+                         if(!game.state.gameOver) game.takeDamage(10 * game.state.survivors, "атака зомби");
+                         if(!game.state.gameOver && Math.random() < 0.2 * game.state.survivors && game.state.survivors > 0){
                              game.state.survivors--;
                              game.log("Один из выживших погиб во время атаки...", "event-negative");
+                             if(game.state.survivors <= 0 && !game.state.gameOver) game.gameOver("Все выжившие погибли.");
                          }
                     }
                 }},
                 { text: "Рискнуть и ничего не делать", action: () => {
-                     if (Math.random() < 0.6) { // 60% шанс, что пронесет
+                     if (Math.random() < 0.6) { 
                         game.log("Зомби прошли мимо, не заметив базу.", "event-neutral");
                      } else {
                         game.log("Зомби атаковали неподготовленную базу!", "event-negative");
-                        game.takeDamage(15 * game.state.survivors, "внезапная атака");
-                         if(Math.random() < 0.3 * game.state.survivors && game.state.survivors > 0){
+                        if(!game.state.gameOver) game.takeDamage(15 * game.state.survivors, "внезапная атака");
+                         if(!game.state.gameOver && Math.random() < 0.3 * game.state.survivors && game.state.survivors > 0){
                              game.state.survivors--;
                              game.log("Потери среди выживших...", "event-negative");
+                             if(game.state.survivors <= 0 && !game.state.gameOver) game.gameOver("Все выжившие погибли.");
                          }
                      }
                 }}
@@ -698,7 +741,7 @@ const game = {
             this.log(`СОБЫТИЕ: ${this.state.currentEvent.text}`, "event-discovery");
             this.displayEventChoices();
         } else {
-            if (document.getElementById('main-tab').style.display === 'block') { // Только если активна главная вкладка
+            if (document.getElementById('main-tab').style.display === 'block') { 
                  this.dom.eventActionsContainer.style.display = 'none';
             }
         }
@@ -722,31 +765,30 @@ const game = {
             const btn = document.createElement('button');
             btn.textContent = choice.text;
             btn.onclick = () => {
-                choice.action();
-                this.state.currentEvent = null;
-                eventButtonsEl.innerHTML = ''; 
-                eventTextEl.textContent = '';
-                eventContainer.style.display = 'none'; 
-                this.updateDisplay(); // Обновить всё после действия события
-                this.saveGame();
+                if (this.state.currentEvent) { // Доп. проверка, чтобы избежать двойного срабатывания
+                    choice.action();
+                    this.state.currentEvent = null; // Сбрасываем событие сразу
+                    eventButtonsEl.innerHTML = ''; 
+                    eventTextEl.textContent = '';
+                    eventContainer.style.display = 'none'; 
+                    this.updateDisplay(); 
+                    this.saveGame();
+                }
             };
             eventButtonsEl.appendChild(btn);
         });
     },
 
-    // --- GAME OVER & RESET ---
     gameOver: function(message) {
-        if(this.state.gameOver) return; // Предотвратить многократный вызов
+        if(this.state.gameOver) return; 
         this.log(message, "event-negative");
         this.state.gameOver = true;
-        // Блокируем кнопки действий, кроме "Начать заново"
         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
-            if(button.textContent !== "Начать игру заново" && !button.closest('footer')) { // Не блокируем кнопку в футере
+            if(!button.closest('footer') && button.onclick !== game.resetGameConfirmation) { 
                 button.disabled = true;
             }
         });
-        this.dom.eventActionsContainer.style.display = 'none'; // Скрыть панель событий
-        // localStorage.removeItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`); // Спорный момент, удалять ли сразу
+        this.dom.eventActionsContainer.style.display = 'none'; 
     },
     
     resetGameConfirmation: function() {
@@ -756,7 +798,8 @@ const game = {
     },
 
     resetGame: function() {
-        localStorage.removeItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`);
+        const [major, minor] = GAME_VERSION.split('.').map(Number);
+        localStorage.removeItem(`zombieSurvivalGame_v${major}.${minor}`);
         this.state.day = 1;
         this.state.survivors = 1;
         this.state.gameOver = false;
@@ -775,16 +818,26 @@ const game = {
         this.initializeStructures();
         this.addInitialItems(); 
 
-        this.dom.logMessages.innerHTML = ''; // Очистить лог на экране
-        this.init(); 
+        this.dom.logMessages.innerHTML = ''; 
+        // this.init(); // Не вызываем полный init, чтобы не было двойной загрузки и т.д.
         
-        // Разблокировать кнопки
-         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
+        // Восстанавливаем DOM и обработчики, которые могли быть изменены/удалены в init или gameOver
+        this.dom.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
+        this.applyLogVisibility();
+        this.updateDisplay();
+        this.updateBuildActions();
+
+        document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
             button.disabled = false;
         });
-        this.updateBuildActions(); // Обновить доступность кнопок строительства (могут быть задизейблены из-за ресурсов)
+        const defaultNavLink = this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
+        if (defaultNavLink) {
+            this.openTab('main-tab', defaultNavLink);
+        }
+        this.dom.eventActionsContainer.style.display = 'none'; 
 
         this.log("Новая игра начата.", "event-neutral");
+        this.saveGame(); // Сохраняем чистое состояние новой игры
     }
 };
 
