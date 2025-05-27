@@ -1,308 +1,167 @@
-// js/uiManager.js - Управление всем графическим интерфейсом пользователя
+// js/uiManager.js
 
-const UIManager = {
-    // DOM-элементы, которые мы будем часто использовать
-    gameTextElement: null,
-    optionsContainer: null,
-    gameLogElement: null,
-    playerHealthElement: null,
-    playerHungerElement: null,
-    playerThirstElement: null,
-    playerFatigueElement: null,
-    currentWeaponElement: null,
-    communitySurvivorsElement: null,
-    communityMoraleElement: null,
-    communitySecurityElement: null,
-    communityFoodElement: null,
-    communityWaterElement: null,
-    
-    // Свойства для хранения ссылок на кнопки и секции
-    navButtons: {}, // Объект для хранения ссылок на навигационные кнопки
-    gameSections: {}, // Объект для хранения ссылок на игровые секции
-    
-    // Перемещаем navButtonMap сюда, чтобы она была доступна всем методам UIManager
-    navButtonMap: {
-        'nav-explore': 'explore-section',
-        'nav-inventory': 'inventory-section',
-        'nav-crafting': 'crafting-section',
-        'nav-community': 'community-section',
-        'nav-factions': 'factions-section'
-    },
+// Использование единого объекта для UIManager
+// Это гарантирует, что у нас всегда будет один и тот же экземпляр
+// и другие части кода могут обращаться к нему через window.uiManager
+if (typeof window.uiManager === 'undefined') {
+    window.uiManager = (function() {
+        // Приватные переменные и методы
+        let gameLogElement;
+        let gameTextElement;
+        let optionsContainer;
+        let playerStatusElement;
+        let communityStatusElement;
+        let playerInventoryList;
+        let communityStorageList;
+        let craftingRecipesElement; // Добавлен для CraftingManager
 
-    /**
-     * Инициализирует все DOM-элементы и обработчики событий.
-     * Вызывается один раз при загрузке игры.
-     */
-    init() {
-        console.log('UIManager: Инициализация...');
+        // Приватные методы для инициализации
+        function initializeElements() {
+            gameLogElement = document.getElementById('game-log');
+            gameTextElement = document.getElementById('game-text');
+            optionsContainer = document.getElementById('options-container');
+            playerStatusElement = document.getElementById('player-status');
+            communityStatusElement = document.getElementById('community-status');
+            playerInventoryList = document.getElementById('player-inventory-list');
+            communityStorageList = document.getElementById('community-storage-list');
+            craftingRecipesElement = document.getElementById('crafting-recipes'); // Инициализация
 
-        // 1. Получаем ссылки на основные элементы DOM
-        this.gameTextElement = document.getElementById('game-text');
-        this.optionsContainer = document.getElementById('options-container');
-        this.gameLogElement = document.getElementById('game-log');
-
-        // 2. Получаем ссылки на элементы статуса игрока
-        this.playerHealthElement = document.getElementById('player-health');
-        this.playerHungerElement = document.getElementById('player-hunger');
-        this.playerThirstElement = document.getElementById('player-thirst');
-        this.playerFatigueElement = document.getElementById('player-fatigue');
-        this.currentWeaponElement = document.getElementById('current-weapon');
-
-        // 3. Получаем ссылки на элементы статуса общины
-        this.communitySurvivorsElement = document.getElementById('community-survivors');
-        this.communityMoraleElement = document.getElementById('community-morale');
-        this.communitySecurityElement = document.getElementById('community-security');
-        this.communityFoodElement = document.getElementById('community-food');
-        this.communityWaterElement = document.getElementById('community-water');
-
-        // 4. Инициализация навигационных кнопок и игровых секций
-        for (const navId in this.navButtonMap) {
-            const sectionId = this.navButtonMap[navId];
-            const button = document.getElementById(navId);
-            const section = document.getElementById(sectionId);
-
-            if (button) {
-                this.navButtons[navId] = button;
-                button.addEventListener('click', () => {
-                    this.showSection(sectionId);
-                    // console.log(`UIManager: Нажата кнопка "${navId}", показана секция "${sectionId}"`); // Убрал частый лог
-                });
-            } else {
-                console.warn(`UIManager: Кнопка навигации с ID "${navId}" не найдена.`);
-            }
-
-            if (section) {
-                this.gameSections[sectionId] = section;
-            } else {
-                console.warn(`UIManager: Секция с ID "${sectionId}" не найдена.`);
-            }
+            // Проверки на существование элементов
+            if (!gameLogElement) console.warn("UIManager: Элемент #game-log не найден.");
+            if (!gameTextElement) console.warn("UIManager: Элемент #game-text не найден.");
+            if (!optionsContainer) console.warn("UIManager: Элемент #options-container не найден.");
+            if (!playerStatusElement) console.warn("UIManager: Элемент #player-status не найден.");
+            if (!communityStatusElement) console.warn("UIManager: Элемент #community-status не найден.");
+            if (!playerInventoryList) console.warn("UIManager: Элемент #player-inventory-list не найден.");
+            if (!communityStorageList) console.warn("UIManager: Элемент #community-storage-list не найден.");
+            if (!craftingRecipesElement) console.warn("UIManager: Элемент #crafting-recipes не найден.");
         }
 
-        // 5. Проверяем, что все ключевые элементы найдены
-        if (!this.gameLogElement) console.error("UIManager ОШИБКА: Элемент #game-log не найден! Игровой лог не будет отображаться.");
-        if (!this.gameTextElement) console.error("UIManager ОШИБКА: Элемент #game-text не найден!");
-        if (!this.optionsContainer) console.error("UIManager ОШИБКА: Элемент #options-container не найден!");
+        // Публичные методы
+        return {
+            init: function() {
+                console.log('UIManager: Инициализация...');
+                initializeElements();
+                console.log('UIManager: Инициализация завершена. Проверенные элементы:');
+                console.log({ gameLogElement, gameTextElement, optionsContainer, playerStatusElement, communityStatusElement, playerInventoryList, communityStorageList, craftingRecipesElement });
+                this.addGameLog('Система интерфейса инициализирована.');
+            },
 
-        // 6. Инициализация первой секции (обычно "Исследовать")
-        if (this.gameSections['explore-section']) {
-            this.showSection('explore-section'); // Показываем секцию "Исследовать" по умолчанию
-        } else {
-            console.error("UIManager ОШИБКА: Секция 'explore-section' не найдена при инициализации!");
-        }
-        
-        console.log('UIManager: Инициализация завершена. Проверенные элементы:');
-        // console.log('gameSections:', this.gameSections); // Убрал лог для чистоты консоли
-        // console.log('navButtons:', this.navButtons); // Убрал лог для чистоты консоли
-    },
+            // Обновляет текстовое описание игры
+            displayGameText: function(text) {
+                if (gameTextElement) {
+                    gameTextElement.innerHTML = `<p>${text}</p>`;
+                } else {
+                    console.warn("displayGameText: Элемент #game-text не найден.");
+                }
+            },
 
-    /**
-     * Отображает указанную секцию игры и активирует соответствующую навигационную кнопку.
-     * @param {string} sectionId - ID секции для отображения (например, 'explore-section').
-     */
-    showSection(sectionId) {
-        // console.log(`UIManager: Попытка показать секцию: ${sectionId}`); // Убрал частый лог
+            // Отображает доступные опции (кнопки)
+            displayOptions: function(options) {
+                if (optionsContainer) {
+                    optionsContainer.innerHTML = ''; // Очищаем предыдущие опции
+                    options.forEach(option => {
+                        const button = document.createElement('button');
+                        button.textContent = option.text;
+                        button.classList.add('game-option-button');
+                        button.addEventListener('click', () => {
+                            // Отключаем все кнопки, чтобы предотвратить множественные клики
+                            Array.from(optionsContainer.children).forEach(btn => btn.disabled = true);
+                            if (option.action && typeof option.action === 'function') {
+                                option.action();
+                            }
+                        });
+                        optionsContainer.appendChild(button);
+                    });
+                } else {
+                    console.warn("displayOptions: Элемент #options-container не найден.");
+                }
+            },
 
-        // Скрываем все секции и деактивируем все кнопки
-        for (const id in this.gameSections) {
-            const section = this.gameSections[id];
-            if (section) {
-                section.classList.add('hidden');
-                section.classList.remove('active');
-            }
-        }
-        for (const id in this.navButtons) {
-            const button = this.navButtons[id];
-            if (button) {
-                button.classList.remove('active');
-            }
-        }
+            // Добавляет сообщение в игровой лог
+            addGameLog: function(message) {
+                // НОВОЕ: Проверка на isGameOver, чтобы не добавлять логи после смерти
+                if (window.gameState && window.gameState.isGameOver && message.includes('погибли') || message.includes('здоровье иссякло') || message.includes('община погибла')) {
+                    // Это сообщение о Game Over, его можно добавить, но не после этого
+                    if (gameLogElement) {
+                         const entry = document.createElement('p');
+                         entry.classList.add('game-log-entry', 'game-over-log');
+                         entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                         gameLogElement.prepend(entry); // Добавляем в начало
+                         if (gameLogElement.children.length > 50) { // Ограничиваем количество записей
+                             gameLogElement.removeChild(gameLogElement.lastChild);
+                         }
+                     }
+                    return; // Не добавляем другие логи, если игра окончена
+                } else if (window.gameState && window.gameState.isGameOver) {
+                    return; // Блокируем все логи, кроме сообщений Game Over, после Game Over
+                }
 
-        // Показываем нужную секцию
-        const targetSection = this.gameSections[sectionId];
-        if (targetSection) {
-            targetSection.classList.remove('hidden');
-            targetSection.classList.add('active');
-            // console.log(`UIManager: Секция "${sectionId}" успешно показана.`); // Убрал частый лог
-        } else {
-            console.warn(`UIManager: Секция с ID "${sectionId}" не найдена в gameSections.`);
-        }
 
-        // Активируем соответствующую кнопку навигации
-        const navButtonId = Object.keys(this.navButtonMap).find(key => this.navButtonMap[key] === sectionId);
-        if (navButtonId && this.navButtons[navButtonId]) {
-            this.navButtons[navButtonId].classList.add('active');
-            // console.log(`UIManager: Кнопка "${navButtonId}" активирована.`); // Убрал частый лог
-        } else {
-            console.warn(`UIManager: Не удалось найти навигационную кнопку для секции "${sectionId}".`);
-        }
+                if (gameLogElement) {
+                    const entry = document.createElement('p');
+                    entry.classList.add('game-log-entry');
+                    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                    gameLogElement.prepend(entry); // Добавляем в начало
+                    // Ограничиваем количество записей в логе
+                    if (gameLogElement.children.length > 50) { // Например, 50 последних записей
+                        gameLogElement.removeChild(gameLogElement.lastChild);
+                    }
+                } else {
+                    console.warn("addGameLog: Элемент #game-log не найден. Сообщение: " + message);
+                }
+            },
 
-        // Специальная логика для обновления контента при переключении секций
-        switch (sectionId) {
-            case 'inventory-section':
-                if (window.inventoryManager && typeof window.inventoryManager.displayPlayerInventory === 'function' && typeof window.inventoryManager.displayCommunityStorage === 'function') {
+            // Обновляет всю информацию о статусе игрока и общины
+            updateAllStatus: function() {
+                this.updatePlayerStatus();
+                this.updateCommunityStatus();
+                if (window.inventoryManager) {
                     window.inventoryManager.displayPlayerInventory();
                     window.inventoryManager.displayCommunityStorage();
                 } else {
-                    console.warn("UIManager: inventoryManager или его методы displayPlayerInventory/displayCommunityStorage не инициализированы или отсутствуют.");
+                    console.warn("updateAllStatus: InventoryManager не инициализирован.");
                 }
-                break;
-            case 'crafting-section':
-                if (window.craftingManager && typeof window.craftingManager.displayCraftingRecipes === 'function') {
+                if (window.craftingManager) {
                     window.craftingManager.displayCraftingRecipes();
                 } else {
-                    console.warn("UIManager: craftingManager или его метод displayCraftingRecipes не инициализированы или отсутствуют.");
+                     console.warn("updateAllStatus: CraftingManager не инициализирован.");
                 }
-                break;
-            case 'community-section':
-                if (window.gameState.community && typeof window.gameState.community.displayCommunityDetails === 'function') {
-                    window.gameState.community.displayCommunityDetails();
-                } else {
-                    console.warn("UIManager: window.gameState.community или его метод displayCommunityDetails не найден.");
+            },
+
+            // Обновляет статус игрока
+            updatePlayerStatus: function() {
+                if (!playerStatusElement || !window.gameState.player) {
+                    console.warn("updatePlayerStatus: Элемент статуса игрока или данные игрока не найдены.");
+                    return;
                 }
-                break;
-            case 'factions-section':
-                if (window.factionManager && typeof window.factionManager.displayFactions === 'function') {
-                    window.factionManager.displayFactions();
-                } else {
-                    console.warn("UIManager: factionManager или его метод displayFactions не найден.");
+                const player = window.gameState.player;
+                playerStatusElement.innerHTML = `
+                    <p><img src="assets/icons/heart.png" alt="Здоровье" class="status-icon"> Здоровье:${player.health}/${player.maxHealth}</p>
+                    <p><img src="assets/icons/stamina.png" alt="Выносливость" class="status-icon"> Выносливость:${player.stamina}/${player.maxStamina}</p>
+                    <p><img src="assets/icons/hunger.png" alt="Голод" class="status-icon"> Голод:${Math.round((player.hunger / player.maxHunger) * 100)}%</p>
+                    <p><img src="assets/icons/thirst.png" alt="Жажда" class="status-icon"> Жажда:${Math.round((player.thirst / player.maxThirst) * 100)}%</p>
+                    <p><img src="assets/icons/fatigue.png" alt="Усталость" class="status-icon"> Усталость:${Math.round((player.fatigue / player.maxFatigue) * 100)}%</p>
+                    <p><img src="assets/icons/weapon.png" alt="Оружие" class="status-icon"> Оружие:Нет</p>
+                    `;
+            },
+
+            // Обновляет статус общины
+            updateCommunityStatus: function() {
+                if (!communityStatusElement || !window.gameState.community) {
+                    console.warn("updateCommunityStatus: Элемент статуса общины или данные общины не найдены.");
+                    return;
                 }
-                break;
-            default:
-                // Для explore-section или других, которые не требуют немедленного обновления при переключении вкладки
-                break;
-        }
-    },
-
-    /**
-     * Обновляет все элементы статуса игрока и общины.
-     */
-    updateAllStatus() {
-        if (!window.gameState || !window.gameState.player || !window.gameState.community) {
-            console.warn("UIManager: Невозможно обновить статус, gameState, player или community не инициализированы.");
-            return;
-        }
-
-        const player = window.gameState.player;
-        const community = window.gameState.community;
-
-        // Обновляем статус игрока
-        if (this.playerHealthElement) this.playerHealthElement.textContent = Math.max(0, player.health);
-        if (this.playerHungerElement) this.playerHungerElement.textContent = Math.round(player.hunger);
-        if (this.playerThirstElement) this.playerThirstElement.textContent = Math.round(player.thirst);
-        if (this.playerFatigueElement) this.playerFatigueElement.textContent = Math.round(player.fatigue);
-        // Добавим проверку на currentWeapon, если оно null/undefined
-        if (this.currentWeaponElement) this.currentWeaponElement.textContent = player.currentWeapon ? player.currentWeapon.name : 'Нет';
-
-        // Обновляем статус общины
-        if (this.communitySurvivorsElement) this.communitySurvivorsElement.textContent = community.survivors;
-        if (this.communityMoraleElement) this.communityMoraleElement.textContent = Math.round(community.morale);
-        if (this.communitySecurityElement) this.communitySecurityElement.textContent = Math.round(community.security);
-        if (this.communityFoodElement) this.communityFoodElement.textContent = Math.round(community.resources.food);
-        if (this.communityWaterElement) this.communityWaterElement.textContent = Math.round(community.resources.water);
-    },
-
-    /**
-     * Отображает основной текст игровой сцены.
-     * @param {string} text - Текст для отображения.
-     */
-    displayGameText(text) {
-        if (this.gameTextElement) {
-            this.gameTextElement.innerHTML = text;
-        } else {
-            console.warn("UIManager: Элемент #game-text не найден для отображения текста.");
-        }
-    },
-
-    /**
-     * Отображает кнопки опций для текущей сцены.
-     * @param {Array<Object>} options - Массив объектов опций ({ text: string, action: Function }).
-     */
-    displayOptions(options) {
-        if (!this.optionsContainer) {
-            console.warn("UIManager: Элемент #options-container не найден для отображения опций.");
-            return;
-        }
-        this.optionsContainer.innerHTML = ''; // Очищаем старые опции
-
-        if (!Array.isArray(options)) {
-            console.error("UIManager: Опции должны быть массивом.");
-            return;
-        }
-
-        options.forEach(option => {
-            if (typeof option.text !== 'string' || typeof option.action !== 'function') {
-                console.warn("UIManager: Некорректный формат опции:", option);
-                return;
-            }
-            const button = document.createElement('button');
-            button.classList.add('option-button');
-            button.textContent = option.text;
-            button.addEventListener('click', () => {
-                option.action(); // Выполняем действие опции
-            });
-            this.optionsContainer.appendChild(button);
-        });
-    },
-
-    /**
-     * Добавляет сообщение в игровой лог и обновляет его отображение.
-     * @param {string} message - Сообщение для лога.
-     */
-    addGameLog(message) {
-        if (!this.gameLogElement) {
-            // Если gameLogElement еще не инициализирован, просто выводим в консоль
-            console.log(`[GAME LOG] ${message}`);
-            return;
-        }
-
-        const timestamp = new Date().toLocaleTimeString();
-        const fullMessage = `[${timestamp}] ${message}`;
-
-        // Убедимся, что gameState и gameLog существуют и являются массивом
-        if (window.gameState && Array.isArray(window.gameState.gameLog)) {
-            window.gameState.gameLog.unshift(fullMessage); // Добавляем в начало
-            // Ограничиваем размер лога, чтобы не перегружать память
-            if (window.gameState.gameLog.length > 50) {
-                window.gameState.gameLog.pop(); // Удаляем самый старый элемент
-            }
-            this.updateGameLogDisplay(); // Обновляем отображение лога
-        } else {
-            console.warn("UIManager: window.gameState.gameLog не инициализирован как массив. Сообщения лога не будут сохранены.");
-            // Если gameLog не массив, все равно отобразим текущее сообщение напрямую в DOM
-            const p = document.createElement('p');
-            p.textContent = fullMessage;
-            this.gameLogElement.prepend(p); // Добавляем в начало
-            // В этом случае ограничим количество P-тегов вручную
-            while (this.gameLogElement.children.length > 50) {
-                this.gameLogElement.removeChild(this.gameLogElement.lastChild);
-            }
-        }
-    },
-
-    /**
-     * Обновляет HTML-отображение игрового лога из window.gameState.gameLog.
-     */
-    updateGameLogDisplay() {
-        if (!this.gameLogElement) {
-            console.warn("UIManager: gameLogElement не найден. Невозможно обновить отображение лога.");
-            return;
-        }
-        if (window.gameState && Array.isArray(window.gameState.gameLog)) {
-            // Используем DocumentFragment для оптимизации: уменьшаем количество операций с DOM
-            const fragment = document.createDocumentFragment();
-            window.gameState.gameLog.forEach(msg => {
-                const p = document.createElement('p');
-                p.textContent = msg;
-                fragment.appendChild(p);
-            });
-            this.gameLogElement.innerHTML = ''; // Очищаем старое содержимое
-            this.gameLogElement.appendChild(fragment); // Добавляем новое
-            this.gameLogElement.scrollTop = this.gameLogElement.scrollHeight; // Прокручиваем вниз
-        } else {
-            console.warn("UIManager: Невозможно обновить отображение лога, window.gameState.gameLog не массив.");
-        }
-    }
-};
-
-// Делаем UIManager глобально доступным
-window.uiManager = UIManager;
+                const community = window.gameState.community;
+                communityStatusElement.innerHTML = `
+                    <p><img src="assets/icons/survivor.png" alt="Выжившие" class="status-icon"> Выживших:${community.survivors}</p>
+                    <p><img src="assets/icons/morale.png" alt="Мораль" class="status-icon"> Мораль:${community.morale}/${community.maxMorale}</p>
+                    <p><img src="assets/icons/safety.png" alt="Безопасность" class="status-icon"> Безопасность:${Math.round((community.safety / community.maxSafety) * 100)}%</p>
+                    <p><img src="assets/icons/food.png" alt="Еда" class="status-icon"> Еда:${community.resources.food}</p>
+                    <p><img src="assets/icons/water.png" alt="Вода" class="status-icon"> Вода:${community.resources.water}</p>
+                    <p><img src="assets/icons/shelter.png" alt="Убежище" class="status-icon"> Убежище:Уровень ${community.facilities.shelter_level}</p>
+                    `;
+            },
+        };
+    })(); // Самовыполняющаяся функция для создания синглтона
+}
