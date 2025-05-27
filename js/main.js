@@ -8,150 +8,147 @@ window.gameState = {
     factions: {},    // Репутация с фракциями (будет заполнена FactionManager)
     currentSceneId: 'abandoned_building_start', // ID текущей сцены
     gameDay: 1,      // Текущий игровой день
-    gameLog: [],     // Игровой лог для сообщений
+    gameLog: [],     // Игровой лог для сообщений (будет заполняться UIManager)
     // Дополнительные игровые состояния, если нужны
 };
 
-// --- Основные функции игры ---
+// --- Основные глобальные функции игры ---
 
-// !!! ВАЖНОЕ ИСПРАВЛЕНИЕ !!!
-// Делаем функцию добавления в лог глобально доступной сразу.
-// Теперь она будет вызывать метод uiManager.addGameLog, который уже настроен на работу с DOM и gameState.
-// uiManager.js должен быть загружен в HTML до main.js для этого.
+/**
+ * Добавляет сообщение в игровой лог. Это обертка вокруг window.uiManager.addGameLog.
+ * Используйте эту функцию во всех игровых файлах для логирования.
+ * @param {string} message - Сообщение для добавления.
+ */
 window.addGameLog = function(message) {
-    // window.uiManager.addGameLog() сам управляет timestamp и сохранением в gameState.gameLog,
-    // а также обновлением DOM.
+    // Проверяем, что uiManager и его метод addGameLog доступны
     if (window.uiManager && typeof window.uiManager.addGameLog === 'function') {
         window.uiManager.addGameLog(message);
     } else {
-        // Запасной вариант, если uiManager еще не инициализирован или не содержит addGameLog
-        console.warn("UIManager.addGameLog еще не доступен. Сообщение: " + message);
-        // Можно добавить сообщение в gameLog напрямую, но оно не будет отображено сразу
-        if (window.gameState && window.gameState.gameLog) {
-            const timestamp = new Date().toLocaleTimeString();
-            window.gameState.gameLog.unshift(`[${timestamp}] ${message}`);
-            if (window.gameState.gameLog.length > 50) {
-                window.gameState.gameLog.pop();
+        // Запасной вариант, если uiManager еще не полностью инициализирован (хотя не должен срабатывать при правильном порядке)
+        console.warn("window.uiManager.addGameLog еще не доступен. Сообщение: " + message);
+        // Если лог совсем не работает, выводим напрямую в консоль
+        console.log(`[FALLBACK LOG] ${message}`);
+    }
+};
+
+/**
+ * Загружает и отображает новую сцену.
+ * @param {string} sceneId - ID сцены для загрузки.
+ * @param {boolean} triggerOnEnter - Вызывать ли onEnter для сцены. По умолчанию true.
+ */
+window.loadScene = function(sceneId, triggerOnEnter = true) {
+    const scene = GameScenes[sceneId];
+    if (!scene) {
+        window.addGameLog(`Ошибка: Сцена с ID "${sceneId}" не найдена!`);
+        window.loadScene('player_death', false); // Переход к сцене ошибки или game over
+        return;
+    }
+
+    window.gameState.currentSceneId = sceneId;
+    window.addGameLog(`Загружена сцена: "${scene.name}"`);
+
+    // Выполняем действия, которые должны произойти при входе в сцену (если есть)
+    if (triggerOnEnter && scene.onEnter) {
+        scene.onEnter(window.gameState.player, window.gameState.community);
+    }
+
+    // Обновляем UI
+    window.uiManager.displayGameText(scene.description);
+    // Мапим опции для displayOptions, чтобы они вызывали loadScene
+    window.uiManager.displayOptions(scene.options.map(option => ({
+        text: option.text,
+        action: () => {
+            // Если опция ведет к новой сцене, просто загружаем её
+            if (option.nextScene) {
+                window.loadScene(option.nextScene);
+            } else if (option.customAction) {
+                // Если есть кастомное действие, выполняем его
+                option.customAction();
+                // После кастомного действия, возможно, нужно обновить текущую сцену
+                // или перейти к новой, если действие не привело к смене сцены
+                window.loadScene(window.gameState.currentSceneId, false); // Обновляем текущую сцену без вызова onEnter
             }
         }
+    })));
+
+    // Проверяем условия Game Over после загрузки сцены
+    checkGameOverConditions();
+    window.uiManager.updateAllStatus(); // Убеждаемся, что статус всегда актуален
+};
+
+/**
+ * Проверяет условия завершения игры (Game Over).
+ */
+function checkGameOverConditions() {
+    const player = window.gameState.player;
+    const community = window.gameState.community;
+
+    if (player.health <= 0) {
+        window.addGameLog('Ваше здоровье иссякло. Вы не смогли больше бороться. Это конец вашего пути.');
+        window.loadScene('player_death', false); // Загружаем сцену смерти без повторного onEnter
+        return true;
     }
+    // Если выживших в общине нет (кроме самого игрока) И игрок не погиб
+    // Добавлено условие, что убежище должно быть разрушено, иначе можно просто умереть от голода/жажды и община будет жива
+    if (community.survivors <= 1 && player.health > 0 && community.facilities.shelter_level === 0) {
+        window.addGameLog('Ваше убежище разрушено, а община погибла. Вы остались один, без надежды на восстановление.');
+        window.loadScene('player_death', false); // Можно сделать отдельную сцену "Одинокий конец"
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Функция для перехода к следующему игровому дню (ежедневный цикл).
+ * Вызывается по триггеру (например, кнопка "Отдохнуть" или событие).
+ */
+window.nextGameDay = function() {
+    window.gameState.gameDay++;
+    window.addGameLog(`Наступил день ${window.gameState.gameDay}.`);
+
+    // Ежедневные действия игрока
+    window.gameState.player.passDay();
+
+    // Ежедневные действия общины
+    window.gameState.community.passDay();
+
+    // Обновляем UI
+    window.uiManager.updateAllStatus();
+    // uiManager.addGameLog('Произошли ежедневные события.'); // Это уже делается в passDay() или loadScene()
+
+    // Загружаем текущую сцену заново, чтобы обновились опции
+    // (например, если какие-то действия стали доступны/недоступны)
+    window.loadScene(window.gameState.currentSceneId, false); // false, чтобы не вызывать onEnter снова
+
+    // Проверяем условия Game Over после всех ежедневных событий
+    checkGameOverConditions();
 };
 
 
 // Загружаем DOM перед инициализацией скриптов
 document.addEventListener('DOMContentLoaded', () => {
-    window.addGameLog('Игра загружена! Инициализация...'); // Используем новую глобальную функцию
+    // !!! ВАЖНО: uiManager.init() должен быть вызван как можно раньше,
+    // после того как DOM гарантированно загружен и элемент #game-log существует.
+    // Если он вызывает document.getElementById, то DOM должен быть готов.
+    window.uiManager.init(); // Инициализируем UIManager первым делом!
+
+    // Теперь, когда uiManager инициализирован и gameLogElement найден,
+    // можно безопасно использовать window.addGameLog
+    window.addGameLog('Игра загружена! Инициализация...');
 
     // Инициализируем игровые объекты
     window.gameState.player = new Player();
     window.gameState.community = new Community();
 
     // Инициализируем менеджеры
+    // Эти менеджеры могут использовать window.addGameLog, который теперь работает через uiManager.
     window.craftingManager = new CraftingManager();
     window.factionManager = new FactionManager();
     window.combatManager = new CombatManager(); // Инициализируем CombatManager
     
-    // Инициализируем UIManager (он будет отвечать за обновление HTML)
-    // Важно: uiManager должен быть инициализирован после player и community
-    // и после того, как все GameScenes, GameItems и т.д. загружены.
-    // А также после определения window.addGameLog, если мы его используем как глобальную функцию.
-    window.uiManager.init(); // Теперь uiManager.init() вызовется после того, как window.addGameLog существует
-
     // Инициализируем репутацию фракций
-    window.factionManager.initFactions(); // Теперь эта функция сможет использовать window.addGameLog
-
-    /**
-     * Загружает и отображает новую сцену.
-     * @param {string} sceneId - ID сцены для загрузки.
-     * @param {boolean} triggerOnEnter - Вызывать ли onEnter для сцены. По умолчанию true.
-     */
-    window.loadScene = function(sceneId, triggerOnEnter = true) {
-        const scene = GameScenes[sceneId];
-        if (!scene) {
-            window.addGameLog(`Ошибка: Сцена с ID "${sceneId}" не найдена!`);
-            window.loadScene('player_death'); // Переход к сцене ошибки или game over
-            return;
-        }
-
-        window.gameState.currentSceneId = sceneId;
-        window.addGameLog(`Загружена сцена: "${scene.name}"`);
-
-        // Выполняем действия, которые должны произойти при входе в сцену (если есть)
-        if (triggerOnEnter && scene.onEnter) {
-            scene.onEnter(window.gameState.player, window.gameState.community);
-        }
-
-        // Обновляем UI
-        window.uiManager.displayGameText(scene.description);
-        // Мапим опции для displayOptions, чтобы они вызывали loadScene
-        window.uiManager.displayOptions(scene.options.map(option => ({
-            text: option.text,
-            action: () => {
-                // Если опция ведет к новой сцене, просто загружаем её
-                if (option.nextScene) {
-                    window.loadScene(option.nextScene);
-                } else if (option.customAction) {
-                    // Если есть кастомное действие, выполняем его
-                    option.customAction();
-                    // После кастомного действия, возможно, нужно обновить текущую сцену
-                    // или перейти к новой, если действие не привело к смене сцены
-                    window.loadScene(window.gameState.currentSceneId, false); // Обновляем текущую сцену без вызова onEnter
-                }
-            }
-        })));
-
-        // Проверяем условия Game Over после загрузки сцены
-        checkGameOverConditions();
-        window.uiManager.updateAllStatus(); // Убеждаемся, что статус всегда актуален
-    };
-
-    /**
-     * Проверяет условия завершения игры (Game Over).
-     */
-    function checkGameOverConditions() {
-        const player = window.gameState.player;
-        const community = window.gameState.community;
-
-        if (player.health <= 0) {
-            window.addGameLog('Ваше здоровье иссякло. Вы не смогли больше бороться. Это конец вашего пути.');
-            window.loadScene('player_death', false); // Загружаем сцену смерти без повторного onEnter
-            return true;
-        }
-        // Если выживших в общине нет (кроме самого игрока) И игрок не погиб
-        // Добавлено условие, что убежище должно быть разрушено, иначе можно просто умереть от голода/жажды и община будет жива
-        if (community.survivors <= 1 && player.health > 0 && community.facilities.shelter_level === 0) {
-            window.addGameLog('Ваше убежище разрушено, а община погибла. Вы остались один, без надежды на восстановление.');
-            window.loadScene('player_death', false); // Можно сделать отдельную сцену "Одинокий конец"
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Функция для перехода к следующему игровому дню (ежедневный цикл).
-     * Вызывается по триггеру (например, кнопка "Отдохнуть" или событие).
-     */
-    window.nextGameDay = function() {
-        window.gameState.gameDay++;
-        window.addGameLog(`Наступил день ${window.gameState.gameDay}.`);
-
-        // Ежедневные действия игрока
-        window.gameState.player.passDay();
-
-        // Ежедневные действия общины
-        window.gameState.community.passDay();
-
-        // Обновляем UI
-        window.uiManager.updateAllStatus();
-        window.uiManager.addGameLog('Произошли ежедневные события.');
-
-        // Загружаем текущую сцену заново, чтобы обновились опции
-        // (например, если какие-то действия стали доступны/недоступны)
-        window.loadScene(window.gameState.currentSceneId, false); // false, чтобы не вызывать onEnter снова
-
-        // Проверяем условия Game Over после всех ежедневных событий
-        checkGameOverConditions();
-    };
+    // Здесь factionManager будет вызывать window.addGameLog, который уже настроен.
+    window.factionManager.initFactions();
 
     // Запускаем первую сцену после полной инициализации
     window.loadScene(window.gameState.currentSceneId);
