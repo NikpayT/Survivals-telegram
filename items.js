@@ -7,7 +7,7 @@ const ITEM_DEFINITIONS = {
         name: "Консервы",
         description: "Банка тушенки или чего-то похожего. Сытно.",
         type: "food",
-        effect: { hunger: 25 }, // Восстанавливает 25 ед. сытости
+        effect: { hunger: 25 }, 
         weight: 0.5,
         stackable: true,
     },
@@ -16,17 +16,29 @@ const ITEM_DEFINITIONS = {
         name: "Объедки",
         description: "Не первой свежести, но лучше, чем ничего.",
         type: "food",
-        effect: { hunger: 10, morale_debuff: 1 }, // Небольшой штраф к морали (пока не реализовано)
+        effect: { hunger: 10, morale_debuff: 1 },
         weight: 0.2,
         stackable: true,
     },
+    // --- НОВЫЙ РЕСУРС ЕДЫ ---
+    mutated_fruit: {
+        id: "mutated_fruit",
+        name: "Мутировавший фрукт",
+        description: "Странного вида фрукт, возможно, съедобный. Слегка фонит.",
+        type: "food",
+        effect: { hunger: 15, radiation: 5 }, // Добавляет немного радиации (механика пока не введена)
+        weight: 0.3,
+        stackable: true,
+        locationSpecific: ["small_forest_edge", "irradiated_zone"] // Пример, где чаще встречается
+    },
+
     // --- ВОДА ---
     water_dirty: {
         id: "water_dirty",
         name: "Грязная вода",
         description: "Мутная жижа. Лучше очистить перед употреблением.",
-        type: "water_source", // Можно пить, но с риском, или использовать для очистки
-        effect: { thirst: 15, sickness_chance: 0.3 }, // Восстанавливает жажду, но есть шанс заболеть
+        type: "water_source", 
+        effect: { thirst: 15, sickness_chance: 0.3 }, 
         weight: 1.0,
         stackable: true,
     },
@@ -39,7 +51,8 @@ const ITEM_DEFINITIONS = {
         weight: 1.0,
         stackable: true,
     },
-    // --- МАТЕРИАЛЫ ---
+
+    // --- МАТЕРИАЛЫ (старые) ---
     scrap_metal: {
         id: "scrap_metal",
         name: "Металлолом",
@@ -72,13 +85,42 @@ const ITEM_DEFINITIONS = {
         weight: 0.1,
         stackable: true,
     },
+    // --- НОВЫЕ РЕСУРСЫ МАТЕРИАЛОВ ---
+    chemicals: {
+        id: "chemicals",
+        name: "Химикаты",
+        description: "Различные химические вещества в сомнительных контейнерах. Могут быть полезны для крафта или опасны.",
+        type: "material",
+        weight: 0.2,
+        stackable: true,
+        locationSpecific: ["gas_station_ruins", "old_lab"] 
+    },
+    leather_scraps: {
+        id: "leather_scraps",
+        name: "Обрывки кожи",
+        description: "Куски старой, потрескавшейся кожи. Можно использовать для ремонта или создания простой брони.",
+        type: "material",
+        weight: 0.15,
+        stackable: true,
+        locationSpecific: ["abandoned_road", "hunter_shack"]
+    },
+    wires: {
+        id: "wires",
+        name: "Провода",
+        description: "Моток тонких проводов, выдранных из старой техники.",
+        type: "material", // Можно сделать подтипом компонентов
+        weight: 0.05,
+        stackable: true,
+        locationSpecific: ["urban_ruins", "gas_station_ruins"]
+    },
+
     // --- МЕДИКАМЕНТЫ ---
     bandages_crude: {
         id: "bandages_crude",
         name: "Грубые бинты",
         description: "Сделаны из грязной ткани. Лучше, чем ничего.",
         type: "medicine",
-        effect: { healing: 10, infection_chance: 0.1 }, // Лечит немного, но может вызвать инфекцию
+        effect: { healing: 10, infection_chance: 0.1 }, 
         weight: 0.1,
         stackable: true,
     },
@@ -91,16 +133,27 @@ const ITEM_DEFINITIONS = {
         weight: 0.2,
         stackable: true,
     },
-    stimpack_fallout: { // Явное указание на Fallout для примера
+    stimpack_fallout: { 
         id: "stimpack_fallout",
         name: "Стимулятор",
         description: "Быстрое восстановление здоровья. Классика Пустошей.",
         type: "medicine",
         effect: { healing: 50 },
         weight: 0.1,
-        stackable: false, // Стимуляторы обычно не стакаются в одном слоте (каждый - отдельный предмет)
+        stackable: false, 
     },
-    // --- ИНСТРУМЕНТЫ (пока без особой механики, просто для наличия) ---
+    // --- НОВЫЙ РЕСУРС МЕДИЦИНСКИЙ/ТРАВЫ ---
+    healing_herbs: {
+        id: "healing_herbs",
+        name: "Целебные травы",
+        description: "Пучок высушенных трав с легким лекарственным запахом. Можно использовать для приготовления отваров.",
+        type: "material", // Или "medicine_ingredient"
+        weight: 0.05,
+        stackable: true,
+        locationSpecific: ["small_forest_edge", " overgrown_park"]
+    },
+
+    // --- ИНСТРУМЕНТЫ ---
     tool_hammer: {
         id: "tool_hammer",
         name: "Молоток",
@@ -109,7 +162,18 @@ const ITEM_DEFINITIONS = {
         weight: 1.0,
         stackable: false,
     },
-    // --- ОСОБЫЕ/КВЕСТОВЫЕ (пример) ---
+    // --- НОВЫЙ ИНСТРУМЕНТ/РЕСУРС ---
+    broken_electronics: {
+        id: "broken_electronics",
+        name: "Сломанная электроника",
+        description: "Нерабочий электронный прибор. Можно разобрать на компоненты или провода.",
+        type: "material", // Можно разбирать на "components" и "wires" через крафт
+        weight: 0.8,
+        stackable: true,
+        locationSpecific: ["urban_ruins", "abandoned_road"]
+    },
+    
+    // --- ОСОБЫЕ/КВЕСТОВЫЕ ---
     diary_page: {
         id: "diary_page",
         name: "Вырванная страница дневника",
@@ -120,5 +184,4 @@ const ITEM_DEFINITIONS = {
     }
 };
 
-// Сделаем доступным глобально
 window.ITEM_DEFINITIONS = ITEM_DEFINITIONS;
