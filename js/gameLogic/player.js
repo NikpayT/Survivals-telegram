@@ -33,8 +33,7 @@ class Player {
         this.health += amount;
         if (this.health > 100) this.health = 100;
         if (this.health < 0) this.health = 0; // Игрок мертв, если health <= 0
-        console.log(`Здоровье: ${this.health}`);
-        // Оповещаем UI об изменении (будет реализовано в uiManager)
+        window.addGameLog(`Здоровье изменено на ${amount}. Текущее: ${this.health}`);
         window.uiManager.updatePlayerStatus();
     }
 
@@ -46,7 +45,6 @@ class Player {
         this.hunger += amount;
         if (this.hunger > 100) this.hunger = 100;
         if (this.hunger < 0) this.hunger = 0;
-        console.log(`Голод: ${this.hunger}`);
         window.uiManager.updatePlayerStatus();
     }
 
@@ -58,7 +56,6 @@ class Player {
         this.thirst += amount;
         if (this.thirst > 100) this.thirst = 100;
         if (this.thirst < 0) this.thirst = 0;
-        console.log(`Жажда: ${this.thirst}`);
         window.uiManager.updatePlayerStatus();
     }
 
@@ -70,7 +67,6 @@ class Player {
         this.fatigue += amount;
         if (this.fatigue > 100) this.fatigue = 100;
         if (this.fatigue < 0) this.fatigue = 0;
-        console.log(`Усталость: ${this.fatigue}`);
         window.uiManager.updatePlayerStatus();
     }
 
@@ -85,7 +81,7 @@ class Player {
         } else {
             this.inventory[itemId] = quantity;
         }
-        console.log(`Добавлено в инвентарь: ${GameItems[itemId].name} x${quantity}`);
+        window.addGameLog(`Найден предмет: ${GameItems[itemId].name} x${quantity}`);
         window.uiManager.updatePlayerInventory();
     }
 
@@ -101,11 +97,10 @@ class Player {
             if (this.inventory[itemId] <= 0) {
                 delete this.inventory[itemId];
             }
-            console.log(`Удалено из инвентаря: ${GameItems[itemId].name} x${quantity}`);
             window.uiManager.updatePlayerInventory();
             return true;
         }
-        console.warn(`Недостаточно ${GameItems[itemId] ? GameItems[itemId].name : itemId} в инвентаре.`);
+        window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Недостаточно ${GameItems[itemId] ? GameItems[itemId].name : itemId} в инвентаре.`);
         return false;
     }
 
@@ -126,11 +121,11 @@ class Player {
     useItem(itemId) {
         const item = GameItems[itemId];
         if (!item || item.type !== 'consumable') {
-            console.warn(`Предмет ${itemId} не является расходуемым или не существует.`);
+            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Предмет ${itemId} не является расходуемым или не существует.`);
             return false;
         }
         if (!this.hasItem(itemId, 1)) {
-            console.warn(`У вас нет ${item.name}.`);
+            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] У вас нет ${item.name}.`);
             return false;
         }
 
@@ -150,15 +145,14 @@ class Player {
                         case 'fatigue':
                             this.adjustFatigue(item.effect[effectType]);
                             break;
-                        // Добавляем новые эффекты здесь по мере необходимости
                         case 'waterPurity':
-                            // Логика для очистки воды
-                            console.log('Вода очищена!'); // Заглушка
+                            // Пока заглушка для эффекта очистки воды
+                            window.addGameLog(`Вода очищена!`);
                             break;
+                        // Добавляем новые эффекты здесь по мере необходимости
                     }
                 }
             }
-            console.log(`Использован предмет: ${item.name}`);
             return true;
         }
         return false;
@@ -185,11 +179,11 @@ class Player {
     equipWeapon(itemId) {
         const item = GameItems[itemId];
         if (!item || item.type !== 'weapon') {
-            console.warn(`Предмет ${itemId} не является оружием.`);
+            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Предмет ${itemId} не является оружием.`);
             return false;
         }
         if (!this.hasItem(itemId, 1)) {
-            console.warn(`У вас нет ${item.name} для экипировки.`);
+            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] У вас нет ${item.name} для экипировки.`);
             return false;
         }
 
@@ -199,7 +193,7 @@ class Player {
         }
         this.equipment.weapon = itemId;
         this.removeItem(itemId, 1); // Удаляем из инвентаря, оно теперь экипировано
-        console.log(`Экипировано: ${item.name}`);
+        window.uiManager.updatePlayerStatus(); // Обновляем статус, чтобы показать оружие
         window.uiManager.updatePlayerInventory(); // Обновляем инвентарь для отображения
         return true;
     }
@@ -212,10 +206,48 @@ class Player {
             const weaponId = this.equipment.weapon;
             this.addItem(weaponId, 1); // Возвращаем в инвентарь
             this.equipment.weapon = null;
-            console.log(`Снято оружие: ${GameItems[weaponId].name}`);
+            window.uiManager.updatePlayerStatus(); // Обновляем статус
             window.uiManager.updatePlayerInventory();
         }
     }
+
+    /**
+     * Экипирует броню (пример).
+     * @param {string} itemId - ID брони.
+     */
+    equipArmor(itemId) {
+        const item = GameItems[itemId];
+        if (!item || item.type !== 'armor') {
+            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Предмет ${itemId} не является броней.`);
+            return false;
+        }
+        if (!this.hasItem(itemId, 1)) {
+            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] У вас нет ${item.name} для экипировки.`);
+            return false;
+        }
+        if (this.equipment.armor) {
+            this.addItem(this.equipment.armor, 1);
+        }
+        this.equipment.armor = itemId;
+        this.removeItem(itemId, 1);
+        window.uiManager.updatePlayerStatus();
+        window.uiManager.updatePlayerInventory();
+        return true;
+    }
+
+    /**
+     * Снимает броню.
+     */
+    unequipArmor() {
+        if (this.equipment.armor) {
+            const armorId = this.equipment.armor;
+            this.addItem(armorId, 1);
+            this.equipment.armor = null;
+            window.uiManager.updatePlayerStatus();
+            window.uiManager.updatePlayerInventory();
+        }
+    }
+
 
     /**
      * Проверяет, жив ли игрок.
@@ -233,11 +265,10 @@ class Player {
     gainSkillExp(skillName, amount = 1) {
         if (this.skills[skillName] !== undefined) {
             this.skills[skillName] += amount;
-            console.log(`Навык "${skillName}" повышен до ${this.skills[skillName]}`);
-            // В будущем можно добавить систему уровней навыков и уведомления
+            window.addGameLog(`Навык "${skillName}" повышен до ${this.skills[skillName]}`);
             window.uiManager.updatePlayerStatus(); // Обновляем UI, если есть отображение навыков
         } else {
-            console.warn(`Попытка повысить несуществующий навык: ${skillName}`);
+            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Попытка повысить несуществующий навык: ${skillName}`);
         }
     }
 
