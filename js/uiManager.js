@@ -13,7 +13,8 @@ if (typeof window.uiManager === 'undefined') {
         let communityStatusElement;
         let playerInventoryList;
         let communityStorageList;
-        let craftingRecipesElement; // Добавлен для CraftingManager
+        let craftingRecipesElement;
+        let gameDayDisplayElement; // Для отображения дня
 
         // Приватные методы для инициализации
         function initializeElements() {
@@ -24,7 +25,8 @@ if (typeof window.uiManager === 'undefined') {
             communityStatusElement = document.getElementById('community-status');
             playerInventoryList = document.getElementById('player-inventory-list');
             communityStorageList = document.getElementById('community-storage-list');
-            craftingRecipesElement = document.getElementById('crafting-recipes'); // Инициализация
+            craftingRecipesElement = document.getElementById('crafting-recipes');
+            gameDayDisplayElement = document.getElementById('game-day-display'); // Находим элемент для дня
 
             // Проверки на существование элементов
             if (!gameLogElement) console.warn("UIManager: Элемент #game-log не найден.");
@@ -35,6 +37,7 @@ if (typeof window.uiManager === 'undefined') {
             if (!playerInventoryList) console.warn("UIManager: Элемент #player-inventory-list не найден.");
             if (!communityStorageList) console.warn("UIManager: Элемент #community-storage-list не найден.");
             if (!craftingRecipesElement) console.warn("UIManager: Элемент #crafting-recipes не найден.");
+            if (!gameDayDisplayElement) console.warn("UIManager: Элемент #game-day-display не найден.");
         }
 
         // Публичные методы
@@ -42,8 +45,7 @@ if (typeof window.uiManager === 'undefined') {
             init: function() {
                 console.log('UIManager: Инициализация...');
                 initializeElements();
-                console.log('UIManager: Инициализация завершена. Проверенные элементы:');
-                // Выводим только имена переменных, чтобы избежать вывода всего DOM-элемента, если он большой
+                console.log('UIManager: Инициализация завершена. Проверенные элементы (true - найден, false - не найден):');
                 console.log({
                     gameLogElement: !!gameLogElement,
                     gameTextElement: !!gameTextElement,
@@ -52,32 +54,29 @@ if (typeof window.uiManager === 'undefined') {
                     communityStatusElement: !!communityStatusElement,
                     playerInventoryList: !!playerInventoryList,
                     communityStorageList: !!communityStorageList,
-                    craftingRecipesElement: !!craftingRecipesElement
+                    craftingRecipesElement: !!craftingRecipesElement,
+                    gameDayDisplayElement: !!gameDayDisplayElement
                 });
-                // this.addGameLog('Система интерфейса инициализирована.'); // Закомментировано, чтобы избежать вызова до полной инициализации gameState
+                // this.addGameLog('Система интерфейса инициализирована.'); // Можно раскомментировать после полной загрузки gameState
             },
 
-            // Обновляет текстовое описание игры
             displayGameText: function(text) {
                 if (gameTextElement) {
-                    gameTextElement.innerHTML = `<p>${text || ''}</p>`; // Добавлена проверка на undefined text
+                    gameTextElement.innerHTML = `<p>${text || ''}</p>`;
                 } else {
                     console.warn("displayGameText: Элемент #game-text не найден.");
                 }
             },
 
-            // Отображает доступные опции (кнопки)
             displayOptions: function(options) {
                 if (optionsContainer) {
-                    optionsContainer.innerHTML = ''; // Очищаем предыдущие опции
+                    optionsContainer.innerHTML = '';
                     if (options && options.length > 0) {
                         options.forEach(option => {
                             const button = document.createElement('button');
                             button.textContent = option.text;
-                            // Убедимся, что класс добавляется, как в твоем CSS, если есть (.option-button или .game-option-button)
-                            button.classList.add('option-button'); // или 'game-option-button' в зависимости от твоего CSS
+                            button.classList.add('option-button'); // Убедись, что класс соответствует твоему CSS
                             button.addEventListener('click', () => {
-                                // Отключаем все кнопки, чтобы предотвратить множественные клики
                                 Array.from(optionsContainer.children).forEach(btn => btn.disabled = true);
                                 if (option.action && typeof option.action === 'function') {
                                     option.action();
@@ -85,35 +84,26 @@ if (typeof window.uiManager === 'undefined') {
                             });
                             optionsContainer.appendChild(button);
                         });
-                    } else {
-                         // Можно добавить сообщение, если опций нет, или оставить пустым
-                        // optionsContainer.innerHTML = '<p>Нет доступных действий.</p>';
                     }
                 } else {
                     console.warn("displayOptions: Элемент #options-container не найден.");
                 }
             },
 
-            // Добавляет сообщение в игровой лог
             addGameLog: function(message) {
-                // Проверка на isGameOver, чтобы не добавлять логи после смерти
-                // Логика определения "сообщений о смерти" и блокировки логов после Game Over
-                // (A && B && C) || D || E - (window.gameState && window.gameState.isGameOver && message.includes('погибли')) || message.includes('здоровье иссякло') || message.includes('община погибла')
                 if ((window.gameState && window.gameState.isGameOver && message && message.includes('погибли')) || (message && message.includes('здоровье иссякло')) || (message && message.includes('община погибла'))) {
                     if (gameLogElement) {
                         const entry = document.createElement('p');
-                        entry.classList.add('game-log-entry', 'game-over-log'); // Класс для особых сообщений
+                        entry.classList.add('game-log-entry', 'game-over-log');
                         entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
                         gameLogElement.prepend(entry);
                         if (gameLogElement.children.length > 50) {
                             gameLogElement.removeChild(gameLogElement.lastChild);
                         }
                     }
-                    return; 
+                    return;
                 } else if (window.gameState && window.gameState.isGameOver) {
-                    // Блокируем все остальные логи, если игра уже завершена
-                    // console.log(`[LOG BLOCKED DUE TO GAME OVER] ${message}`); // для отладки
-                    return; 
+                    return;
                 }
 
                 if (gameLogElement) {
@@ -121,21 +111,18 @@ if (typeof window.uiManager === 'undefined') {
                     entry.classList.add('game-log-entry');
                     entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
                     gameLogElement.prepend(entry);
-                    if (gameLogElement.children.length > 50) { 
+                    if (gameLogElement.children.length > 50) {
                         gameLogElement.removeChild(gameLogElement.lastChild);
                     }
                 } else {
-                    // Лог в консоль, если элемент не найден (может случиться при очень ранних ошибках)
                     console.warn(`addGameLog: Элемент #game-log не найден. Сообщение: [${new Date().toLocaleTimeString()}] ${message}`);
                 }
             },
 
-            // Обновляет всю информацию о статусе игрока и общины
             updateAllStatus: function() {
                 this.updatePlayerStatus();
-                this.updateCommunityStatus();
-                
-                // Обновление инвентаря и крафта, если менеджеры доступны
+                this.updateCommunityStatus(); // Также обновит день игры
+
                 if (window.inventoryManager && typeof window.inventoryManager.displayPlayerInventory === 'function') {
                     window.inventoryManager.displayPlayerInventory();
                 } else {
@@ -157,12 +144,11 @@ if (typeof window.uiManager === 'undefined') {
             // Обновляет статус игрока (БЕЗ ИЗОБРАЖЕНИЙ)
             updatePlayerStatus: function() {
                 if (!playerStatusElement || !window.gameState || !window.gameState.player) {
-                    console.warn("updatePlayerStatus: Элемент статуса игрока (#player-status), gameState или gameState.player не найдены/не инициализированы.");
+                    console.warn("updatePlayerStatus: Элемент #player-status, gameState или gameState.player не найдены/не инициализированы.");
                     if(playerStatusElement) playerStatusElement.innerHTML = '<p>Данные игрока недоступны.</p>';
                     return;
                 }
                 const player = window.gameState.player;
-                // Убедимся, что все свойства игрока существуют перед использованием
                 const health = player.health !== undefined ? player.health : 'N/A';
                 const maxHealth = player.maxHealth !== undefined ? player.maxHealth : 'N/A';
                 const stamina = player.stamina !== undefined ? player.stamina : 'N/A';
@@ -170,7 +156,7 @@ if (typeof window.uiManager === 'undefined') {
                 const hungerPercent = (player.hunger !== undefined && player.maxHunger) ? Math.round((player.hunger / player.maxHunger) * 100) : 'N/A';
                 const thirstPercent = (player.thirst !== undefined && player.maxThirst) ? Math.round((player.thirst / player.maxThirst) * 100) : 'N/A';
                 const fatiguePercent = (player.fatigue !== undefined && player.maxFatigue) ? Math.round((player.fatigue / player.maxFatigue) * 100) : 'N/A';
-                const weapon = player.weapon ? player.weapon.name : 'Нет'; // Предполагается, что оружие - объект с именем
+                const weaponName = (player.weapon && player.weapon.name) ? player.weapon.name : 'Нет';
 
                 playerStatusElement.innerHTML = `
                     <p>Здоровье: ${health}/${maxHealth}</p>
@@ -178,19 +164,25 @@ if (typeof window.uiManager === 'undefined') {
                     <p>Голод: ${hungerPercent}%</p>
                     <p>Жажда: ${thirstPercent}%</p>
                     <p>Усталость: ${fatiguePercent}%</p>
-                    <p>Оружие: ${weapon}</p>
+                    <p>Оружие: ${weaponName}</p>
                     `;
             },
 
-            // Обновляет статус общины (БЕЗ ИЗОБРАЖЕНИЙ)
+            // Обновляет статус общины (БЕЗ ИЗОБРАЖЕНИЙ) и день игры
             updateCommunityStatus: function() {
+                if (gameDayDisplayElement && window.gameState && window.gameState.gameDay !== undefined) {
+                    gameDayDisplayElement.textContent = window.gameState.gameDay;
+                } else if (gameDayDisplayElement) {
+                    gameDayDisplayElement.textContent = 'N/A';
+                }
+
+
                 if (!communityStatusElement || !window.gameState || !window.gameState.community) {
-                    console.warn("updateCommunityStatus: Элемент статуса общины (#community-status), gameState или gameState.community не найдены/не инициализированы.");
+                    console.warn("updateCommunityStatus: Элемент #community-status, gameState или gameState.community не найдены/не инициализированы.");
                      if(communityStatusElement) communityStatusElement.innerHTML = '<p>Данные общины недоступны.</p>';
                     return;
                 }
                 const community = window.gameState.community;
-                // Убедимся, что все свойства общины существуют
                 const survivors = community.survivors !== undefined ? community.survivors : 'N/A';
                 const morale = community.morale !== undefined ? community.morale : 'N/A';
                 const maxMorale = community.maxMorale !== undefined ? community.maxMorale : 'N/A';
@@ -198,14 +190,6 @@ if (typeof window.uiManager === 'undefined') {
                 const food = (community.resources && community.resources.food !== undefined) ? community.resources.food : 'N/A';
                 const water = (community.resources && community.resources.water !== undefined) ? community.resources.water : 'N/A';
                 const shelterLevel = (community.facilities && community.facilities.shelter_level !== undefined) ? community.facilities.shelter_level : 'N/A';
-                const gameDay = window.gameState.gameDay !== undefined ? window.gameState.gameDay : 'N/A';
-
-
-                // Обновление заголовка с днем игры
-                const dayDisplayElement = document.getElementById('game-day-display');
-                if (dayDisplayElement) {
-                    dayDisplayElement.textContent = gameDay;
-                }
 
                 communityStatusElement.innerHTML = `
                     <p>Выживших: ${survivors}</p>
@@ -217,5 +201,5 @@ if (typeof window.uiManager === 'undefined') {
                     `;
             },
         };
-    })(); // Самовыполняющаяся функция для создания синглтона
+    })();
 }
