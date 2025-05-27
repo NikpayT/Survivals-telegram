@@ -78,6 +78,15 @@ const GameItems = {
         rarity: 'uncommon',
         stackable: true
     },
+    'mutant_meat': { // Новый предмет: мясо мутанта
+        id: 'mutant_meat',
+        name: 'Мясо мутанта',
+        description: 'Сырое мясо убитого мутанта. Выглядит отвратительно, но съедобно после готовки.',
+        type: 'consumable',
+        effect: { hunger: -10, health: -5 }, // Немного утоляет голод, но вредно сырым
+        rarity: 'uncommon',
+        stackable: true
+    },
 
     // Оружие
     'old_knife': {
@@ -98,6 +107,28 @@ const GameItems = {
         damage: 25,
         durability: 30,
         ammoType: 'pistol_ammo',
+        rarity: 'uncommon',
+        stackable: false
+    },
+
+    // Броня (новый тип)
+    'ragged_clothes': {
+        id: 'ragged_clothes',
+        name: 'Рваная одежда',
+        description: 'Едва прикрывает тело, но лучше, чем ничего.',
+        type: 'armor',
+        defense: 5,
+        durability: 20,
+        rarity: 'common',
+        stackable: false
+    },
+    'leather_vest': {
+        id: 'leather_vest',
+        name: 'Кожаный жилет',
+        description: 'Самодельный жилет из кусков кожи. Неплохая защита.',
+        type: 'armor',
+        defense: 15,
+        durability: 60,
         rarity: 'uncommon',
         stackable: false
     },
@@ -123,7 +154,7 @@ const GameItems = {
         stackable: false
     },
 
-    // Дополнительные предметы (будут расширяться)
+    // Дополнительные предметы
     'bandages': {
         id: 'bandages',
         name: 'Бинты',
