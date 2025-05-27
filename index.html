@@ -18,6 +18,7 @@
                     <div class="status-item hunger"><span class="icon">🍔</span> Голод: <span id="player-hunger">0</span>%</div>
                     <div class="status-item thirst"><span class="icon">💧</span> Жажда: <span id="player-thirst">0</span>%</div>
                     <div class="status-item fatigue"><span class="icon">💤</span> Усталость: <span id="player-fatigue">0</span>%</div>
+                    <div class="status-item current-weapon"><span class="icon">🔪</span> Оружие: <span id="current-weapon">Нет</span></div>
                 </div>
                 <div class="status-group community-status">
                     <h3>Убежище</h3>
@@ -27,7 +28,7 @@
                     <div class="status-item food"><span class="icon">🥫</span> Еда: <span id="community-food">0</span></div>
                     <div class="status-item water"><span class="icon">🚰</span> Вода: <span id="community-water">0</span></div>
                 </div>
-                </div>
+            </div>
             <nav id="game-navigation">
                 <button id="nav-explore" class="nav-button active">Исследовать</button>
                 <button id="nav-inventory" class="nav-button">Инвентарь</button>
@@ -72,6 +73,12 @@
                     </div>
             </section>
         </main>
+
+        <div id="game-log-container">
+            <h3>Лента событий</h3>
+            <div id="game-log">
+                </div>
+        </div>
     </div>
 
     <script src="js/gameData/items.js"></script>
@@ -81,11 +88,11 @@
 
     <script src="js/gameLogic/player.js"></script>
     <script src="js/gameLogic/community.js"></script>
+
     <script src="js/gameLogic/inventoryManager.js"></script>
     <script src="js/gameLogic/craftingManager.js"></script>
     <script src="js/gameLogic/factionManager.js"></script>
-    <script src="js/gameLogic/gameLoop.js"></script>
-
-    <script src="js/uiManager.js"></script>
-    <script src="js/main.js"></script> </body>
+    <script src="js/gameLogic/combatManager.js"></script> <script src="js/gameLogic/gameLoop.js"></script> <script src="js/uiManager.js"></script>
+    <script src="js/main.js"></script>
+</body>
 </html>
