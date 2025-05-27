@@ -2,12 +2,12 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Важно для адаптивности -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <title>Пустошь: Выживание</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <button id="burger-menu-button">☰</button> <!-- Кнопка "бургер" -->
+    <button id="burger-menu-button">☰</button> 
 
     <div id="game-wrapper">
         <aside id="sidebar">
@@ -123,8 +123,9 @@
 
                 <div id="craft-tab" class="tab-content">
                     <h2>Изготовление Предметов</h2>
-                    <div id="crafting-recipes">
-                        <p><em>Нет доступных рецептов или не хватает материалов/инструментов.</em></p>
+                    <p>Мастерская Ур: <span id="workshop-level-display">0</span></p>
+                    <div id="crafting-recipes-list">
+                        <p><em>Рецепты не найдены или не выполнены условия.</em></p>
                     </div>
                 </div>
             </div>
@@ -147,7 +148,7 @@
         <div class="modal-content">
             <span class="close-button" onclick="game.closeInventoryModal()">×</span>
             <h2>Инвентарь Игрока (<span id="inventory-weight">0</span> / <span id="inventory-max-weight">25</span> кг)</h2>
-            <div class="inventory-filters player-inventory-filters"> <!-- Добавлен класс для уникальности -->
+            <div class="inventory-filters player-inventory-filters"> 
                 <button data-filter="all" class="active">Все</button>
                 <button data-filter="food">Еда</button>
                 <button data-filter="water_source">Вода</button>
@@ -170,6 +171,7 @@
     <script src="items.js"></script>
     <script src="buildings.js"></script>
     <script src="locations.js"></script>
+    <script src="recipes.js"></script> <!-- НОВЫЙ ФАЙЛ РЕЦЕПТОВ -->
     <script src="game_state.js"></script> 
     <script src="dom_elements.js"></script> 
     <script src="script.js"></script> 
