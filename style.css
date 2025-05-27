@@ -1,103 +1,176 @@
-/* Стилизация в духе m.xaos.mobi */
+/* Базовые стили */
 body {
     font-family: "Lucida Console", Monaco, monospace;
-    background-color: #000000;
+    background-color: #080808; /* Чуть светлее черного для фона */
     color: #CCCCCC;
     margin: 0;
-    padding: 10px;
+    padding: 0; /* Убираем padding с body */
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.5; /* Уменьшим для компактности */
+    display: flex; /* Для футера внизу */
+    flex-direction: column; /* Для футера внизу */
+    min-height: 100vh; /* Для футера внизу */
 }
 
-#game-container {
-    background-color: #111111;
-    border: 1px solid #333333;
-    margin: 0 auto;
-    padding: 15px;
-    width: 100%;
-    max-width: 750px; /* Немного увеличим для вкладок */
-    box-sizing: border-box;
-}
-
-header {
+#game-wrapper {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #444444;
-    padding-bottom: 10px;
+    flex-grow: 1; /* Занимает все доступное место */
+    width: 100%;
+    max-width: 1200px; /* Максимальная ширина игры */
+    margin: 0 auto; /* Центрирование */
+    background-color: #000; /* Фон под сайдбаром и мейном */
+}
+
+/* Сайдбар (левая панель навигации и статуса) */
+#sidebar {
+    width: 260px; /* Фиксированная ширина сайдбара */
+    background-color: #0e0e0e;
+    padding: 15px;
+    border-right: 1px solid #282828;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Если контента много */
+}
+
+#sidebar-header {
     margin-bottom: 20px;
+    text-align: center;
 }
-
-header h1 {
-    color: #FFFFFF;
-    margin: 0; /* Убрали лишние отступы */
-    font-size: 1.5em;
+#sidebar-header h2 {
+    color: #00AEEF;
+    margin: 0 0 10px 0;
+    font-size: 1.6em;
 }
-
-.header-button {
+.sidebar-button {
     background-color: #004488;
     color: #CCDDFF;
     border: 1px solid #0066CC;
-    padding: 6px 10px;
+    padding: 8px 15px;
     font-family: inherit;
-    font-size: 0.9em;
+    font-size: 1em;
     cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
 }
-.header-button:hover {
+.sidebar-button:hover {
     background-color: #0055A0;
 }
 
-
-.panel {
-    background-color: #0a0a0a;
+#main-nav button.nav-link {
+    display: block;
+    width: 100%;
     padding: 10px 15px;
-    margin-bottom: 15px;
-    border: 1px solid #282828;
-}
-
-.panel h2, .panel h3 {
+    margin-bottom: 5px;
+    background-color: #1a1a1a;
     color: #00AEEF;
-    margin-top: 0;
-    border-bottom: 1px solid #222222;
-    padding-bottom: 8px;
-    font-size: 1.2em;
+    border: 1px solid #282828;
+    text-align: left;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s, color 0.2s;
 }
-.panel h3 {
-    font-size: 1.1em;
-    color: #0088CC;
-    margin-top: 15px;
+#main-nav button.nav-link:hover {
+    background-color: #252525;
+    color: #fff;
 }
-
-
-#stats-panel p {
-    margin: 8px 0;
-}
-
-#stats-panel p span {
-    font-weight: bold;
-    color: #E0E0E0;
+#main-nav button.nav-link.active {
+    background-color: #0055AA;
+    color: #ffffff;
+    border-left: 3px solid #00AEEF;
 }
 
-#log-messages {
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid #222222;
+#player-status-condensed, #quick-stats {
+    background-color: #111;
+    border: 1px solid #222;
     padding: 10px;
-    background-color: #000000;
-    margin-top: 10px;
+    margin-top: 20px;
 }
-
-#log-messages p {
-    margin: 0 0 5px 0;
-    padding-bottom: 5px;
-    border-bottom: 1px dotted #333333;
+#player-status-condensed h4, #quick-stats h4 {
+    color: #00AEEF;
+    margin: 0 0 8px 0;
     font-size: 0.95em;
+    border-bottom: 1px solid #202020;
+    padding-bottom: 5px;
 }
-#log-messages p:last-child {
-    border-bottom: none;
+#player-status-condensed p, #quick-stats p {
+    margin: 5px 0;
+    font-size: 0.9em;
+}
+#player-status-condensed p span, #quick-stats p span {
+    color: #E0E0E0;
+    float: right; /* Значения справа */
 }
 
-button, .inline-action-button {
+
+/* Основной контент (правая часть) */
+#main-content {
+    flex-grow: 1;
+    padding: 20px;
+    background-color: #050505; /* Очень темный фон для контента */
+    overflow-y: auto; /* Если контента много */
+    display: flex;
+    flex-direction: column;
+}
+
+#main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+}
+#main-header h1 {
+    color: #FFFFFF;
+    margin: 0;
+    font-size: 1.8em;
+}
+#player-condition-display {
+    font-size: 0.95em;
+    color: #aaa;
+}
+#player-condition-display span {
+    color: #E0E0E0;
+    font-weight: bold;
+}
+
+
+#tab-content-area {
+    flex-grow: 1; /* Занимает доступное место перед логом */
+}
+
+.tab-content {
+    display: none; /* Скрыты по умолчанию */
+    animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content h2 {
+    color: #00AEEF;
+    font-size: 1.4em;
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #282828;
+    padding-bottom: 8px;
+}
+
+.action-group {
+    background-color: #0a0a0a;
+    border: 1px solid #222;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+.action-group h3 {
+    color: #0088CC;
+    margin: 0 0 10px 0;
+    font-size: 1.1em;
+}
+
+/* Стили для кнопок действий (общие) */
+button {
     background-color: #003366;
     color: #CCDDFF;
     border: 1px solid #0055AA;
@@ -106,34 +179,31 @@ button, .inline-action-button {
     cursor: pointer;
     font-family: inherit;
     font-size: 0.95em;
-    text-decoration: none;
-    display: inline-block;
+    transition: background-color 0.2s;
 }
-
-button:hover, .inline-action-button:hover {
+button:hover {
     background-color: #004488;
-    border-color: #0077CC;
 }
-
-button:disabled, .inline-action-button:disabled {
+button:disabled {
     background-color: #222222;
     color: #555555;
     border-color: #333333;
     cursor: not-allowed;
 }
 
-.inline-action-button {
-    padding: 4px 8px;
-    margin-left: 10px;
-}
-
-#build-actions button {
-    display: block;
-    width: calc(100% - 10px);
-    margin-bottom: 8px;
+#build-actions.action-grid button { /* Если хотим кнопки построек в грид */
+    min-width: 200px; /* Примерная ширина кнопки */
     text-align: left;
 }
+/* Если просто списком, то: */
+/* #build-actions button { display: block; width: calc(100% - 10px); margin-bottom: 8px; text-align: left; } */
 
+
+#event-text-display {
+    margin-bottom: 10px;
+    font-style: italic;
+    color: #ddd;
+}
 #event-actions button {
      background-color: #660000;
      border-color: #990000;
@@ -141,182 +211,88 @@ button:disabled, .inline-action-button:disabled {
 }
 #event-actions button:hover {
     background-color: #880000;
-    border-color: #BB0000;
 }
 
-/* Стили для вкладок */
-.tabs {
-    overflow: hidden;
-    border-bottom: 1px solid #282828;
-    margin-bottom: 10px;
-}
 
-.tab-link {
-    background-color: #1a1a1a;
-    color: #00AEEF;
-    float: left;
+/* Лог событий */
+#log-panel-container {
+    margin-top: auto; /* Прижимает лог к низу main-content */
+    padding-top: 15px; /* Отступ сверху, если #tab-content-area короткое */
+}
+#log-panel {
+    background-color: #0a0a0a;
     border: 1px solid #282828;
-    border-bottom: none;
-    outline: none;
-    cursor: pointer;
-    padding: 8px 12px;
-    transition: 0.3s;
-    font-size: 0.9em;
-    margin:0 2px -1px 0; /* Убираем двойные границы и выравниваем по нижней */
+    padding: 0; /* Убираем padding, т.к. он будет у .log-header и #log-messages */
 }
-
-.tab-link:hover {
-    background-color: #222;
-}
-
-.tab-link.active {
-    background-color: #0a0a0a; /* Такой же как у панели .panel */
-    border-bottom: 1px solid #0a0a0a; /* Скрываем нижнюю границу активной вкладки */
-    color: #FFFFFF;
-}
-
-.tab-content {
-    display: none;
-    padding: 6px 0; /* Уменьшим padding */
-    /* border-top: none; */ /* Не нужна, т.к. граница у .tabs */
-}
-
-
-/* Стили для модального окна инвентаря */
-.modal {
-    display: none; /* Скрыто по умолчанию */
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.7); /* Полупрозрачный фон */
-}
-
-.modal-content {
-    background-color: #0c0c0c;
-    margin: 5% auto; /* Центрирование и отступ сверху */
-    padding: 20px;
-    border: 1px solid #333;
-    width: 80%;
-    max-width: 650px;
-    color: #ccc;
-    position: relative;
-}
-
-.modal-content h2 {
-    color: #00AEEF;
-    border-bottom: 1px solid #222;
-    padding-bottom: 10px;
-    margin-top: 0;
-}
-
-.close-button {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    position: absolute;
-    top: 10px;
-    right: 15px;
-}
-
-.close-button:hover,
-.close-button:focus {
-    color: #fff;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.inventory-filters {
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #222;
-}
-.inventory-filters button {
-    background-color: #1a1a1a;
-    color: #00AEEF;
-    font-size: 0.85em;
-    padding: 5px 8px;
-    margin: 2px;
-    border: 1px solid #333;
-}
-.inventory-filters button.active {
-    background-color: #004488;
-    color: #fff;
-    border-color: #0066CC;
-}
-
-
-#inventory-items-list {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.inventory-item {
-    background-color: #181818;
-    border: 1px solid #2a2a2a;
-    padding: 8px 10px;
-    margin-bottom: 8px;
+.log-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background-color: #111;
+    padding: 8px 12px;
+    border-bottom: 1px solid #282828;
 }
-.inventory-item:hover {
-    background-color: #202020;
-    border-color: #444;
+.log-header h2 {
+    color: #00AEEF;
+    margin: 0;
+    font-size: 1.1em;
 }
-
-.item-info {
-    flex-grow: 1;
-}
-.item-info h4 {
-    margin: 0 0 3px 0;
-    color: #eee;
+#toggle-log {
+    background: #333;
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 2px 8px;
     font-size: 1em;
 }
-.item-info p {
-    margin: 0;
-    font-size: 0.85em;
-    color: #999;
+
+#log-messages {
+    max-height: 150px; /* Уменьшим стандартную высоту */
+    overflow-y: auto;
+    padding: 10px; /* Внутренний отступ для сообщений */
+    background-color: #000000;
+    font-size: 0.9em;
+    transition: max-height 0.3s ease-in-out; /* Для плавного скрытия/показа */
 }
-.item-info .item-quantity {
-    color: #00AEEF;
-    font-weight: bold;
+#log-messages.hidden {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top: none; /* Если есть верхняя граница у log-messages */
+    overflow: hidden;
 }
-
-.item-actions button {
-    font-size: 0.8em;
-    padding: 4px 6px;
-    margin-left: 5px;
+#log-messages p {
+    margin: 0 0 4px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px dotted #333333;
 }
+#log-messages p:last-child { border-bottom: none; }
 
 
-/* Стили для сообщений разных типов в логе */
-.event-positive { color: #88CC88; }
-.event-negative { color: #FF6666; }
-.event-neutral { color: #AAAAAA; }
-.event-discovery { color: #88AAFF; }
-.event-warning { color: #FFCC00; }
+/* Модальное окно Инвентаря (остается почти без изменений, возможно, чуть подправить цвета) */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
+.modal-content { background-color: #0c0c0c; margin: 5% auto; padding: 20px; border: 1px solid #333; width: 90%; max-width: 700px; color: #ccc; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.modal-content h2 { color: #00AEEF; border-bottom: 1px solid #222; padding-bottom: 10px; margin-top: 0; }
+.close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; position: absolute; top: 10px; right: 15px; }
+.close-button:hover, .close-button:focus { color: #fff; text-decoration: none; cursor: pointer; }
+.inventory-filters { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #222; text-align: center; }
+.inventory-filters button { background-color: #1a1a1a; color: #00AEEF; font-size: 0.85em; padding: 6px 10px; margin: 3px; border: 1px solid #333; }
+.inventory-filters button.active { background-color: #004488; color: #fff; border-color: #0066CC; }
+#inventory-items-list { max-height: 400px; overflow-y: auto; }
+.inventory-item { background-color: #181818; border: 1px solid #2a2a2a; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.inventory-item:hover { background-color: #202020; border-color: #444; }
+.item-info { flex-grow: 1; }
+.item-info h4 { margin: 0 0 3px 0; color: #eee; font-size: 1em; }
+.item-info p { margin: 0; font-size: 0.85em; color: #999; }
+.item-info .item-quantity { color: #00AEEF; font-weight: bold; }
+.item-actions button { font-size: 0.8em; padding: 5px 8px; margin-left: 8px; }
 
-#fed-status, #watered-status { margin-left: 5px; font-style: italic; }
-.status-ok { color: #88CC88; }
-.status-needed { color: #FFCC00; }
-.status-critical { color: #FF6666; font-weight: bold; }
-
-#hunger-status, #thirst-status, #health-status, #player-condition {
-    /* Можно добавить специфичные стили если надо */
-}
-
-
+/* Футер */
 footer {
+    background-color: #0e0e0e;
+    border-top: 1px solid #282828;
+    padding: 10px;
     text-align: center;
-    margin-top: 20px;
-    padding-top: 10px;
-    border-top: 1px solid #333333;
-    font-size: 0.8em;
+    font-size: 0.85em;
     color: #777777;
 }
 footer button {
@@ -324,7 +300,22 @@ footer button {
     border-color: #770000;
     color: #FFAAAA;
     font-size: 0.9em;
+    padding: 6px 10px;
 }
-footer button:hover {
-    background-color: #660000;
-}
+footer button:hover { background-color: #660000; }
+#game-version { margin: 5px 0 0 0; }
+
+/* Стили для сообщений разных типов в логе (остаются) */
+.event-positive { color: #88CC88; }
+.event-negative { color: #FF6666; }
+.event-neutral { color: #AAAAAA; }
+.event-discovery { color: #88AAFF; }
+.event-warning { color: #FFCC00; }
+
+/* Статусы игрока (остаются) */
+.status-ok { color: #88CC88; }
+.status-needed { color: #FFCC00; }
+.status-critical { color: #FF6666; font-weight: bold; }
+
+/* Добавим фильтры для инвентаря: Оружие, Броня */
+/* (в items.js пока нет таких предметов, но фильтры будут готовы) */
