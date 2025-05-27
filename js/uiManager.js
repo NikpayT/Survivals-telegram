@@ -20,7 +20,7 @@ const UIManager = {
     navButtons: {}, // Объект для хранения ссылок на навигационные кнопки
     gameSections: {}, // Объект для хранения ссылок на игровые секции
     
-    // НОВОЕ: Перемещаем navButtonMap сюда, чтобы она была доступна всем методам UIManager
+    // Перемещаем navButtonMap сюда, чтобы она была доступна всем методам UIManager
     navButtonMap: {
         'nav-explore': 'explore-section',
         'nav-inventory': 'inventory-section',
@@ -56,9 +56,8 @@ const UIManager = {
         this.communityWaterElement = document.getElementById('community-water');
 
         // 4. Инициализация навигационных кнопок и игровых секций
-        // ИСПОЛЬЗУЕМ this.navButtonMap ВМЕСТО ЛОКАЛЬНОЙ ПЕРЕМЕННОЙ
-        for (const navId in this.navButtonMap) { // ИЗМЕНЕНО: this.navButtonMap
-            const sectionId = this.navButtonMap[navId]; // ИЗМЕНЕНО: this.navButtonMap
+        for (const navId in this.navButtonMap) {
+            const sectionId = this.navButtonMap[navId];
             const button = document.getElementById(navId);
             const section = document.getElementById(sectionId);
 
@@ -66,7 +65,7 @@ const UIManager = {
                 this.navButtons[navId] = button;
                 button.addEventListener('click', () => {
                     this.showSection(sectionId);
-                    console.log(`UIManager: Нажата кнопка "${navId}", показана секция "${sectionId}"`);
+                    // console.log(`UIManager: Нажата кнопка "${navId}", показана секция "${sectionId}"`); // Убрал частый лог
                 });
             } else {
                 console.warn(`UIManager: Кнопка навигации с ID "${navId}" не найдена.`);
@@ -85,7 +84,6 @@ const UIManager = {
         if (!this.optionsContainer) console.error("UIManager ОШИБКА: Элемент #options-container не найден!");
 
         // 6. Инициализация первой секции (обычно "Исследовать")
-        // Убедимся, что секция "explore-section" существует, прежде чем пытаться её показать
         if (this.gameSections['explore-section']) {
             this.showSection('explore-section'); // Показываем секцию "Исследовать" по умолчанию
         } else {
@@ -93,8 +91,8 @@ const UIManager = {
         }
         
         console.log('UIManager: Инициализация завершена. Проверенные элементы:');
-        console.log('gameSections:', this.gameSections);
-        console.log('navButtons:', this.navButtons);
+        // console.log('gameSections:', this.gameSections); // Убрал лог для чистоты консоли
+        // console.log('navButtons:', this.navButtons); // Убрал лог для чистоты консоли
     },
 
     /**
@@ -102,7 +100,7 @@ const UIManager = {
      * @param {string} sectionId - ID секции для отображения (например, 'explore-section').
      */
     showSection(sectionId) {
-        console.log(`UIManager: Попытка показать секцию: ${sectionId}`);
+        // console.log(`UIManager: Попытка показать секцию: ${sectionId}`); // Убрал частый лог
 
         // Скрываем все секции и деактивируем все кнопки
         for (const id in this.gameSections) {
@@ -124,42 +122,38 @@ const UIManager = {
         if (targetSection) {
             targetSection.classList.remove('hidden');
             targetSection.classList.add('active');
-            console.log(`UIManager: Секция "${sectionId}" успешно показана.`);
+            // console.log(`UIManager: Секция "${sectionId}" успешно показана.`); // Убрал частый лог
         } else {
             console.warn(`UIManager: Секция с ID "${sectionId}" не найдена в gameSections.`);
         }
 
         // Активируем соответствующую кнопку навигации
-        // ИСПОЛЬЗУЕМ this.navButtonMap ВМЕСТО navButtonMap
-        const navButtonId = Object.keys(this.navButtonMap).find(key => this.navButtonMap[key] === sectionId); // ИЗМЕНЕНО: this.navButtonMap
+        const navButtonId = Object.keys(this.navButtonMap).find(key => this.navButtonMap[key] === sectionId);
         if (navButtonId && this.navButtons[navButtonId]) {
             this.navButtons[navButtonId].classList.add('active');
-            console.log(`UIManager: Кнопка "${navButtonId}" активирована.`);
+            // console.log(`UIManager: Кнопка "${navButtonId}" активирована.`); // Убрал частый лог
         } else {
             console.warn(`UIManager: Не удалось найти навигационную кнопку для секции "${sectionId}".`);
         }
 
         // Специальная логика для обновления контента при переключении секций
-        // Здесь важно убедиться, что соответствующие менеджеры инициализированы
-        // и имеют нужные методы.
         switch (sectionId) {
             case 'inventory-section':
                 if (window.inventoryManager && typeof window.inventoryManager.displayPlayerInventory === 'function' && typeof window.inventoryManager.displayCommunityStorage === 'function') {
                     window.inventoryManager.displayPlayerInventory();
                     window.inventoryManager.displayCommunityStorage();
                 } else {
-                    console.warn("UIManager: inventoryManager или его методы displayPlayerInventory/displayCommunityStorage не инициализированы.");
+                    console.warn("UIManager: inventoryManager или его методы displayPlayerInventory/displayCommunityStorage не инициализированы или отсутствуют.");
                 }
                 break;
             case 'crafting-section':
                 if (window.craftingManager && typeof window.craftingManager.displayCraftingRecipes === 'function') {
                     window.craftingManager.displayCraftingRecipes();
                 } else {
-                    console.warn("UIManager: craftingManager или его метод displayCraftingRecipes не инициализированы.");
+                    console.warn("UIManager: craftingManager или его метод displayCraftingRecipes не инициализированы или отсутствуют.");
                 }
                 break;
             case 'community-section':
-                // Предполагаем, что window.community (экземпляр Community) имеет метод displayCommunityDetails
                 if (window.gameState.community && typeof window.gameState.community.displayCommunityDetails === 'function') {
                     window.gameState.community.displayCommunityDetails();
                 } else {
@@ -173,7 +167,6 @@ const UIManager = {
                     console.warn("UIManager: factionManager или его метод displayFactions не найден.");
                 }
                 break;
-            // explore-section обновляется через loadScene
             default:
                 // Для explore-section или других, которые не требуют немедленного обновления при переключении вкладки
                 break;
@@ -197,6 +190,7 @@ const UIManager = {
         if (this.playerHungerElement) this.playerHungerElement.textContent = Math.round(player.hunger);
         if (this.playerThirstElement) this.playerThirstElement.textContent = Math.round(player.thirst);
         if (this.playerFatigueElement) this.playerFatigueElement.textContent = Math.round(player.fatigue);
+        // Добавим проверку на currentWeapon, если оно null/undefined
         if (this.currentWeaponElement) this.currentWeaponElement.textContent = player.currentWeapon ? player.currentWeapon.name : 'Нет';
 
         // Обновляем статус общины
@@ -230,7 +224,16 @@ const UIManager = {
         }
         this.optionsContainer.innerHTML = ''; // Очищаем старые опции
 
+        if (!Array.isArray(options)) {
+            console.error("UIManager: Опции должны быть массивом.");
+            return;
+        }
+
         options.forEach(option => {
+            if (typeof option.text !== 'string' || typeof option.action !== 'function') {
+                console.warn("UIManager: Некорректный формат опции:", option);
+                return;
+            }
             const button = document.createElement('button');
             button.classList.add('option-button');
             button.textContent = option.text;
@@ -246,20 +249,20 @@ const UIManager = {
      * @param {string} message - Сообщение для лога.
      */
     addGameLog(message) {
-        // Проверка, что gameLogElement уже найден и инициализирован
         if (!this.gameLogElement) {
-            console.warn("UIManager: gameLogElement не найден. Лог не будет обновлен.");
-            console.log(`[GAME LOG] ${message}`); // Всегда логируем в консоль, даже если элемент не найден
+            // Если gameLogElement еще не инициализирован, просто выводим в консоль
+            console.log(`[GAME LOG] ${message}`);
             return;
         }
 
         const timestamp = new Date().toLocaleTimeString();
         const fullMessage = `[${timestamp}] ${message}`;
 
-        // Убедимся, что gameState и gameLog существуют
+        // Убедимся, что gameState и gameLog существуют и являются массивом
         if (window.gameState && Array.isArray(window.gameState.gameLog)) {
             window.gameState.gameLog.unshift(fullMessage); // Добавляем в начало
-            if (window.gameState.gameLog.length > 50) { // Ограничиваем размер лога
+            // Ограничиваем размер лога, чтобы не перегружать память
+            if (window.gameState.gameLog.length > 50) {
                 window.gameState.gameLog.pop(); // Удаляем самый старый элемент
             }
             this.updateGameLogDisplay(); // Обновляем отображение лога
@@ -269,13 +272,11 @@ const UIManager = {
             const p = document.createElement('p');
             p.textContent = fullMessage;
             this.gameLogElement.prepend(p); // Добавляем в начало
-            // Ограничить количество P-тегов вручную, если gameLog недоступен
+            // В этом случае ограничим количество P-тегов вручную
             while (this.gameLogElement.children.length > 50) {
                 this.gameLogElement.removeChild(this.gameLogElement.lastChild);
             }
         }
-        // Дополнительный console.log для всех сообщений лога, полезно для отладки
-        console.log(`[GAME LOG] ${fullMessage}`);
     },
 
     /**
@@ -287,9 +288,16 @@ const UIManager = {
             return;
         }
         if (window.gameState && Array.isArray(window.gameState.gameLog)) {
-            this.gameLogElement.innerHTML = window.gameState.gameLog.map(msg => `<p>${msg}</p>`).join('');
-            // Прокручиваем вниз, чтобы видеть новые сообщения
-            this.gameLogElement.scrollTop = this.gameLogElement.scrollHeight;
+            // Используем DocumentFragment для оптимизации: уменьшаем количество операций с DOM
+            const fragment = document.createDocumentFragment();
+            window.gameState.gameLog.forEach(msg => {
+                const p = document.createElement('p');
+                p.textContent = msg;
+                fragment.appendChild(p);
+            });
+            this.gameLogElement.innerHTML = ''; // Очищаем старое содержимое
+            this.gameLogElement.appendChild(fragment); // Добавляем новое
+            this.gameLogElement.scrollTop = this.gameLogElement.scrollHeight; // Прокручиваем вниз
         } else {
             console.warn("UIManager: Невозможно обновить отображение лога, window.gameState.gameLog не массив.");
         }
