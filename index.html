@@ -1,40 +1,43 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-B">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Выживание: Зов Пустоши</title>
+    <title>Пустошь: Выживание</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
         <header>
-            <h1>Выживание: Зов Пустоши</h1>
+            <h1>Пустошь: Выживание</h1>
         </header>
 
-        <div id="stats-panel">
-            <h2>Состояние Базы:</h2>
+        <div id="stats-panel" class="panel">
+            <h2>Состояние Базы</h2>
             <p>День: <span id="day">1</span></p>
-            <p>Выжившие: <span id="survivors">1</span> / <span id="max-survivors">5</span></p>
-            <p>Еда: <span id="food">20</span></p>
-            <p>Вода: <span id="water">20</span></p>
+            <p>Выжившие: <span id="survivors">1</span> / <span id="max-survivors">1</span></p>
+            <p>Еда: <span id="food">20</span> <button id="eat-button" class="inline-action-button">Поесть</button> <span id="fed-status"></span></p>
+            <p>Вода: <span id="water">20</span> <button id="drink-button" class="inline-action-button">Попить</button> <span id="watered-status"></span></p>
             <p>Материалы: <span id="materials">10</span></p>
             <p>Медикаменты: <span id="medicine">5</span></p>
-            <p>Уровень Базы: <span id="base-level">1</span></p>
+            <!-- <p>Уровень Базы: <span id="base-level">1</span></p> -->
         </div>
 
-        <div id="log-panel">
-            <h2>Журнал Событий:</h2>
+        <div id="log-panel" class="panel">
+            <h2>Журнал Событий</h2>
             <div id="log-messages">
                 <p>Добро пожаловать в Пустошь. Ваша задача - выжить и развить базу.</p>
             </div>
         </div>
 
-        <div id="actions-panel">
-            <h2>Действия:</h2>
+        <div id="actions-panel" class="panel">
+            <h2>Действия</h2>
             <div id="main-actions">
                 <button onclick="game.scavenge()">Искать припасы</button>
                 <button onclick="game.nextDay()">Следующий день</button>
+            </div>
+             <div id="resource-actions">
+                <!-- Кнопки "Поесть", "Попить" были перемещены в stats-panel для наглядности -->
             </div>
             <div id="build-actions">
                 <h3>Улучшения Базы:</h3>
@@ -44,8 +47,12 @@
                 <!-- Кнопки для событий будут добавляться сюда JS -->
             </div>
         </div>
-
+        <footer>
+            <button onclick="game.resetGameConfirmation()">Начать игру заново</button>
+            <p>Alpha v0.2</p>
+        </footer>
     </div>
+    <script src="buildings.js"></script> <!-- Сначала загружаем определения зданий -->
     <script src="script.js"></script>
 </body>
 </html>
