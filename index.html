@@ -2,11 +2,13 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Важно для адаптивности -->
     <title>Пустошь: Выживание</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <button id="burger-menu-button">☰</button> <!-- Кнопка "бургер" -->
+
     <div id="game-wrapper">
         <aside id="sidebar">
             <div id="sidebar-header">
@@ -16,7 +18,7 @@
             <nav id="main-nav">
                 <button class="nav-link active" data-tab="main-tab">Обзор</button>
                 <button class="nav-link" data-tab="base-tab">База</button>
-                <button class.nav-link" data-tab="storage-tab">Склад</button> <!-- НОВАЯ ВКЛАДКА -->
+                <button class="nav-link" data-tab="storage-tab">Склад</button> 
                 <button class="nav-link" data-tab="explore-tab">Разведка</button>
                 <button class="nav-link" data-tab="craft-tab">Крафт</button>
             </nav>
@@ -84,10 +86,9 @@
                     </div>
                 </div>
                 
-                <!-- НОВАЯ ВКЛАДКА ДЛЯ СКЛАДА -->
                 <div id="storage-tab" class="tab-content">
                     <h2>Склад Базы</h2>
-                    <div class="inventory-filters base-storage-filters"> <!-- Добавим класс для стилизации, если нужно -->
+                    <div class="inventory-filters base-storage-filters"> 
                         <button data-filter="all" class="active">Все</button>
                         <button data-filter="food">Еда</button>
                         <button data-filter="water_source">Вода</button>
@@ -99,7 +100,6 @@
                         <button data-filter="quest_item">Особое</button>
                     </div>
                     <div id="base-inventory-list" class="inventory-list-shared-style">
-                        <!-- Предметы склада будут добавляться сюда JS -->
                     </div>
                 </div>
 
@@ -143,11 +143,11 @@
         </main>
     </div>
 
-    <div id="inventory-modal" class="modal"> <!-- Личный инвентарь игрока -->
+    <div id="inventory-modal" class="modal"> 
         <div class="modal-content">
             <span class="close-button" onclick="game.closeInventoryModal()">×</span>
             <h2>Инвентарь Игрока (<span id="inventory-weight">0</span> / <span id="inventory-max-weight">25</span> кг)</h2>
-            <div class="inventory-filters player-inventory-filters">
+            <div class="inventory-filters player-inventory-filters"> <!-- Добавлен класс для уникальности -->
                 <button data-filter="all" class="active">Все</button>
                 <button data-filter="food">Еда</button>
                 <button data-filter="water_source">Вода</button>
@@ -170,8 +170,8 @@
     <script src="items.js"></script>
     <script src="buildings.js"></script>
     <script src="locations.js"></script>
-    <script src="game_state.js"></script> <!-- НОВЫЙ ФАЙЛ -->
-    <script src="dom_elements.js"></script> <!-- НОВЫЙ ФАЙЛ -->
-    <script src="script.js"></script> <!-- Основной файл игры -->
+    <script src="game_state.js"></script> 
+    <script src="dom_elements.js"></script> 
+    <script src="script.js"></script> 
 </body>
 </html>
