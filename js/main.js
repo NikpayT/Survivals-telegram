@@ -1,116 +1,123 @@
-// main.js - Основной файл для инициализации игры
+// main.js - Основной файл для инициализации игры и управления глобальным состоянием
 
+// Глобальный объект для хранения состояния игры
+// Доступен по всему приложению через window.gameState
+window.gameState = {
+    player: null,    // Экземпляр класса Player
+    community: null, // Экземпляр класса Community
+    currentSceneId: 'abandoned_building_start', // ID текущей сцены
+    // Здесь можно добавить другие глобальные состояния, например, игровой день
+    gameDay: 1
+};
+
+// Загружаем DOM перед инициализацией скриптов
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Игра загружена! Добро пожаловать в постапокалиптический мир.');
+    console.log('Игра загружена! Инициализация...');
 
-    // Получаем ссылки на основные элементы интерфейса
-    const gameTextElement = document.getElementById('game-text');
-    const optionsContainerElement = document.getElementById('options-container');
-    const statusBarElement = document.getElementById('status-bar');
+    // Инициализируем игровые объекты
+    window.gameState.player = new Player();
+    window.gameState.community = new Community();
 
-    // --- Функции для обновления интерфейса ---
+    // Запускаем UIManager (он будет отвечать за обновление HTML)
+    // Важно: uiManager должен быть инициализирован после player и community
+    // и после того, как все GameScenes, GameItems и т.д. загружены.
+    // Его определение будет в файле uiManager.js
+    window.uiManager.init();
 
-    /**
-     * Отображает текст в основном окне игры.
-     * @param {string} text - Текст для отображения.
-     */
-    function displayGameText(text) {
-        gameTextElement.innerHTML = text; // Используем innerHTML для поддержки базового форматирования, если потребуется
-    }
+    // --- Основные функции игры ---
 
     /**
-     * Отображает варианты действий в виде кнопок.
-     * @param {Array<Object>} options - Массив объектов { text: string, action: Function }.
+     * Загружает и отображает новую сцену.
+     * @param {string} sceneId - ID сцены для загрузки.
      */
-    function displayOptions(options) {
-        optionsContainerElement.innerHTML = ''; // Очищаем предыдущие кнопки
-        options.forEach(option => {
-            const button = document.createElement('button');
-            button.textContent = option.text;
-            button.classList.add('game-option-button'); // Добавляем класс для стилизации
-            button.onclick = option.action;
-            optionsContainerElement.appendChild(button);
-        });
-    }
+    window.loadScene = function(sceneId) {
+        const scene = GameScenes[sceneId];
+        if (!scene) {
+            console.error(`Сцена с ID "${sceneId}" не найдена!`);
+            // Переход к сцене ошибки или game over
+            window.loadScene('player_death');
+            return;
+        }
 
-    /**
-     * Обновляет строку статуса игрока.
-     * @param {Object} playerStatus - Объект с данными о статусе игрока (например, { health: 100, hunger: 50 }).
-     */
-    function updateStatusBar(playerStatus) {
-        // Пример: Обновление строки статуса
-        // Это базовая заглушка, мы доработаем её позже, когда определимся с параметрами игрока
-        statusBarElement.innerHTML = `
-            Здоровье: ${playerStatus.health || 100}% | Голод: ${playerStatus.hunger || 0}% | Жажда: ${playerStatus.thirst || 0}%
-            `;
-    }
+        window.gameState.currentSceneId = sceneId;
+        console.log(`Загружена сцена: ${scene.name} (ID: ${sceneId})`);
 
-    // --- Начальная инициализация игры ---
+        // Выполняем действия, которые должны произойти при входе в сцену (если есть)
+        if (scene.onEnter) {
+            scene.onEnter(window.gameState.player, window.gameState.community);
+        }
 
-    // Предположим, что у нас есть некая начальная сцена или вопрос
-    const initialScene = {
-        text: 'Вы приходите в себя в полуразрушенном здании. Вокруг тишина, лишь ветер свистит в разбитых окнах. Вы один.',
-        options: [
-            { text: 'Осмотреться вокруг', action: () => handleAction('look_around') },
-            { text: 'Попытаться найти выход', action: () => handleAction('find_exit') }
-        ]
-    };
+        // Обновляем UI
+        window.uiManager.displayGameText(scene.description);
+        window.uiManager.displayOptions(scene.options.map(option => ({
+            text: option.text,
+            // Действие кнопки - загрузить следующую сцену
+            action: () => window.loadScene(option.nextScene)
+        })));
 
-    // Глобальный объект для хранения состояния игры (пока простой, но будет расширяться)
-    window.gameState = {
-        player: {
-            health: 100,
-            hunger: 0,
-            thirst: 0,
-            inventory: [],
-            location: 'abandoned_building'
-        },
-        currentScene: null // Будет хранить текущую сцену
+        // Проверяем условия Game Over после загрузки сцены (например, если здоровье упало до 0)
+        checkGameOverConditions();
     };
 
     /**
-     * Основная функция для обработки действий игрока.
-     * Здесь будет основная логика игры: переход между сценами, обработка выборов.
-     * @param {string} actionType - Тип действия, выбранного игроком.
+     * Проверяет условия завершения игры (Game Over).
      */
-    function handleAction(actionType) {
-        console.log(`Игрок выбрал действие: ${actionType}`);
-        // Здесь будет логика для обработки выбранного действия
-        // Например, переход к новой сцене или изменение состояния игрока
-        switch (actionType) {
-            case 'look_around':
-                displayGameText('Вы осматриваетесь. Пыль, обломки. В углу виднеется тусклый силуэт, похожий на рюкзак.');
-                displayOptions([
-                    { text: 'Подойти к рюкзаку', action: () => handleAction('approach_backpack') },
-                    { text: 'Игнорировать и искать выход', action: () => handleAction('find_exit') }
-                ]);
-                break;
-            case 'find_exit':
-                displayGameText('Вы продвигаетесь к ближайшему выходу. Дверь завалена обломками. Нужно другое место.');
-                displayOptions([
-                    { text: 'Искать другой выход', action: () => handleAction('search_another_exit') },
-                    { text: 'Попробовать расчистить завал', action: () => handleAction('clear_debris') }
-                ]);
-                break;
-            case 'approach_backpack':
-                displayGameText('В старом рюкзаке вы находите почти пустую бутылку воды и потрёпанный нож. Инвентарь обновлён.');
-                window.gameState.player.inventory.push('water_bottle', 'old_knife');
-                window.gameState.player.thirst -= 10; // Небольшое снижение жажды от находки
-                updateStatusBar(window.gameState.player);
-                displayOptions([
-                    { text: 'Искать другой выход', action: () => handleAction('search_another_exit') }
-                ]);
-                break;
-            default:
-                displayGameText('Действие не распознано. Что делать?');
-                displayOptions(initialScene.options);
-                break;
+    function checkGameOverConditions() {
+        if (window.gameState.player.health <= 0) {
+            window.uiManager.displayGameText('Ваше здоровье иссякло. Вы не смогли больше бороться. Это конец вашего пути.');
+            window.uiManager.displayOptions([{ text: 'Начать новую игру', action: () => window.loadScene('game_start_new') }]);
+            // Дополнительная логика для Game Over
+            console.log('GAME OVER: Игрок погиб.');
+        }
+        // Можно добавить другие условия Game Over, например, если сообщество уничтожено
+        if (window.gameState.community.survivors <= 0 && window.gameState.player.health > 0) {
+            window.uiManager.displayGameText('Ваше убежище разрушено, а община погибла. Вы остались один, без надежды на восстановление.');
+            window.uiManager.displayOptions([{ text: 'Начать новую игру', action: () => window.loadScene('game_start_new') }]);
+            console.log('GAME OVER: Община уничтожена.');
         }
     }
 
+    /**
+     * Функция для перехода к следующему игровому дню (ежедневный цикл).
+     * Будет вызываться по триггеру (например, кнопка "Отдохнуть" или событие).
+     */
+    window.nextGameDay = function() {
+        window.gameState.gameDay++;
+        console.log(`Начался день ${window.gameState.gameDay}`);
 
-    // --- Запуск игры ---
-    displayGameText(initialScene.text);
-    displayOptions(initialScene.options);
-    updateStatusBar(window.gameState.player); // Инициализация статуса
+        // Ежедневное потребление ресурсов общиной
+        window.gameState.community.dailyConsumption();
+
+        // Ежедневные потребности игрока (голод, жажда, усталость увеличиваются)
+        window.gameState.player.adjustHunger(10);
+        window.gameState.player.adjustThirst(15);
+        window.gameState.player.adjustFatigue(20);
+
+        // Проверка на последствия голода/жажды для игрока
+        if (window.gameState.player.hunger >= 90) {
+            window.gameState.player.adjustHealth(-5); // Начинаем терять здоровье от сильного голода
+            window.uiManager.addMessageToLog('Вы очень голодны и чувствуете слабость.');
+        }
+        if (window.gameState.player.thirst >= 90) {
+            window.gameState.player.adjustHealth(-10); // Теряем больше здоровья от сильной жажды
+            window.uiManager.addMessageToLog('Вас мучает жажда, силы покидают вас.');
+        }
+        if (window.gameState.player.fatigue >= 100) {
+            window.gameState.player.adjustHealth(-3); // Теряем здоровье от крайней усталости
+            window.uiManager.addMessageToLog('Вы измотаны. Вам срочно нужен отдых.');
+        }
+
+        // Обновляем UI
+        window.uiManager.updateAllStatus();
+        window.uiManager.displayGameText(`Наступил день ${window.gameState.gameDay}. Ваши основные потребности усилились.`);
+
+        // В будущем здесь можно добавить случайные события для нового дня
+        // currentSceneId не меняем, игрок остается на той же локации, если не выбрал действие.
+    };
+
+
+    // --- Инициализация интерфейса и загрузка первой сцены ---
+    // Убедимся, что все элементы UI доступны перед первой загрузкой сцены
+    window.uiManager.updateAllStatus(); // Обновляем статус-бар при старте
+    window.loadScene(window.gameState.currentSceneId); // Загружаем начальную сцену
 });
