@@ -141,13 +141,12 @@ const ITEM_DEFINITIONS = {
         weight: 0.1,
         stackable: true,
     },
-    // НОВЫЙ ПРЕДМЕТ
     bandages_clean: {
         id: "bandages_clean",
         name: "Чистые бинты",
         description: "Аккуратно сделанные бинты из чистой ткани с антисептиком. Снижают риск инфекции.",
         type: "medicine",
-        effect: { healing: 20, infection_chance: 0.01 }, // Лечат лучше, шанс инфекции минимален
+        effect: { healing: 20, infection_chance: 0.01 }, 
         weight: 0.1,
         stackable: true,
     },
@@ -156,7 +155,7 @@ const ITEM_DEFINITIONS = {
         name: "Антисептик",
         description: "Для обработки ран и предотвращения инфекций.",
         type: "medicine",
-        effect: { prevent_infection: true }, // Можно использовать для улучшения бинтов или отдельно
+        effect: { prevent_infection: true }, 
         weight: 0.2,
         stackable: true,
     },
