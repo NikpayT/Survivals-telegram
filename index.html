@@ -1,111 +1,51 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-B">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Survival Text RPG</title>
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Изображения и иконки не используются в этой версии игры -->
+    <title>Выживание: Зов Пустоши</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-container"> {/* ИСПРАВЛЕНО: class на id в соответствии с CSS и комментариями */}
-        <header id="game-header">
-            <h1>Выживание: Последний Рассвет</h1>
-            <p id="game-version">Версия: Загрузка...</p>
+    <div id="game-container">
+        <header>
+            <h1>Выживание: Зов Пустоши</h1>
         </header>
 
-        <div class="main-content-wrapper"> {/* Обертка для удобства компоновки game-area и sidebar */}
-            <main class="game-area"> {/* Основной игровой контент */}
-                <div id="game-text" class="game-text-display">
-                    <p>Загрузка игры...</p>
-                </div>
-                <div id="options-container" class="options-menu">
-                    <!-- Кнопки опций будут генерироваться здесь -->
-                </div>
-            </main>
+        <div id="stats-panel">
+            <h2>Состояние Базы:</h2>
+            <p>День: <span id="day">1</span></p>
+            <p>Выжившие: <span id="survivors">1</span> / <span id="max-survivors">5</span></p>
+            <p>Еда: <span id="food">20</span></p>
+            <p>Вода: <span id="water">20</span></p>
+            <p>Материалы: <span id="materials">10</span></p>
+            <p>Медикаменты: <span id="medicine">5</span></p>
+            <p>Уровень Базы: <span id="base-level">1</span></p>
+        </div>
 
-            <aside class="sidebar">
-                <div class="status-panel player-status-panel">
-                    <h2>Ваш Статус</h2>
-                    <div id="player-status">
-                        <!-- Статусы игрока без иконок -->
-                        <p>Здоровье: 100/100</p>
-                        <p>Выносливость: 100/100</p>
-                        <p>Голод: 0%</p>
-                        <p>Жажда: 0%</p>
-                        <p>Усталость: 0%</p>
-                        <p>Оружие: Нет</p>
-                    </div>
-                </div>
-
-                <div class="status-panel community-status-panel">
-                    <h2>Статус Общины (День <span id="game-day-display">1</span>)</h2>
-                    <div id="community-status">
-                        <!-- Статусы общины без иконок -->
-                        <p>Выживших: 5</p>
-                        <p>Мораль: 70/100</p>
-                        <p>Безопасность: 50%</p>
-                        <p>Еда: 10</p>
-                        <p>Вода: 10</p>
-                        <p>Убежище: Уровень 1</p>
-                    </div>
-                </div>
-
-                <div class="inventory-panel">
-                    <h2>Инвентарь Игрока</h2>
-                    <ul id="player-inventory-list" class="item-list">
-                        <li>Пусто</li>
-                    </ul>
-
-                    <h2>Склад Общины</h2>
-                    <ul id="community-storage-list" class="item-list">
-                        <li>Пусто</li>
-                    </ul>
-                </div>
-                
-                <div class="crafting-panel">
-                    <h2>Крафт</h2>
-                    <div id="crafting-recipes" class="crafting-recipes-list">
-                        <p>Рецепты крафта загружаются...</p>
-                    </div>
-                </div>
-            </aside>
-        </div> <!-- Закрытие main-content-wrapper -->
-
-
-        <div id="game-log-container" class="game-log-container">
-            <h2>Лог Событий</h2>
-            <div id="game-log" class="game-log">
-                <!-- Записи лога будут добавляться сюда -->
+        <div id="log-panel">
+            <h2>Журнал Событий:</h2>
+            <div id="log-messages">
+                <p>Добро пожаловать в Пустошь. Ваша задача - выжить и развить базу.</p>
             </div>
         </div>
-    </div> <!-- Закрытие game-container -->
 
-    <!-- --- СКРИПТЫ В ПРАВИЛЬНОМ ПОРЯДКЕ ЗАГРУЗКИ --- -->
+        <div id="actions-panel">
+            <h2>Действия:</h2>
+            <div id="main-actions">
+                <button onclick="game.scavenge()">Искать припасы</button>
+                <button onclick="game.nextDay()">Следующий день</button>
+            </div>
+            <div id="build-actions">
+                <h3>Улучшения Базы:</h3>
+                <!-- Кнопки строительства будут добавляться сюда JS -->
+            </div>
+            <div id="event-actions">
+                <!-- Кнопки для событий будут добавляться сюда JS -->
+            </div>
+        </div>
 
-    <!-- 1. Данные Игры (Определения объектов, без исполняемой логики при загрузке) -->
-    <script src="js/gameData/items.js"></script>
-    <script src="js/gameData/craftingRecipes.js"></script>
-    <script src="js/gameData/factions.js"></script>
-    <script src="js/gameData/scenes.js"></script>
-
-    <!-- 2. Классы Сущностей (Player, Community - определения классов) -->
-    <script src="js/gameLogic/player.js"></script>
-    <script src="js/gameLogic/community.js"></script>
-
-    <!-- 3. UI Manager (Нужен многим другим менеджерам и main.js для логирования и обновления UI) -->
-    <script src="js/uiManager.js"></script> 
-
-    <!-- 4. Остальные Менеджеры и Игровая Логика -->
-    <script src="js/gameLogic/inventoryManager.js"></script>
-    <script src="js/gameLogic/craftingManager.js"></script>
-    <script src="js/gameLogic/factionManager.js"></script>
-    <script src="js/gameLogic/combatManager.js"></script>
-    <script src="js/gameLogic/explorationManager.js"></script> 
-    <!-- Раскомментируй gameLoop.js, если он используется -->
-    <!-- <script src="js/gameLogic/gameLoop.js"></script> -->
-    
-    <!-- 5. Основной скрипт игры (Инициализация всех компонентов и запуск игры) -->
-    <script src="js/main.js"></script>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
