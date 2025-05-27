@@ -6,7 +6,98 @@
 // Также InventoryManager, LocationManager, EventManager должны быть доступны.
 
 const UIManager = {
+    // --- Основные функции обновления UI ---
+    updateDisplay: function() {
+        if (!domElements || typeof gameState === 'undefined' || typeof GameStateGetters === 'undefined') {
+            console.error("UIManager.updateDisplay: Critical objects not defined!");
+            return;
+        }
+        domElements.day.textContent = gameState.day;
+        domElements.survivors.textContent = gameState.survivors;
+        domElements.maxSurvivors.textContent = GameStateGetters.getMaxSurvivors(); 
+        
+        this.updatePlayerStatus(); 
+        this.updateInventoryWeightDisplay(); 
+
+        domElements.totalFoodValue.textContent = GameStateGetters.countBaseFoodItems(); 
+        domElements.totalWaterValue.textContent = GameStateGetters.countBaseWaterItems(); 
+
+        if (document.getElementById('main-tab').style.display === 'block') {
+            this.updateOverviewTabStats();
+        }
+
+        if (domElements.inventoryModal.style.display === 'block' && typeof InventoryManager !== 'undefined') {
+            const activeFilter = domElements.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all';
+            InventoryManager.renderPlayerInventory(activeFilter); // Делегируем InventoryManager, если он отвечает за свой рендер
+        }
+        if (document.getElementById('explore-tab').style.display === 'block' && typeof LocationManager !== 'undefined') {
+            LocationManager.updateExploreTabDisplay(); // Делегируем
+        }
+        if (document.getElementById('storage-tab')?.style.display === 'block' && typeof InventoryManager !== 'undefined') {
+            const storageActiveFilter = domElements.baseInventoryFilters?.querySelector('button.active')?.dataset.filter || 'all';
+            InventoryManager.renderBaseInventory(storageActiveFilter); // Делегируем
+        }
+        if (document.getElementById('craft-tab')?.style.display === 'block') {
+            this.renderCraftingRecipes();
+        }
+    },
+
+    updatePlayerStatus: function() {
+        if (!domElements || typeof gameState === 'undefined') return;
+        const player = gameState.player;
+
+        const healthPercent = Math.max(0, (player.health / player.maxHealth) * 100);
+        domElements.healthBarInner.style.width = `${healthPercent}%`;
+        domElements.healthBarText.textContent = `${player.health}/${player.maxHealth}`;
+        domElements.healthBarInner.classList.remove('critical', 'low');
+        if (healthPercent <= 25) domElements.healthBarInner.classList.add('critical');
+        else if (healthPercent <= 50) domElements.healthBarInner.classList.add('low');
+
+        domElements.hungerBarText.textContent = "Норма"; 
+        domElements.hungerBarInner.style.width = `100%`; 
+        domElements.thirstBarText.textContent = "Норма"; 
+        domElements.thirstBarInner.style.width = `100%`; 
+        
+        domElements.playerCondition.textContent = gameState.player.condition;
+
+        if (domElements.inventoryModal.style.display === 'block' && typeof InventoryManager !== 'undefined') {
+            const activeFilter = domElements.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all';
+            // InventoryManager сам вызовет свой renderPlayerInventory
+            InventoryManager.filterPlayerInventory(activeFilter); 
+        }
+    },
+
+    updateInventoryWeightDisplay: function() {
+        if (!domElements || typeof gameState === 'undefined') return;
+        domElements.inventoryWeight.textContent = gameState.player.carryWeight.toFixed(1);
+        domElements.inventoryMaxWeight.textContent = gameState.player.maxCarryWeight;
+    },
+
+    updateOverviewTabStats: function() {
+        if (!domElements || typeof gameState === 'undefined' || typeof GameStateGetters === 'undefined') return;
+        domElements.overviewHealth.textContent = `${gameState.player.health}/${gameState.player.maxHealth}`;
+        const hungerTh = GameStateGetters.getHungerThresholds(); 
+        if (gameState.player.hunger <= 0) domElements.overviewHunger.textContent = "Смертельный голод";
+        else if (gameState.player.hunger <= hungerTh.critical) domElements.overviewHunger.textContent = "Истощение";
+        else if (gameState.player.hunger <= hungerTh.low) domElements.overviewHunger.textContent = "Голод";
+        else domElements.overviewHunger.textContent = "Сыт";
+
+        const thirstTh = GameStateGetters.getThirstThresholds(); 
+        if (gameState.player.thirst <= 0) domElements.overviewThirst.textContent = "Смертельная жажда";
+        else if (gameState.player.thirst <= thirstTh.critical) domElements.overviewThirst.textContent = "Сильная жажда";
+        else if (gameState.player.thirst <= thirstTh.low) domElements.overviewThirst.textContent = "Жажда";
+        else domElements.overviewThirst.textContent = "Норма";
+        
+        domElements.overviewCondition.textContent = gameState.player.condition;
+        domElements.overviewDay.textContent = gameState.day;
+        domElements.overviewSurvivors.textContent = `${gameState.survivors}/${GameStateGetters.getMaxSurvivors()}`;
+        domElements.overviewBaseFood.textContent = GameStateGetters.countBaseFoodItems();
+        domElements.overviewBaseWater.textContent = GameStateGetters.countBaseWaterItems();
+    },
+
+    // --- Управление вкладками и сайдбаром ---
     openTab: function(tabName, clickedLinkElement) {
+        if (!domElements) return;
         domElements.tabContentArea.querySelectorAll('.tab-content').forEach(tc => tc.style.display = "none");
         domElements.mainNav.querySelectorAll('.nav-link').forEach(tl => tl.classList.remove("active"));
         
@@ -53,59 +144,12 @@ const UIManager = {
     },
 
     toggleSidebar: function() {
+        if (!domElements) return;
         domElements.sidebar.classList.toggle('open');
     },
 
-    updatePlayerStatus: function() {
-        const player = gameState.player;
-
-        const healthPercent = Math.max(0, (player.health / player.maxHealth) * 100);
-        domElements.healthBarInner.style.width = `${healthPercent}%`;
-        domElements.healthBarText.textContent = `${player.health}/${player.maxHealth}`;
-        domElements.healthBarInner.classList.remove('critical', 'low');
-        if (healthPercent <= 25) domElements.healthBarInner.classList.add('critical');
-        else if (healthPercent <= 50) domElements.healthBarInner.classList.add('low');
-
-        domElements.hungerBarText.textContent = "Норма"; 
-        domElements.hungerBarInner.style.width = `100%`; 
-        domElements.thirstBarText.textContent = "Норма"; 
-        domElements.thirstBarInner.style.width = `100%`; 
-        
-        domElements.playerCondition.textContent = gameState.player.condition;
-
-        if (domElements.inventoryModal.style.display === 'block') {
-            const activeFilter = domElements.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all';
-            this.renderPlayerInventory(activeFilter); 
-        }
-    },
-
-    updateInventoryWeightDisplay: function() {
-        domElements.inventoryWeight.textContent = gameState.player.carryWeight.toFixed(1);
-        domElements.inventoryMaxWeight.textContent = gameState.player.maxCarryWeight;
-    },
-
-    updateOverviewTabStats: function() {
-        domElements.overviewHealth.textContent = `${gameState.player.health}/${gameState.player.maxHealth}`;
-        const hungerTh = GameStateGetters.getHungerThresholds(); 
-        if (gameState.player.hunger <= 0) domElements.overviewHunger.textContent = "Смертельный голод";
-        else if (gameState.player.hunger <= hungerTh.critical) domElements.overviewHunger.textContent = "Истощение";
-        else if (gameState.player.hunger <= hungerTh.low) domElements.overviewHunger.textContent = "Голод";
-        else domElements.overviewHunger.textContent = "Сыт";
-
-        const thirstTh = GameStateGetters.getThirstThresholds(); 
-        if (gameState.player.thirst <= 0) domElements.overviewThirst.textContent = "Смертельная жажда";
-        else if (gameState.player.thirst <= thirstTh.critical) domElements.overviewThirst.textContent = "Сильная жажда";
-        else if (gameState.player.thirst <= thirstTh.low) domElements.overviewThirst.textContent = "Жажда";
-        else domElements.overviewThirst.textContent = "Норма";
-        
-        domElements.overviewCondition.textContent = gameState.player.condition;
-        domElements.overviewDay.textContent = gameState.day;
-        domElements.overviewSurvivors.textContent = `${gameState.survivors}/${GameStateGetters.getMaxSurvivors()}`;
-        domElements.overviewBaseFood.textContent = GameStateGetters.countBaseFoodItems();
-        domElements.overviewBaseWater.textContent = GameStateGetters.countBaseWaterItems();
-    },
-
     applyLogVisibility: function() {
+        if (!domElements) return;
         if (gameState.logVisible) {
             domElements.logMessages.classList.remove('hidden');
             domElements.toggleLogButton.textContent = '-';
@@ -115,7 +159,9 @@ const UIManager = {
         }
     },
 
+    // --- Рендеринг списков ---
     renderPlayerInventory: function(filterType = 'all') { 
+        if (!domElements || !ITEM_DEFINITIONS || typeof InventoryManager === 'undefined') return;
         domElements.inventoryItemsList.innerHTML = '';
         const inventoryToDisplay = gameState.inventory; 
 
@@ -146,7 +192,6 @@ const UIManager = {
 
             let itemActionsHTML = '';
             if (itemDef.type === 'food' || itemDef.type === 'water' || itemDef.type === 'water_source' || itemDef.type === 'medicine') {
-                // Вызываем InventoryManager.consumeItem, предполагая, что game объект доступен InventoryManager
                 itemActionsHTML += `<button onclick="InventoryManager.consumeItem('${itemSlot.itemId}', ${index}, gameState.inventory)">Использовать</button>`;
             }
             itemActionsHTML += `<button onclick="InventoryManager.transferItem('${itemSlot.itemId}', ${index}, gameState.inventory, gameState.baseInventory, 1)">На склад (1)</button>`;
@@ -173,7 +218,7 @@ const UIManager = {
     },
 
     renderBaseInventory: function(filterType = 'all') {
-        if (!domElements.baseInventoryList) return; 
+        if (!domElements || !domElements.baseInventoryList || !ITEM_DEFINITIONS || typeof InventoryManager === 'undefined') return; 
         domElements.baseInventoryList.innerHTML = '';
         const inventoryToDisplay = gameState.baseInventory;
 
@@ -224,8 +269,9 @@ const UIManager = {
     },
 
     updateExploreTabDisplay: function() { 
+        if (!domElements || typeof gameState === 'undefined' || typeof LOCATION_DEFINITIONS === 'undefined') return;
         const currentLocationId = gameState.currentLocationId;
-        const currentLocationDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[currentLocationId] : null;
+        const currentLocationDef = LOCATION_DEFINITIONS[currentLocationId];
         const currentLocationState = gameState.discoveredLocations[currentLocationId];
 
         if (currentLocationDef && currentLocationState) {
@@ -247,11 +293,12 @@ const UIManager = {
     },
 
     renderDiscoveredLocations: function() {
+        if (!domElements || typeof gameState === 'undefined' || typeof LOCATION_DEFINITIONS === 'undefined') return;
         domElements.discoveredLocationsList.innerHTML = '';
         let hasDiscoveredOtherThanBase = false;
         for (const locId in gameState.discoveredLocations) {
             if (gameState.discoveredLocations[locId].discovered) {
-                const locDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[locId] : null;
+                const locDef = LOCATION_DEFINITIONS[locId];
                 if (!locDef) continue;
                 if (locId !== "base_surroundings") hasDiscoveredOtherThanBase = true;
 
@@ -261,8 +308,8 @@ const UIManager = {
                     entryDiv.classList.add('active-location');
                 }
                 // ВАЖНО: Вызов должен быть game.LocationManager.setCurrentLocation, но LocationManager еще не полностью интегрирован в game
-                // Пока оставляем вызов через глобальный LocationManager, если он существует, или game, если он там определен.
-                entryDiv.onclick = () => (typeof LocationManager !== 'undefined' ? LocationManager.setCurrentLocation(locId) : game.setCurrentLocation(locId)); 
+                // Теперь это LocationManager.setCurrentLocation
+                entryDiv.onclick = () => (typeof LocationManager !== 'undefined' ? LocationManager.setCurrentLocation(locId) : console.error("LocationManager not defined for setCurrentLocation")); 
 
                 let dangerText = "Низкая";
                 let dangerClass = "low";
@@ -283,9 +330,10 @@ const UIManager = {
     },
 
     updateBuildActions: function() {
+        if (!domElements || typeof gameState === 'undefined' || typeof BASE_STRUCTURE_DEFINITIONS === 'undefined' || typeof InventoryManager === 'undefined' || typeof ITEM_DEFINITIONS === 'undefined') return;
         domElements.buildActions.innerHTML = ''; 
         for (const key in gameState.structures) {
-            const definition = (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') ? BASE_STRUCTURE_DEFINITIONS[key] : null;
+            const definition = BASE_STRUCTURE_DEFINITIONS[key];
             const currentStructureState = gameState.structures[key];
             if (!definition) continue;
 
@@ -324,15 +372,15 @@ const UIManager = {
             tooltipSpan.innerHTML = tooltipContent;
             btn.appendChild(tooltipSpan);
             
-            btn.onclick = () => game.build(key); 
+            btn.onclick = () => game.build(key); // game.build останется в основном файле (script.js)
             btn.disabled = !canAffordAll || atMaxLevel || gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver;
             domElements.buildActions.appendChild(btn);
         }
     },
 
     renderCraftingRecipes: function() {
-        if (!domElements.craftingRecipesList || typeof CRAFTING_RECIPES === 'undefined') {
-            if (domElements.craftingRecipesList) domElements.craftingRecipesList.innerHTML = '<p>Ошибка загрузки рецептов.</p>';
+        if (!domElements || !domElements.craftingRecipesList || typeof CRAFTING_RECIPES === 'undefined' || typeof InventoryManager === 'undefined' || typeof ITEM_DEFINITIONS === 'undefined') {
+            if (domElements && domElements.craftingRecipesList) domElements.craftingRecipesList.innerHTML = '<p>Ошибка загрузки рецептов.</p>';
             return;
         }
         
@@ -410,26 +458,31 @@ const UIManager = {
     },
 
     finalizeEventUI: function() { 
+        if (!domElements) return;
         domElements.eventActions.innerHTML = ''; 
         domElements.eventTextDisplay.textContent = '';
         domElements.eventActionsContainer.style.display = 'none'; 
         
-        this.updateDisplay(); // Было UIManager.updateDisplay()
-        this.updateBuildActions(); // Было UIManager.updateBuildActions()
-        if (typeof LocationManager !== 'undefined') { // Проверка перед вызовом
-             LocationManager.updateExploreTab(); // Обновляем, чтобы кнопки разблокировались
+        this.updateDisplay(); 
+        this.updateBuildActions(); 
+        if (typeof LocationManager !== 'undefined') { 
+             LocationManager.updateExploreTab(); 
         } else {
-            this.updateExploreTabDisplay(); // Альтернатива, если LocationManager еще не готов
+            this.updateExploreTabDisplay(); 
             this.renderDiscoveredLocations();
         }
-        game.saveGame(); // game.saveGame останется в основном файле
+        if (typeof game !== 'undefined' && typeof game.saveGame === 'function') {
+            game.saveGame(); // game.saveGame останется в основном файле
+        }
     },
 
-    updateAllUI: function() { // Эту функцию можно будет вызывать из game объекта
+    updateAllUI: function() { 
         this.updateDisplay(); 
         this.updateBuildActions();
         if (typeof LocationManager !== 'undefined') LocationManager.updateExploreTab();
         if (document.getElementById('craft-tab')?.style.display === 'block') this.renderCraftingRecipes();
-        if (document.getElementById('storage-tab')?.style.display === 'block') this.renderBaseInventory();
+        if (document.getElementById('storage-tab')?.style.display === 'block' && typeof InventoryManager !== 'undefined') {
+            InventoryManager.renderBaseInventory(); // Делегируем InventoryManager
+        }
     }
 };
