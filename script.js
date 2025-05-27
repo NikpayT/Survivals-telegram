@@ -1,6 +1,6 @@
 // script.js
 
-const GAME_VERSION = "0.4.1"; // Версия: Состояние локаций и новые ресурсы
+const GAME_VERSION = "0.4.2"; // Версия: Исправление событий, базовый склад
 
 const game = {
     state: {
@@ -10,21 +10,26 @@ const game = {
         currentEvent: null, 
         structures: {}, 
         
-        inventory: [], 
+        inventory: [], // Личный инвентарь игрока
+        baseInventory: [], // Склад базы (общаг)
+
         player: {
             health: 100, maxHealth: 100,
-            hunger: 100, maxHunger: 100,
-            thirst: 100, maxThirst: 100,
+            hunger: 100, maxHunger: 100, 
+            thirst: 100, maxThirst: 100, 
             carryWeight: 0, maxCarryWeight: 25, 
             condition: "В порядке", 
         },
+        dailyFoodNeed: 0, 
+        dailyWaterNeed: 0, 
+
         currentLocationId: "base_surroundings", 
         discoveredLocations: { 
             "base_surroundings": { 
                 discovered: true, 
                 name: "Окрестности Базы",
-                searchAttemptsLeft: LOCATION_DEFINITIONS["base_surroundings"]?.initialSearchAttempts || 5, // Инициализация из defs
-                foundSpecialItems: {} // {itemId: true}
+                searchAttemptsLeft: (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]?.initialSearchAttempts) || 5, 
+                foundSpecialItems: {} 
             } 
         },
         locationEvent: null, 
@@ -34,7 +39,7 @@ const game = {
 
     get maxSurvivors() {
         let max = 0;
-        if (this.state.structures.shelter && this.state.structures.shelter.level > 0) {
+        if (this.state.structures.shelter && this.state.structures.shelter.level > 0 && typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') {
             max += BASE_STRUCTURE_DEFINITIONS.shelter.effect(this.state.structures.shelter.level).maxSurvivors;
         }
         return max || 1;
@@ -42,8 +47,8 @@ const game = {
 
     getHungerThresholds: function() { return { critical: 20, low: 40, normal: 100 }; },
     getThirstThresholds: function() { return { critical: 15, low: 35, normal: 100 }; },
-
-    getTotalResourceValue: function(type) { 
+    
+    getTotalPlayerResourceValue: function(type) { 
         let totalValue = 0;
         this.state.inventory.forEach(itemSlot => {
             const itemDef = ITEM_DEFINITIONS[itemSlot.itemId];
@@ -57,6 +62,27 @@ const game = {
         });
         return totalValue;
     },
+    countBaseFoodItems: function() {
+        let count = 0;
+        this.state.baseInventory.forEach(slot => {
+            const itemDef = ITEM_DEFINITIONS[slot.itemId];
+            if (itemDef && itemDef.type === 'food') {
+                count += slot.quantity * (itemDef.effect?.hunger || 0); 
+            }
+        });
+        return count;
+    },
+    countBaseWaterItems: function() {
+        let count = 0;
+        this.state.baseInventory.forEach(slot => {
+            const itemDef = ITEM_DEFINITIONS[slot.itemId];
+            if (itemDef && (itemDef.type === 'water' || itemDef.type === 'water_source')) {
+                 count += slot.quantity * (itemDef.effect?.thirst || 0); 
+            }
+        });
+        return count;
+    },
+
 
     dom: {
         gameVersionDisplay: document.getElementById('game-version'),
@@ -64,8 +90,8 @@ const game = {
         survivors: document.getElementById('survivors'),
         maxSurvivors: document.getElementById('max-survivors'),
         
-        totalFoodValue: document.getElementById('total-food-value'),
-        totalWaterValue: document.getElementById('total-water-value'),
+        totalFoodValue: document.getElementById('total-food-value'), 
+        totalWaterValue: document.getElementById('total-water-value'), 
         playerCondition: document.getElementById('player-condition'),
 
         healthBarInner: document.getElementById('health-bar-inner'),
@@ -104,7 +130,7 @@ const game = {
         discoverNewLocationButton: document.getElementById('discover-new-location-button'),
         discoveredLocationsList: document.getElementById('discovered-locations-list'),
         craftingRecipesContainer: document.getElementById('crafting-recipes'), 
-    },
+     },
 
     init: function() {
         this.dom.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
@@ -119,7 +145,7 @@ const game = {
         }
         if (!this.state.discoveredLocations["base_surroundings"] || 
             this.state.discoveredLocations["base_surroundings"].searchAttemptsLeft === undefined) {
-            const baseLocDef = LOCATION_DEFINITIONS["base_surroundings"];
+            const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
             this.state.discoveredLocations["base_surroundings"] = { 
                 discovered: true, 
                 name: baseLocDef.name,
@@ -130,10 +156,14 @@ const game = {
         if (!this.state.currentLocationId) {
              this.state.currentLocationId = "base_surroundings";
         }
+        if (!this.state.baseInventory) { 
+            this.state.baseInventory = [];
+        }
 
 
         if (!localStorage.getItem(savedVersionKey)) { 
-            if (this.state.inventory.length === 0) this.addInitialItems(); 
+            if (this.state.inventory.length === 0) this.addInitialItemsToPlayer(); 
+            this.addInitialItemsToBase(); 
         }
         
         this.updateDisplay(); 
@@ -171,12 +201,16 @@ const game = {
         }
     },
 
-    addInitialItems: function() {
-        this.addItemToInventory("food_canned", 3);
-        this.addItemToInventory("water_purified", 3);
-        this.addItemToInventory("scrap_metal", 10);
-        this.addItemToInventory("bandages_crude", 2);
-        this.addItemToInventory("wood", 5);
+    addInitialItemsToPlayer: function() { 
+        this.addItemToInventory(this.state.inventory, "food_canned", 1); 
+        this.addItemToInventory(this.state.inventory, "water_purified", 1);
+        this.addItemToInventory(this.state.inventory, "bandages_crude", 1);
+    },
+    addInitialItemsToBase: function() {
+        this.addItemToInventory(this.state.baseInventory, "food_canned", 5);
+        this.addItemToInventory(this.state.baseInventory, "water_purified", 5);
+        this.addItemToInventory(this.state.baseInventory, "scrap_metal", 10);
+        this.addItemToInventory(this.state.baseInventory, "wood", 10);
     },
 
     openTab: function(tabName, clickedLinkElement) {
@@ -230,51 +264,20 @@ const game = {
         if (healthPercent <= 25) this.dom.healthBarInner.classList.add('critical');
         else if (healthPercent <= 50) this.dom.healthBarInner.classList.add('low');
 
-        const hungerTh = this.getHungerThresholds();
-        const hungerPercent = Math.max(0, (player.hunger / player.maxHunger) * 100);
-        this.dom.hungerBarInner.style.width = `${hungerPercent}%`;
-        this.dom.hungerBarInner.classList.remove('critical', 'low');
-        let hungerText = "Сыт";
-        if (player.hunger <= 0) {
-            hungerText = "Истощение!";
-            this.dom.hungerBarInner.classList.add('critical');
-            if (!this.state.gameOver) this.takeDamage(5, "голод"); 
-        } else if (player.hunger <= hungerTh.critical) {
-            hungerText = "Истощение";
-            this.dom.hungerBarInner.classList.add('critical');
-        } else if (player.hunger <= hungerTh.low) {
-            hungerText = "Голод";
-            this.dom.hungerBarInner.classList.add('low');
-        }
-        this.dom.hungerBarText.textContent = hungerText;
-
-        const thirstTh = this.getThirstThresholds();
-        const thirstPercent = Math.max(0, (player.thirst / player.maxThirst) * 100);
-        this.dom.thirstBarInner.style.width = `${thirstPercent}%`;
-        this.dom.thirstBarInner.classList.remove('critical', 'low');
-        let thirstText = "Норма";
-        if (player.thirst <= 0) {
-            thirstText = "Обезвожен!";
-            this.dom.thirstBarInner.classList.add('critical');
-            if (!this.state.gameOver) this.takeDamage(10, "обезвоживание"); 
-        } else if (player.thirst <= thirstTh.critical) {
-            thirstText = "Сильная жажда";
-            this.dom.thirstBarInner.classList.add('critical');
-        } else if (player.thirst <= thirstTh.low) {
-            thirstText = "Жажда";
-            this.dom.thirstBarInner.classList.add('low');
-        }
-        this.dom.thirstBarText.textContent = thirstText;
+        this.dom.hungerBarText.textContent = "Норма"; 
+        this.dom.hungerBarInner.style.width = `100%`; 
+        this.dom.thirstBarText.textContent = "Норма"; 
+        this.dom.thirstBarInner.style.width = `100%`; 
         
         this.dom.playerCondition.textContent = this.state.player.condition;
 
         if (this.dom.inventoryModal.style.display === 'block') {
             const activeFilter = this.dom.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all';
-            this.renderInventory(activeFilter);
+            this.renderInventory(activeFilter); 
         }
     },
 
-    consumeItem: function(itemId, inventoryItemIndex) {
+    consumeItem: function(itemId, inventoryItemIndex, targetInventory = this.state.inventory) { 
         const itemDef = ITEM_DEFINITIONS[itemId];
         if (!itemDef || !itemDef.effect) {
             this.log(`Предмет '${itemDef.name}' не является употребляемым.`, "event-neutral");
@@ -283,8 +286,11 @@ const game = {
 
         let consumed = false;
         if (itemDef.type === "food" && itemDef.effect.hunger) {
+            // Если потребляет игрок из своего инвентаря, то на игрока.
+            // Если это потребление для выживших (не через эту функцию сейчас), то на них.
+            // Пока что эта функция вызывается только для игрока.
             this.state.player.hunger = Math.min(this.state.player.maxHunger, this.state.player.hunger + itemDef.effect.hunger);
-            this.log(`Вы съели: ${itemDef.name}. Сытость +${itemDef.effect.hunger}.`, "event-positive");
+            this.log(`Вы съели: ${itemDef.name}. Сытость игрока +${itemDef.effect.hunger}.`, "event-positive");
             consumed = true;
         } else if ((itemDef.type === "water" || itemDef.type === "water_source") && itemDef.effect.thirst) {
             if (itemDef.effect.sickness_chance && Math.random() < itemDef.effect.sickness_chance) {
@@ -292,17 +298,17 @@ const game = {
                 this.state.player.condition = "Подташнивает"; 
             } else {
                 this.state.player.thirst = Math.min(this.state.player.maxThirst, this.state.player.thirst + itemDef.effect.thirst);
-                this.log(`Вы выпили: ${itemDef.name}. Жажда утолена на +${itemDef.effect.thirst}.`, "event-positive");
+                this.log(`Вы выпили: ${itemDef.name}. Жажда игрока утолена на +${itemDef.effect.thirst}.`, "event-positive");
             }
             consumed = true;
         } else if (itemDef.type === "medicine" && itemDef.effect.healing) {
             this.state.player.health = Math.min(this.state.player.maxHealth, this.state.player.health + itemDef.effect.healing);
-             this.log(`Вы использовали ${itemDef.name}. Здоровье +${itemDef.effect.healing}.`, "event-positive");
+             this.log(`Вы использовали ${itemDef.name}. Здоровье игрока +${itemDef.effect.healing}.`, "event-positive");
             consumed = true;
         }
 
         if (consumed) {
-            this.removeItemFromInventory(itemId, 1, inventoryItemIndex); 
+            this.removeItemFromInventory(targetInventory, itemId, 1, inventoryItemIndex); 
         }
         this.updateDisplay(); 
     },
@@ -318,61 +324,69 @@ const game = {
         this.updatePlayerStatus(); 
     },
 
-    addItemToInventory: function(itemId, quantity = 1) {
+    addItemToInventory: function(targetInventory, itemId, quantity = 1) {
         if (!ITEM_DEFINITIONS[itemId]) {
             console.error(`Попытка добавить несуществующий предмет: ${itemId}`);
             return false;
         }
         const itemDef = ITEM_DEFINITIONS[itemId];
         
-        if (this.state.player.carryWeight + (itemDef.weight * quantity) > this.state.player.maxCarryWeight) {
-            this.log(`Недостаточно места в инвентаре для ${itemDef.name} (x${quantity}).`, "event-warning");
+        if (targetInventory === this.state.inventory && 
+            (this.state.player.carryWeight + (itemDef.weight * quantity) > this.state.player.maxCarryWeight)) {
+            this.log(`Недостаточно места в личном инвентаре для ${itemDef.name} (x${quantity}).`, "event-warning");
             return false; 
         }
 
-        const existingItemIndex = this.state.inventory.findIndex(slot => slot.itemId === itemId && itemDef.stackable);
+        const existingItemIndex = targetInventory.findIndex(slot => slot.itemId === itemId && itemDef.stackable);
         if (existingItemIndex > -1) {
-            this.state.inventory[existingItemIndex].quantity += quantity;
+            targetInventory[existingItemIndex].quantity += quantity;
         } else {
-            this.state.inventory.push({ itemId: itemId, quantity: quantity });
+            targetInventory.push({ itemId: itemId, quantity: quantity });
         }
-        this.state.player.carryWeight += itemDef.weight * quantity;
-        this.state.player.carryWeight = parseFloat(this.state.player.carryWeight.toFixed(2)); 
+        
+        if (targetInventory === this.state.inventory) { 
+            this.state.player.carryWeight += itemDef.weight * quantity;
+            this.state.player.carryWeight = parseFloat(this.state.player.carryWeight.toFixed(2)); 
+        }
         
         this.updateDisplay(); 
         return true; 
     },
 
-    removeItemFromInventory: function(itemId, quantity = 1, specificIndex = -1) {
+    removeItemFromInventory: function(targetInventory, itemId, quantity = 1, specificIndex = -1) {
         const itemDef = ITEM_DEFINITIONS[itemId];
         if (!itemDef) return false;
 
         let itemIndex;
-        if (specificIndex > -1 && this.state.inventory[specificIndex] && this.state.inventory[specificIndex].itemId === itemId) {
+        if (specificIndex > -1 && targetInventory[specificIndex] && targetInventory[specificIndex].itemId === itemId) {
             itemIndex = specificIndex;
         } else {
-            itemIndex = this.state.inventory.findIndex(slot => slot.itemId === itemId);
+            itemIndex = targetInventory.findIndex(slot => slot.itemId === itemId);
         }
 
         if (itemIndex > -1) {
-            const itemSlot = this.state.inventory[itemIndex];
+            const itemSlot = targetInventory[itemIndex];
+            let removedQuantity = 0;
             if (itemSlot.quantity > quantity) {
                 itemSlot.quantity -= quantity;
+                removedQuantity = quantity;
             } else {
-                quantity = itemSlot.quantity; 
-                this.state.inventory.splice(itemIndex, 1);
+                removedQuantity = itemSlot.quantity; 
+                targetInventory.splice(itemIndex, 1);
             }
-            this.state.player.carryWeight -= itemDef.weight * quantity;
-            this.state.player.carryWeight = Math.max(0, parseFloat(this.state.player.carryWeight.toFixed(2)));
+            if (targetInventory === this.state.inventory) { 
+                this.state.player.carryWeight -= itemDef.weight * removedQuantity;
+                this.state.player.carryWeight = Math.max(0, parseFloat(this.state.player.carryWeight.toFixed(2)));
+            }
             this.updateDisplay();
             return true;
         }
         return false; 
     },
     
-    countItemInInventory: function(itemId) {
+    countItemInInventory: function(targetInventory, itemId) {
         let count = 0;
-        this.state.inventory.forEach(slot => {
+        targetInventory.forEach(slot => {
             if (slot.itemId === itemId) {
                 count += slot.quantity;
             }
@@ -384,28 +398,27 @@ const game = {
         this.dom.inventoryModal.style.display = 'block';
         this.filterInventory('all'); 
     },
-
     closeInventoryModal: function() {
         this.dom.inventoryModal.style.display = 'none';
     },
-
     filterInventory: function(filterType) {
         this.dom.inventoryFilters.querySelectorAll('button').forEach(b => b.classList.remove('active'));
         const activeButton = this.dom.inventoryFilters.querySelector(`button[data-filter="${filterType}"]`);
         if (activeButton) activeButton.classList.add('active');
         this.renderInventory(filterType);
     },
-
-    renderInventory: function(filterType = 'all') {
+    renderInventory: function(filterType = 'all') { 
         this.dom.inventoryItemsList.innerHTML = '';
-        if (this.state.inventory.length === 0) {
-            this.dom.inventoryItemsList.innerHTML = '<p>Инвентарь пуст.</p>';
+        const inventoryToDisplay = this.state.inventory; 
+
+        if (inventoryToDisplay.length === 0) {
+            this.dom.inventoryItemsList.innerHTML = '<p>Ваш инвентарь пуст.</p>';
             this.updateInventoryWeightDisplay();
             return;
         }
         
         let somethingRendered = false;
-        this.state.inventory.forEach((itemSlot, index) => {
+        inventoryToDisplay.forEach((itemSlot, index) => {
             const itemDef = ITEM_DEFINITIONS[itemSlot.itemId];
             if (!itemDef) return;
 
@@ -425,7 +438,11 @@ const game = {
 
             let itemActionsHTML = '';
             if (itemDef.type === 'food' || itemDef.type === 'water' || itemDef.type === 'water_source' || itemDef.type === 'medicine') {
-                itemActionsHTML += `<button onclick="game.consumeItem('${itemSlot.itemId}', ${index})">Использовать</button>`;
+                itemActionsHTML += `<button onclick="game.consumeItem('${itemSlot.itemId}', ${index}, game.state.inventory)">Использовать</button>`;
+            }
+            itemActionsHTML += `<button onclick="game.transferItem('${itemSlot.itemId}', ${index}, game.state.inventory, game.state.baseInventory, 1)">На склад (1)</button>`;
+            if (itemSlot.quantity > 1) {
+                 itemActionsHTML += `<button onclick="game.transferItem('${itemSlot.itemId}', ${index}, game.state.inventory, game.state.baseInventory, ${itemSlot.quantity})">На склад (Все)</button>`;
             }
             
             itemDiv.innerHTML = `
@@ -451,16 +468,56 @@ const game = {
         this.dom.inventoryMaxWeight.textContent = this.state.player.maxCarryWeight;
     },
 
+    transferItem: function(itemId, itemIndexInSource, sourceInventory, destinationInventory, quantity) {
+        const itemDef = ITEM_DEFINITIONS[itemId];
+        if (!itemDef) return;
+
+        // Убедимся, что sourceInventory и destinationInventory переданы корректно (массивы)
+        if (!Array.isArray(sourceInventory) || !Array.isArray(destinationInventory)) {
+            console.error("Ошибка: инвентарь источника или назначения не является массивом.", sourceInventory, destinationInventory);
+            return;
+        }
+        
+        const sourceSlot = sourceInventory[itemIndexInSource];
+        if (!sourceSlot || sourceSlot.itemId !== itemId) {
+            console.error("Ошибка: предмет не найден в исходном слоте для перемещения.", itemId, itemIndexInSource, sourceInventory);
+            return;
+        }
+
+        const actualQuantity = Math.min(quantity, sourceSlot.quantity);
+
+        if (destinationInventory === this.state.inventory) {
+            if (this.state.player.carryWeight + (itemDef.weight * actualQuantity) > this.state.player.maxCarryWeight) {
+                this.log(`Недостаточно места в личном инвентаре для ${itemDef.name} (x${actualQuantity}).`, "event-warning");
+                return;
+            }
+        }
+        
+        this.addItemToInventory(destinationInventory, itemId, actualQuantity); // Эта функция обновит вес, если destinationInventory === this.state.inventory
+        this.removeItemFromInventory(sourceInventory, itemId, actualQuantity, itemIndexInSource); // Эта функция обновит вес, если sourceInventory === this.state.inventory
+
+        this.log(`Перемещено: ${itemDef.name} (x${actualQuantity}) ${sourceInventory === this.state.inventory ? 'на склад' : 'в личный инвентарь'}.`, "event-neutral");
+
+        if (this.dom.inventoryModal.style.display === 'block') {
+            // Перерисовываем только если открыт инвентарь игрока и источник - инвентарь игрока
+            if (sourceInventory === this.state.inventory || destinationInventory === this.state.inventory) {
+                 this.renderInventory(this.dom.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all');
+            }
+        }
+        this.updateDisplay(); 
+    },
+
+
     updateDisplay: function() {
         this.dom.day.textContent = this.state.day;
         this.dom.survivors.textContent = this.state.survivors;
-        this.dom.maxSurvivors.textContent = this.maxSurvivors;
+        this.dom.maxSurvivors.textContent = this.maxSurvivors; 
         
         this.updatePlayerStatus(); 
         this.updateInventoryWeightDisplay(); 
 
-        this.dom.totalFoodValue.textContent = this.getTotalResourceValue('food');
-        this.dom.totalWaterValue.textContent = this.getTotalResourceValue('water_source');
+        this.dom.totalFoodValue.textContent = this.countBaseFoodItems(); 
+        this.dom.totalWaterValue.textContent = this.countBaseWaterItems(); 
 
         if (this.dom.inventoryModal.style.display === 'block') {
             const activeFilter = this.dom.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all';
@@ -517,7 +574,7 @@ const game = {
                             } else {
                                 this.state.discoveredLocations[locId] = loadedState.discoveredLocations[locId];
                             }
-                            const locDef = LOCATION_DEFINITIONS[locId];
+                            const locDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[locId] : null;
                             if (locDef && this.state.discoveredLocations[locId].searchAttemptsLeft === undefined) {
                                 this.state.discoveredLocations[locId].searchAttemptsLeft = locDef.initialSearchAttempts;
                             }
@@ -525,22 +582,26 @@ const game = {
                                  this.state.discoveredLocations[locId].foundSpecialItems = {};
                             }
                         }
-                    } else if (typeof this.state[key] === 'object' && this.state[key] !== null && !Array.isArray(this.state[key])) {
+                    } else if (key === 'baseInventory' && Array.isArray(loadedState[key])) { 
+                        this.state.baseInventory = loadedState[key];
+                    }
+                    else if (typeof this.state[key] === 'object' && this.state[key] !== null && !Array.isArray(this.state[key])) {
                         this.state[key] = { ...this.state[key], ...loadedState[key] };
                     } else {
                         this.state[key] = loadedState[key];
                     }
                 }
             }
-            
+             if (!this.state.baseInventory) this.state.baseInventory = []; 
+
             if (!this.state.currentLocationId) this.state.currentLocationId = "base_surroundings";
             if (!this.state.discoveredLocations || Object.keys(this.state.discoveredLocations).length === 0) {
-                const baseLocDef = LOCATION_DEFINITIONS["base_surroundings"];
+                const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
                 this.state.discoveredLocations = { "base_surroundings": { discovered: true, name: baseLocDef.name, searchAttemptsLeft: baseLocDef.initialSearchAttempts, foundSpecialItems: {} } };
             } else { 
                  for (const locId in this.state.discoveredLocations) {
                      if (this.state.discoveredLocations[locId].discovered) {
-                         const locDef = LOCATION_DEFINITIONS[locId];
+                         const locDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[locId] : null;
                          if (locDef && this.state.discoveredLocations[locId].searchAttemptsLeft === undefined) {
                              this.state.discoveredLocations[locId].searchAttemptsLeft = locDef.initialSearchAttempts;
                          }
@@ -552,7 +613,7 @@ const game = {
             }
 
             if (this.state.flags === undefined) this.state.flags = {};
-            const defaultStructureKeys = Object.keys(BASE_STRUCTURE_DEFINITIONS);
+            const defaultStructureKeys = (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') ? Object.keys(BASE_STRUCTURE_DEFINITIONS) : [];
             defaultStructureKeys.forEach(key => {
                 if (!this.state.structures[key]) {
                     this.state.structures[key] = { level: BASE_STRUCTURE_DEFINITIONS[key].initialLevel || 0 };
@@ -577,10 +638,37 @@ const game = {
         this.state.day++;
         this.log(`--- Наступил День ${this.state.day} ---`, "event-neutral");
 
-        this.state.player.hunger -= (15 + this.state.survivors * 3); 
-        this.state.player.thirst -= (20 + this.state.survivors * 4); 
-        this.state.player.hunger = Math.max(0, this.state.player.hunger);
-        this.state.player.thirst = Math.max(0, this.state.player.thirst);
+        this.state.dailyFoodNeed = this.state.survivors * 10; 
+        this.state.dailyWaterNeed = this.state.survivors * 15; 
+
+        let foodConsumedFromBase = this.consumeResourceFromBase('food', this.state.dailyFoodNeed);
+        let waterConsumedFromBase = this.consumeResourceFromBase('water', this.state.dailyWaterNeed);
+
+        if (foodConsumedFromBase < this.state.dailyFoodNeed) {
+            this.log(`На складе не хватило еды для всех выживших! Потреблено ${foodConsumedFromBase} из ${this.state.dailyFoodNeed} необходимых. Выжившие голодают!`, "event-negative");
+            if (Math.random() < 0.2 * this.state.survivors) { 
+                if (this.state.survivors > 0) {
+                    this.state.survivors--;
+                    this.log("Один из выживших умер от голода!", "event-negative");
+                    if (this.state.survivors <= 0 && !this.state.gameOver) { this.gameOver("Все выжившие погибли от голода."); return; }
+                }
+            }
+        } else {
+            this.log(`Выжившие поели. Со склада потрачено ${foodConsumedFromBase} ед. сытости.`, "event-neutral");
+        }
+
+        if (waterConsumedFromBase < this.state.dailyWaterNeed) {
+            this.log(`На складе не хватило воды для всех выживших! Потреблено ${waterConsumedFromBase} из ${this.state.dailyWaterNeed} необходимых. Выжившие страдают от жажды!`, "event-negative");
+             if (Math.random() < 0.25 * this.state.survivors) { 
+                if (this.state.survivors > 0) {
+                    this.state.survivors--;
+                    this.log("Один из выживших умер от обезвоживания!", "event-negative");
+                    if (this.state.survivors <= 0 && !this.state.gameOver) { this.gameOver("Все выжившие погибли от жажды."); return; }
+                }
+            }
+        } else {
+             this.log(`Выжившие попили. Со склада потрачено ${waterConsumedFromBase} ед. утоления жажды.`, "event-neutral");
+        }
         
         this.triggerRandomEvent(); 
         
@@ -595,6 +683,79 @@ const game = {
         this.saveGame();
     },
     
+    consumeResourceFromBase: function(resourceType, amountNeeded) {
+        let amountFulfilled = 0;
+        const inventory = this.state.baseInventory;
+        
+        inventory.sort((aSlot, bSlot) => {
+            const aDef = ITEM_DEFINITIONS[aSlot.itemId];
+            const bDef = ITEM_DEFINITIONS[bSlot.itemId];
+            let aValue = 0; let bValue = 0;
+
+            if (resourceType === 'food') {
+                aValue = (aDef.effect?.hunger || 0) * (aDef.effect?.sickness_chance || aDef.effect?.radiation ? 0.5 : 1);
+                bValue = (bDef.effect?.hunger || 0) * (bDef.effect?.sickness_chance || bDef.effect?.radiation ? 0.5 : 1);
+            } else if (resourceType === 'water') {
+                aValue = (aDef.effect?.thirst || 0) * (aDef.effect?.sickness_chance ? 0.5 : 1);
+                bValue = (bDef.effect?.thirst || 0) * (bDef.effect?.sickness_chance ? 0.5 : 1);
+            }
+            return aValue - bValue; 
+        });
+
+        for (let i = 0; i < inventory.length && amountFulfilled < amountNeeded; ) { // Убрал i++ из for
+            const slot = inventory[i];
+            const itemDef = ITEM_DEFINITIONS[slot.itemId];
+            let itemValue = 0;
+            let isCorrectType = false;
+            let sicknessThisItem = false;
+
+            if (resourceType === 'food' && itemDef.type === 'food' && itemDef.effect?.hunger) {
+                itemValue = itemDef.effect.hunger;
+                isCorrectType = true;
+                if (itemDef.effect?.radiation && Math.random() < 0.1 * this.state.survivors) { // Шанс получить рад. от этой еды
+                    this.log(`Кто-то получил дозу радиации от ${itemDef.name}.`, "event-warning");
+                }
+            } else if (resourceType === 'water' && (itemDef.type === 'water' || itemDef.type === 'water_source') && itemDef.effect?.thirst) {
+                itemValue = itemDef.effect.thirst;
+                isCorrectType = true;
+                 if (itemDef.effect.sickness_chance && Math.random() < itemDef.effect.sickness_chance * this.state.survivors * 0.05) { 
+                    this.log(`Кто-то из выживших заболел, выпив ${itemDef.name} со склада.`, "event-warning");
+                    sicknessThisItem = true; // Не реализована механика болезней, но флаг есть
+                }
+            }
+
+            if (isCorrectType && itemValue > 0) {
+                const neededFromThisSlot = Math.ceil((amountNeeded - amountFulfilled) / itemValue);
+                const canConsumeFromSlot = Math.min(slot.quantity, neededFromThisSlot);
+                
+                amountFulfilled += canConsumeFromSlot * itemValue;
+                // Важно: removeItemFromInventory может изменить длину массива inventory, поэтому i не инкрементируем здесь
+                if (this.removeItemFromInventory(this.state.baseInventory, slot.itemId, canConsumeFromSlot, i)) {
+                    // Если элемент был полностью удален или его количество уменьшилось,
+                    // и мы не хотим пропустить следующий элемент (если он сдвинулся на место удаленного),
+                    // то i не инкрементируем. Если же количество просто уменьшилось, можно инкрементировать.
+                    // Проще всего не инкрементировать i в цикле, а делать это только если элемент не был удален.
+                    // Однако, так как removeItemFromInventory удаляет элемент и массив сжимается,
+                    // следующий элемент уже будет под индексом i. Поэтому, если мы УДАЛИЛИ элемент, i НЕ инкрементируем.
+                    // Если просто уменьшили количество, то i инкрементируем.
+                    // Текущая removeItemFromInventory удаляет если кол-во <= 0.
+                    if (inventory[i] && inventory[i].itemId === slot.itemId && inventory[i].quantity > 0) { // Если слот остался и тот же предмет
+                        i++;
+                    } else if (!inventory[i] || inventory[i].itemId !== slot.itemId) { // Если слот удален или предмет изменился
+                        // i не меняем, т.к. следующий элемент уже на этом индексе
+                    } else { // На всякий случай
+                        i++;
+                    }
+                } else { // Если по какой-то причине removeItemFromInventory вернул false
+                    i++;
+                }
+            } else {
+                 i++; // Если тип не тот или ценность 0, переходим к следующему
+            }
+        }
+        return Math.min(amountFulfilled, amountNeeded); 
+    },
+
     updateExploreTab: function() { 
         this.updateExploreTabDisplay();
         this.renderDiscoveredLocations();
@@ -602,7 +763,7 @@ const game = {
 
     updateExploreTabDisplay: function() { 
         const currentLocationId = this.state.currentLocationId;
-        const currentLocationDef = LOCATION_DEFINITIONS[currentLocationId];
+        const currentLocationDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[currentLocationId] : null;
         const currentLocationState = this.state.discoveredLocations[currentLocationId];
 
         if (currentLocationDef && currentLocationState) {
@@ -628,7 +789,7 @@ const game = {
         let hasDiscoveredOtherThanBase = false;
         for (const locId in this.state.discoveredLocations) {
             if (this.state.discoveredLocations[locId].discovered) {
-                const locDef = LOCATION_DEFINITIONS[locId];
+                const locDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[locId] : null;
                 if (!locDef) continue;
                 if (locId !== "base_surroundings") hasDiscoveredOtherThanBase = true;
 
@@ -658,7 +819,7 @@ const game = {
     },
 
     setCurrentLocation: function(locationId) {
-        if (LOCATION_DEFINITIONS[locationId] && this.state.discoveredLocations[locationId]?.discovered) {
+        if ((typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS[locationId]) && this.state.discoveredLocations[locationId]?.discovered) {
             if (this.state.locationEvent || this.state.currentEvent) { 
                 this.log("Сначала завершите текущее событие.", "event-warning");
                 return;
@@ -675,7 +836,7 @@ const game = {
         if (this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null) return;
         this.log("Вы отправляетесь на разведку неизведанных территорий...", "event-neutral");
 
-        const currentLocationDef = LOCATION_DEFINITIONS[this.state.currentLocationId];
+        const currentLocationDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[this.state.currentLocationId] : null;
         let newLocationFound = false;
 
         if (currentLocationDef && currentLocationDef.discoverableLocations) {
@@ -684,7 +845,7 @@ const game = {
                     Math.random() < discoverable.chance &&
                     (typeof discoverable.condition === 'function' ? discoverable.condition() : true)) {
                     
-                    const newLocDef = LOCATION_DEFINITIONS[discoverable.locationId];
+                    const newLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[discoverable.locationId] : null;
                     if (newLocDef) {
                         this.state.discoveredLocations[discoverable.locationId] = { 
                             discovered: true, 
@@ -711,7 +872,7 @@ const game = {
         if (this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null) return;
 
         const locId = this.state.currentLocationId;
-        const locDef = LOCATION_DEFINITIONS[locId];
+        const locDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[locId] : null;
         const locState = this.state.discoveredLocations[locId];
 
         if (!locDef || !locState) {
@@ -735,7 +896,7 @@ const game = {
                     const flagId = special.oneTimeFlag || `${locId}_${special.itemId}_found`; 
                     if (!this.state.flags[flagId] && (!locState.foundSpecialItems || !locState.foundSpecialItems[special.itemId])) { 
                         if (Math.random() < (special.findChance || 0.1)) { 
-                            if (this.addItemToInventory(special.itemId, special.quantity || 1)) {
+                            if (this.addItemToInventory(this.state.inventory, special.itemId, special.quantity || 1)) { // Лут с локаций идет игроку
                                 this.log(special.descriptionLog || `ОСОБАЯ НАХОДКА: ${ITEM_DEFINITIONS[special.itemId].name}!`, "event-discovery");
                                 itemsFoundCount++;
                                 specialItemFoundThisTurn = true;
@@ -756,7 +917,7 @@ const game = {
                     locDef.lootTable.forEach(lootEntry => {
                         if (Math.random() < lootEntry.chance) {
                             const quantity = Math.floor(Math.random() * (lootEntry.quantity[1] - lootEntry.quantity[0] + 1)) + lootEntry.quantity[0];
-                            if (this.addItemToInventory(lootEntry.itemId, quantity)) {
+                            if (this.addItemToInventory(this.state.inventory, lootEntry.itemId, quantity)) { // Лут с локаций идет игроку
                                 this.log(`Найдено: ${ITEM_DEFINITIONS[lootEntry.itemId].name} (x${quantity})`, "event-positive");
                                 itemsFoundCount++;
                             } else {
@@ -799,11 +960,16 @@ const game = {
         for (let i = 0; i < daysSpent; i++) {
             if (this.state.gameOver) break;
             this.state.day++; 
-            this.log(`--- Наступил День ${this.state.day} ---`, "event-neutral");
-            this.state.player.hunger -= (15 + this.state.survivors * 3); 
-            this.state.player.thirst -= (20 + this.state.survivors * 4); 
-            this.state.player.hunger = Math.max(0, this.state.player.hunger);
-            this.state.player.thirst = Math.max(0, this.state.player.thirst);
+            this.log(`--- Наступил День ${this.state.day} (после вылазки) ---`, "event-neutral");
+            
+            // Потребление ресурсов выжившими со склада (после вылазки)
+            const foodNeed = this.state.survivors * 10;
+            const waterNeed = this.state.survivors * 15;
+            let foodConsumed = this.consumeResourceFromBase('food', foodNeed);
+            let waterConsumed = this.consumeResourceFromBase('water', waterNeed);
+            if (foodConsumed < foodNeed) this.log("Выжившие голодают после вылазки!", "event-negative");
+            if (waterConsumed < waterNeed) this.log("Выжившие страдают от жажды после вылазки!", "event-negative");
+
             this.updateDisplay(); 
             this.triggerRandomEvent(); 
             if(this.state.gameOver) break; 
@@ -833,33 +999,52 @@ const game = {
         this.state.locationEvent.choices.forEach(choice => {
             const btn = document.createElement('button');
             btn.textContent = choice.text;
-            btn.onclick = () => {
-                if (this.state.locationEvent) { 
-                    const currentLocEvent = this.state.locationEvent; 
-                    const outcome = choice.outcome;
-                    if (outcome.log) this.log(outcome.log, outcome.type || "event-neutral");
-                    if (outcome.addItems) {
-                        outcome.addItems.forEach(item => this.addItemToInventory(item.itemId, item.quantity));
+            if (typeof choice.action === 'function') { 
+                 btn.onclick = () => {
+                    if (this.state.locationEvent) {
+                        choice.action(); 
+                        this.state.locationEvent = null; 
+                        this.finalizeEventUI();
                     }
-                    if (outcome.setFlag && currentLocEvent.flagId) this.state.flags[currentLocEvent.flagId] = true; 
-                    
-                    this.state.locationEvent = null; 
-                    eventButtonsEl.innerHTML = ''; 
-                    eventTextEl.textContent = '';
-                    eventContainer.style.display = 'none'; 
-                    this.updateDisplay(); 
-                    this.updateExploreTabDisplay(); 
-                    this.saveGame();
-                }
-            };
+                };
+            } else if (choice.outcome) { 
+                 btn.onclick = () => {
+                    if (this.state.locationEvent) { 
+                        const currentLocEvent = this.state.locationEvent; 
+                        const outcome = choice.outcome;
+                        if (outcome.log) this.log(outcome.log, outcome.type || "event-neutral");
+                        if (outcome.addItems) {
+                            outcome.addItems.forEach(item => this.addItemToInventory(this.state.inventory, item.itemId, item.quantity)); 
+                        }
+                        if (outcome.setFlag && currentLocEvent.flagId) this.state.flags[currentLocEvent.flagId] = true; 
+                        
+                        this.state.locationEvent = null; 
+                        this.finalizeEventUI();
+                    }
+                };
+            } else {
+                console.error("Некорректное определение выбора в событии локации:", choice);
+                btn.disabled = true;
+            }
             eventButtonsEl.appendChild(btn);
         });
     },
+    
+    finalizeEventUI: function() { 
+        this.dom.eventActions.innerHTML = ''; 
+        this.dom.eventTextDisplay.textContent = '';
+        this.dom.eventActionsContainer.style.display = 'none'; 
+        this.updateDisplay(); 
+        this.updateExploreTabDisplay(); 
+        this.updateBuildActions(); 
+        this.saveGame();
+    },
+
 
     updateBuildActions: function() {
         this.dom.buildActions.innerHTML = ''; 
         for (const key in this.state.structures) {
-            const definition = BASE_STRUCTURE_DEFINITIONS[key];
+            const definition = (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') ? BASE_STRUCTURE_DEFINITIONS[key] : null;
             const currentStructureState = this.state.structures[key];
             if (!definition) continue;
 
@@ -875,7 +1060,7 @@ const game = {
                 const costsForTooltip = [];
                 for (const itemId in costDef) {
                     const required = costDef[itemId];
-                    const has = this.countItemInInventory(itemId);
+                    const has = this.countItemInInventory(this.state.baseInventory, itemId); 
                     costsForTooltip.push(`${ITEM_DEFINITIONS[itemId]? ITEM_DEFINITIONS[itemId].name : itemId}: ${has}/${required}`);
                     if (has < required) canAffordAll = false;
                 }
@@ -890,7 +1075,7 @@ const game = {
             tooltipSpan.classList.add('tooltip-text');
             let tooltipContent = definition.description;
             if (!atMaxLevel && costStringForTooltip) {
-                 tooltipContent += `<br>Стоимость: ${costStringForTooltip}`; 
+                 tooltipContent += `<br>Стоимость (со склада): ${costStringForTooltip}`; 
             } else if (atMaxLevel) { 
                  tooltipContent += `<br>${costStringForTooltip}`;
             }
@@ -905,7 +1090,7 @@ const game = {
     },
     build: function(structureKey) { 
         if (this.state.gameOver || this.state.currentEvent || this.state.locationEvent) return;
-        const definition = BASE_STRUCTURE_DEFINITIONS[structureKey];
+        const definition = (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') ? BASE_STRUCTURE_DEFINITIONS[structureKey] : null;
         const currentStructureState = this.state.structures[structureKey];
         if (!definition || !currentStructureState) return;
         if (currentStructureState.level >= definition.maxLevel) {
@@ -919,7 +1104,7 @@ const game = {
 
         for (const itemId in costDefinition) {
             const requiredQty = costDefinition[itemId];
-            const currentQty = this.countItemInInventory(itemId);
+            const currentQty = this.countItemInInventory(this.state.baseInventory, itemId); 
             if (currentQty < requiredQty) {
                 canAfford = false;
                 missingResLog.push(`${requiredQty - currentQty} ${ITEM_DEFINITIONS[itemId] ? ITEM_DEFINITIONS[itemId].name : itemId}`);
@@ -928,15 +1113,15 @@ const game = {
 
         if (canAfford) {
             for (const itemId in costDefinition) {
-                this.removeItemFromInventory(itemId, costDefinition[itemId]);
+                this.removeItemFromInventory(this.state.baseInventory, itemId, costDefinition[itemId]); 
             }
             currentStructureState.level++;
-            this.log(`${definition.name} улучшен до уровня ${currentStructureState.level}.`, "event-positive");
+            this.log(`${definition.name} улучшен до уровня ${currentStructureState.level}. Ресурсы взяты со склада.`, "event-positive");
             this.updateDisplay();
             this.updateBuildActions();
             this.saveGame();
         } else {
-            this.log(`Недостаточно ресурсов для ${definition.name}. Нужно еще: ${missingResLog.join(', ')}.`, "event-negative");
+            this.log(`Недостаточно ресурсов на складе для ${definition.name}. Нужно еще: ${missingResLog.join(', ')}.`, "event-negative");
         }
     },
 
@@ -946,32 +1131,44 @@ const game = {
             condition: () => game.state.survivors < game.maxSurvivors && Math.random() < 0.08,
             text: "Вы слышите стук в ворота. Одинокий путник просит убежища.",
             choices: [
-                { text: "Принять (+1 выживший)", action: () => {
-                    if (game.state.survivors < game.maxSurvivors) {
-                        game.state.survivors++;
-                        game.log("Новый выживший присоединился к вам.", "event-positive");
-                    } else {
-                        game.log("На базе нет места для нового выжившего.", "event-neutral");
+                { 
+                    text: "Принять (+1 выживший)", 
+                    action: function() { 
+                        if (game.state.survivors < game.maxSurvivors) {
+                            game.state.survivors++;
+                            game.log("Новый выживший присоединился к вам.", "event-positive");
+                        } else {
+                            game.log("На базе нет места для нового выжившего.", "event-neutral");
+                        }
                     }
-                }},
-                { text: "Отказать", action: () => game.log("Вы отказали путнику. Он ушел в неизвестность.", "event-neutral") }
+                },
+                { 
+                    text: "Отказать", 
+                    action: function() { game.log("Вы отказали путнику. Он ушел в неизвестность.", "event-neutral"); } 
+                }
             ]
         },
         {
             id: "trader_visit",
             condition: () => Math.random() < 0.07,
-            text: "К базе подошел торговец. Предлагает 3 'Стимулятора' за 15 'Металлолома'.",
+            text: "К базе подошел торговец. Предлагает 3 'Стимулятора' за 15 'Металлолома' (с вашего личного инвентаря).",
             choices: [
-                { text: "Обменять (Метал.-15, Стим.+3)", action: () => {
-                    if (game.countItemInInventory("scrap_metal") >= 15) {
-                        game.removeItemFromInventory("scrap_metal", 15);
-                        game.addItemToInventory("stimpack_fallout", 3);
-                        game.log("Сделка совершена. Вы получили стимуляторы.", "event-positive");
-                    } else {
-                        game.log("Недостаточно металлолома для обмена.", "event-negative");
+                { 
+                    text: "Обменять (Метал.-15, Стим.+3)", 
+                    action: function() {
+                        if (game.countItemInInventory(game.state.inventory, "scrap_metal") >= 15) {
+                            game.removeItemFromInventory(game.state.inventory, "scrap_metal", 15);
+                            game.addItemToInventory(game.state.inventory, "stimpack_fallout", 3); 
+                            game.log("Сделка совершена. Вы получили стимуляторы.", "event-positive");
+                        } else {
+                            game.log("У вас недостаточно металлолома для обмена.", "event-negative");
+                        }
                     }
-                }},
-                { text: "Отказаться", action: () => game.log("Торговец ушел, ворча себе под нос.", "event-neutral") }
+                },
+                { 
+                    text: "Отказаться", 
+                    action: function() { game.log("Торговец ушел, ворча себе под нос.", "event-neutral"); } 
+                }
             ]
         },
         {
@@ -979,34 +1176,40 @@ const game = {
             condition: () => Math.random() < 0.1 && game.state.day > 2, 
             text: "Небольшая группа зомби замечена неподалеку от базы! Они могут напасть.",
             choices: [
-                { text: "Укрепить оборону (-5 дерева, -3 металла)", action: () => {
-                    if (game.countItemInInventory("wood") >=5 && game.countItemInInventory("scrap_metal") >=3){
-                        game.removeItemFromInventory("wood", 5);
-                        game.removeItemFromInventory("scrap_metal", 3);
-                        game.log("Оборона усилена. Зомби не решились атаковать.", "event-positive");
-                    } else {
-                         game.log("Не хватило материалов для укрепления! Зомби прорвались!", "event-negative");
-                         if(!game.state.gameOver) game.takeDamage(10 * game.state.survivors, "атака зомби");
-                         if(!game.state.gameOver && Math.random() < 0.2 * game.state.survivors && game.state.survivors > 0){
-                             game.state.survivors--;
-                             game.log("Один из выживших погиб во время атаки...", "event-negative");
-                             if(game.state.survivors <= 0 && !game.state.gameOver) game.gameOver("Все выжившие погибли.");
+                { 
+                    text: "Укрепить оборону (-5 дерева, -3 металла со склада)", 
+                    action: function() {
+                        if (game.countItemInInventory(game.state.baseInventory, "wood") >=5 && game.countItemInInventory(game.state.baseInventory, "scrap_metal") >=3){
+                            game.removeItemFromInventory(game.state.baseInventory, "wood", 5);
+                            game.removeItemFromInventory(game.state.baseInventory, "scrap_metal", 3);
+                            game.log("Оборона усилена. Зомби не решились атаковать.", "event-positive");
+                        } else {
+                             game.log("Не хватило материалов на складе для укрепления! Зомби прорвались!", "event-negative");
+                             if(!game.state.gameOver) game.takeDamage(10 * game.state.survivors, "атака зомби");
+                             if(!game.state.gameOver && Math.random() < 0.2 * game.state.survivors && game.state.survivors > 0){
+                                 game.state.survivors--;
+                                 game.log("Один из выживших погиб во время атаки...", "event-negative");
+                                 if(game.state.survivors <= 0 && !game.state.gameOver) game.gameOver("Все выжившие погибли.");
+                             }
+                        }
+                    }
+                },
+                { 
+                    text: "Рискнуть и ничего не делать", 
+                    action: function() {
+                         if (Math.random() < 0.6) { 
+                            game.log("Зомби прошли мимо, не заметив базу.", "event-neutral");
+                         } else {
+                            game.log("Зомби атаковали неподготовленную базу!", "event-negative");
+                            if(!game.state.gameOver) game.takeDamage(15 * game.state.survivors, "внезапная атака");
+                             if(!game.state.gameOver && Math.random() < 0.3 * game.state.survivors && game.state.survivors > 0){
+                                 game.state.survivors--;
+                                 game.log("Потери среди выживших...", "event-negative");
+                                 if(game.state.survivors <= 0 && !game.state.gameOver) game.gameOver("Все выжившие погибли.");
+                             }
                          }
                     }
-                }},
-                { text: "Рискнуть и ничего не делать", action: () => {
-                     if (Math.random() < 0.6) { 
-                        game.log("Зомби прошли мимо, не заметив базу.", "event-neutral");
-                     } else {
-                        game.log("Зомби атаковали неподготовленную базу!", "event-negative");
-                        if(!game.state.gameOver) game.takeDamage(15 * game.state.survivors, "внезапная атака");
-                         if(!game.state.gameOver && Math.random() < 0.3 * game.state.survivors && game.state.survivors > 0){
-                             game.state.survivors--;
-                             game.log("Потери среди выживших...", "event-negative");
-                             if(game.state.survivors <= 0 && !game.state.gameOver) game.gameOver("Все выжившие погибли.");
-                         }
-                     }
-                }}
+                }
             ]
         }
     ],
@@ -1045,18 +1248,18 @@ const game = {
         this.state.currentEvent.choices.forEach(choice => {
             const btn = document.createElement('button');
             btn.textContent = choice.text;
-            btn.onclick = () => {
-                if (this.state.currentEvent) { 
-                    choice.action();
-                    this.state.currentEvent = null; 
-                    eventButtonsEl.innerHTML = ''; 
-                    eventTextEl.textContent = '';
-                    eventContainer.style.display = 'none'; 
-                    this.updateDisplay(); 
-                    this.updateExploreTabDisplay(); 
-                    this.saveGame();
-                }
-            };
+            if (typeof choice.action === 'function') {
+                btn.onclick = () => {
+                    if (this.state.currentEvent) { 
+                        choice.action(); 
+                        this.state.currentEvent = null; 
+                        this.finalizeEventUI();
+                    }
+                };
+            } else {
+                 console.error("Некорректное определение choice.action в глобальном событии:", choice);
+                 btn.disabled = true;
+            }
             eventButtonsEl.appendChild(btn);
         });
     },
@@ -1067,7 +1270,8 @@ const game = {
         this.state.gameOver = true;
         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
             const onclickAttr = button.getAttribute('onclick');
-            if(onclickAttr !== "game.resetGameConfirmation()") { 
+            // Проверяем, что это не кнопка сброса игры и не кнопка закрытия модального окна
+            if(onclickAttr !== "game.resetGameConfirmation()" && onclickAttr !== "game.closeInventoryModal()") { 
                 button.disabled = true;
             }
         });
@@ -1089,6 +1293,7 @@ const game = {
         this.state.currentEvent = null;
         this.state.locationEvent = null; 
         this.state.inventory = []; 
+        this.state.baseInventory = []; 
         this.state.player = { 
             health: 100, maxHealth: 100,
             hunger: 100, maxHunger: 100,
@@ -1096,7 +1301,7 @@ const game = {
             carryWeight: 0, maxCarryWeight: 25,
             condition: "В порядке",
         };
-        const baseLocDef = LOCATION_DEFINITIONS["base_surroundings"];
+        const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
         this.state.currentLocationId = "base_surroundings"; 
         this.state.discoveredLocations = { 
             "base_surroundings": { 
@@ -1110,24 +1315,35 @@ const game = {
         this.state.logVisible = true; 
         
         this.initializeStructures();
-        this.addInitialItems(); 
+        this.addInitialItemsToPlayer(); 
+        this.addInitialItemsToBase();
 
         this.dom.logMessages.innerHTML = ''; 
         
         this.dom.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
         this.applyLogVisibility();
+        
+        // Важно: Сначала обновить ExploreTab, чтобы кнопки стали активными (если не gameOver)
+        // this.updateExploreTab(); // Вызывается внутри init -> updateDisplay -> updateExploreTabDisplay если вкладка открыта
+        // this.updateDisplay(); // Вызывается в init
+        // this.updateBuildActions(); // Вызывается в init
+
+        // Вместо вызова init(), который может иметь побочные эффекты от loadGame,
+        // просто переустанавливаем основные состояния и обновляем UI.
         this.updateDisplay(); 
         this.updateBuildActions();
-        this.updateExploreTab(); 
+        this.updateExploreTab();
 
 
         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
-            if(button.getAttribute('onclick') !== "game.resetGameConfirmation()") {
+            if(button.getAttribute('onclick') !== "game.resetGameConfirmation()" && button.getAttribute('onclick') !== "game.closeInventoryModal()") {
                  button.disabled = false;
             }
         });
-        this.updateBuildActions();
-        this.updateExploreTabDisplay(); 
+        // После разблокировки, кнопки могут быть снова заблокированы, если не хватает ресурсов или есть событие
+        this.updateBuildActions(); // Перепроверить доступность после разблокировки
+        this.updateExploreTabDisplay(); // Перепроверить доступность после разблокировки
+
 
         const defaultNavLink = this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
         if (defaultNavLink) {
@@ -1143,5 +1359,14 @@ const game = {
 };
 
 window.onload = () => {
-    game.init();
+    // Проверка, что все внешние JS файлы загрузились (особенно LOCATION_DEFINITIONS и т.д.)
+    if (typeof ITEM_DEFINITIONS !== 'undefined' && 
+        typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined' &&
+        typeof LOCATION_DEFINITIONS !== 'undefined') {
+        game.init();
+    } else {
+        console.error("Один или несколько файлов определений (items, buildings, locations) не загружены!");
+        // Можно показать сообщение об ошибке пользователю
+        document.body.innerHTML = "<p style='color:red; font-size:18px; text-align:center; margin-top: 50px;'>Ошибка загрузки игровых данных. Пожалуйста, проверьте консоль и обновите страницу.</p>";
+    }
 };
