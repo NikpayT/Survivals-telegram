@@ -1,6 +1,6 @@
 // script.js
 
-const GAME_VERSION = "0.4.0"; // Версия: Базовые локации
+const GAME_VERSION = "0.4.1"; // Версия: Состояние локаций и новые ресурсы
 
 const game = {
     state: {
@@ -20,7 +20,12 @@ const game = {
         },
         currentLocationId: "base_surroundings", 
         discoveredLocations: { 
-            "base_surroundings": { discovered: true, name: "Окрестности Базы" } 
+            "base_surroundings": { 
+                discovered: true, 
+                name: "Окрестности Базы",
+                searchAttemptsLeft: LOCATION_DEFINITIONS["base_surroundings"]?.initialSearchAttempts || 5, // Инициализация из defs
+                foundSpecialItems: {} // {itemId: true}
+            } 
         },
         locationEvent: null, 
         logVisible: true, 
@@ -109,10 +114,26 @@ const game = {
         const [major, minor] = GAME_VERSION.split('.').map(Number);
         const savedVersionKey = `zombieSurvivalGame_v${major}.${minor}`;
 
-        if (!localStorage.getItem(savedVersionKey) || Object.keys(this.state.discoveredLocations).length === 0) { 
-            this.state.discoveredLocations = { "base_surroundings": { discovered: true, name: "Окрестности Базы" } };
-            this.state.currentLocationId = "base_surroundings";
-            if (!localStorage.getItem(savedVersionKey)) this.addInitialItems(); 
+        if (!this.state.discoveredLocations || Object.keys(this.state.discoveredLocations).length === 0) {
+            this.state.discoveredLocations = {}; 
+        }
+        if (!this.state.discoveredLocations["base_surroundings"] || 
+            this.state.discoveredLocations["base_surroundings"].searchAttemptsLeft === undefined) {
+            const baseLocDef = LOCATION_DEFINITIONS["base_surroundings"];
+            this.state.discoveredLocations["base_surroundings"] = { 
+                discovered: true, 
+                name: baseLocDef.name,
+                searchAttemptsLeft: baseLocDef.initialSearchAttempts,
+                foundSpecialItems: {}
+            };
+        }
+        if (!this.state.currentLocationId) {
+             this.state.currentLocationId = "base_surroundings";
+        }
+
+
+        if (!localStorage.getItem(savedVersionKey)) { 
+            if (this.state.inventory.length === 0) this.addInitialItems(); 
         }
         
         this.updateDisplay(); 
@@ -181,21 +202,21 @@ const game = {
         }
         
         if (tabName === 'main-tab') {
-            if (this.state.currentEvent) { // Глобальное событие
+            if (this.state.currentEvent) { 
                 this.dom.eventTextDisplay.textContent = this.state.currentEvent.text;
                 this.dom.eventActionsContainer.style.display = 'block';
-                this.displayEventChoices(); // Перерисовать кнопки глобального события
-            } else if (this.state.locationEvent) { // Локальное событие
+                this.displayEventChoices(); 
+            } else if (this.state.locationEvent) { 
                  this.dom.eventTextDisplay.textContent = this.state.locationEvent.text;
                  this.dom.eventActionsContainer.style.display = 'block';
-                 this.displayLocationEventChoices(); // Перерисовать кнопки локального события
+                 this.displayLocationEventChoices(); 
             }
             else {
                 this.dom.eventTextDisplay.textContent = '';
                 this.dom.eventActionsContainer.style.display = 'none';
             }
         } else if (tabName === 'explore-tab') {
-            this.updateExploreTab(); // При переключении на вкладку разведки, обновить её
+            this.updateExploreTab(); 
         }
     },
     
@@ -490,7 +511,20 @@ const game = {
             for (const key in this.state) {
                 if (loadedState.hasOwnProperty(key)) {
                     if (key === 'discoveredLocations' && typeof loadedState[key] === 'object' && loadedState[key] !== null) {
-                        this.state[key] = { ...this.state[key], ...loadedState[key] };
+                        for (const locId in loadedState.discoveredLocations) {
+                            if (this.state.discoveredLocations[locId]) {
+                                this.state.discoveredLocations[locId] = { ...this.state.discoveredLocations[locId], ...loadedState.discoveredLocations[locId] };
+                            } else {
+                                this.state.discoveredLocations[locId] = loadedState.discoveredLocations[locId];
+                            }
+                            const locDef = LOCATION_DEFINITIONS[locId];
+                            if (locDef && this.state.discoveredLocations[locId].searchAttemptsLeft === undefined) {
+                                this.state.discoveredLocations[locId].searchAttemptsLeft = locDef.initialSearchAttempts;
+                            }
+                            if (this.state.discoveredLocations[locId].foundSpecialItems === undefined) {
+                                 this.state.discoveredLocations[locId].foundSpecialItems = {};
+                            }
+                        }
                     } else if (typeof this.state[key] === 'object' && this.state[key] !== null && !Array.isArray(this.state[key])) {
                         this.state[key] = { ...this.state[key], ...loadedState[key] };
                     } else {
@@ -501,11 +535,23 @@ const game = {
             
             if (!this.state.currentLocationId) this.state.currentLocationId = "base_surroundings";
             if (!this.state.discoveredLocations || Object.keys(this.state.discoveredLocations).length === 0) {
-                this.state.discoveredLocations = { "base_surroundings": { discovered: true, name: "Окрестности Базы" } };
+                const baseLocDef = LOCATION_DEFINITIONS["base_surroundings"];
+                this.state.discoveredLocations = { "base_surroundings": { discovered: true, name: baseLocDef.name, searchAttemptsLeft: baseLocDef.initialSearchAttempts, foundSpecialItems: {} } };
+            } else { 
+                 for (const locId in this.state.discoveredLocations) {
+                     if (this.state.discoveredLocations[locId].discovered) {
+                         const locDef = LOCATION_DEFINITIONS[locId];
+                         if (locDef && this.state.discoveredLocations[locId].searchAttemptsLeft === undefined) {
+                             this.state.discoveredLocations[locId].searchAttemptsLeft = locDef.initialSearchAttempts;
+                         }
+                          if (this.state.discoveredLocations[locId].foundSpecialItems === undefined) {
+                             this.state.discoveredLocations[locId].foundSpecialItems = {};
+                         }
+                     }
+                 }
             }
+
             if (this.state.flags === undefined) this.state.flags = {};
-
-
             const defaultStructureKeys = Object.keys(BASE_STRUCTURE_DEFINITIONS);
             defaultStructureKeys.forEach(key => {
                 if (!this.state.structures[key]) {
@@ -513,11 +559,8 @@ const game = {
                 }
             });
 
-            if (loadedState.logVisible !== undefined) {
-                this.state.logVisible = loadedState.logVisible;
-            } else {
-                this.state.logVisible = true; 
-            }
+            if (loadedState.logVisible !== undefined) this.state.logVisible = loadedState.logVisible;
+            else this.state.logVisible = true; 
             this.log("Сохраненная игра загружена.", "event-discovery");
         } else {
              this.log("Сохраненная игра не найдена, начинаем новую.", "event-neutral");
@@ -526,7 +569,7 @@ const game = {
 
     nextDay: function() {
         if (this.state.gameOver) return;
-        if (this.state.currentEvent || this.state.locationEvent) { // Проверяем оба типа событий
+        if (this.state.currentEvent || this.state.locationEvent) { 
             this.log("Завершите текущее событие.", "event-warning");
             return;
         }
@@ -539,7 +582,7 @@ const game = {
         this.state.player.hunger = Math.max(0, this.state.player.hunger);
         this.state.player.thirst = Math.max(0, this.state.player.thirst);
         
-        this.triggerRandomEvent(); // Глобальное событие
+        this.triggerRandomEvent(); 
         
         if (!this.state.currentEvent && !this.state.locationEvent && document.getElementById('main-tab').style.display === 'block') {
              this.dom.eventActionsContainer.style.display = 'none';
@@ -558,16 +601,24 @@ const game = {
     },
 
     updateExploreTabDisplay: function() { 
-        const currentLocationDef = LOCATION_DEFINITIONS[this.state.currentLocationId];
-        if (currentLocationDef) {
+        const currentLocationId = this.state.currentLocationId;
+        const currentLocationDef = LOCATION_DEFINITIONS[currentLocationId];
+        const currentLocationState = this.state.discoveredLocations[currentLocationId];
+
+        if (currentLocationDef && currentLocationState) {
             this.dom.currentLocationNameDisplay.textContent = currentLocationDef.name;
-            this.dom.currentLocationDescriptionDisplay.textContent = currentLocationDef.description;
+            this.dom.currentLocationDescriptionDisplay.textContent = `${currentLocationDef.description} (Попыток обыска: ${currentLocationState.searchAttemptsLeft || 0})`;
             this.dom.currentLocationTimeDisplay.textContent = currentLocationDef.scoutTime || 1;
-            this.dom.scoutCurrentLocationButton.disabled = this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null;
+            
+            const canSearch = (currentLocationState.searchAttemptsLeft || 0) > 0;
+            this.dom.scoutCurrentLocationButton.disabled = !canSearch || this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null;
+            this.dom.scoutCurrentLocationButton.textContent = canSearch ? `Обыскать (${currentLocationDef.scoutTime || 1} д.)` : "Локация обыскана";
+
         } else {
             this.dom.currentLocationNameDisplay.textContent = "Неизвестно";
             this.dom.currentLocationDescriptionDisplay.textContent = "Ошибка: текущая локация не найдена.";
             this.dom.scoutCurrentLocationButton.disabled = true;
+            this.dom.scoutCurrentLocationButton.textContent = "Обыскать";
         }
         this.dom.discoverNewLocationButton.disabled = this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null;
     },
@@ -608,7 +659,7 @@ const game = {
 
     setCurrentLocation: function(locationId) {
         if (LOCATION_DEFINITIONS[locationId] && this.state.discoveredLocations[locationId]?.discovered) {
-            if (this.state.locationEvent || this.state.currentEvent) { // Проверяем оба события
+            if (this.state.locationEvent || this.state.currentEvent) { 
                 this.log("Сначала завершите текущее событие.", "event-warning");
                 return;
             }
@@ -635,7 +686,12 @@ const game = {
                     
                     const newLocDef = LOCATION_DEFINITIONS[discoverable.locationId];
                     if (newLocDef) {
-                        this.state.discoveredLocations[discoverable.locationId] = { discovered: true, name: newLocDef.name };
+                        this.state.discoveredLocations[discoverable.locationId] = { 
+                            discovered: true, 
+                            name: newLocDef.name,
+                            searchAttemptsLeft: newLocDef.initialSearchAttempts, 
+                            foundSpecialItems: {} 
+                        };
                         this.log(`ОБНАРУЖЕНО! Новая локация: ${newLocDef.name}.`, "event-discovery");
                         newLocationFound = true;
                         this.renderDiscoveredLocations(); 
@@ -648,43 +704,80 @@ const game = {
         if (!newLocationFound) {
             this.log("Разведка не принесла новых открытий на этот раз.", "event-neutral");
         }
-        this.nextDayForLocationAction(1); // Разведка новых территорий тратит 1 день
+        this.nextDayForLocationAction(1); 
     },
 
     exploreCurrentLocationAction: function(actionType) { 
         if (this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null) return;
 
-        const locDef = LOCATION_DEFINITIONS[this.state.currentLocationId];
-        if (!locDef) {
+        const locId = this.state.currentLocationId;
+        const locDef = LOCATION_DEFINITIONS[locId];
+        const locState = this.state.discoveredLocations[locId];
+
+        if (!locDef || !locState) {
             this.log("Ошибка: текущая локация не определена.", "event-negative");
             return;
         }
 
         if (actionType === 'search') {
-            this.log(`Вы начинаете обыскивать локацию: ${locDef.name}...`, "event-neutral");
-            let itemsFoundCount = 0;
-            if (locDef.lootTable) {
-                locDef.lootTable.forEach(lootEntry => {
-                    if (Math.random() < lootEntry.chance) {
-                        const quantity = Math.floor(Math.random() * (lootEntry.quantity[1] - lootEntry.quantity[0] + 1)) + lootEntry.quantity[0];
-                        if (this.addItemToInventory(lootEntry.itemId, quantity)) {
-                            this.log(`Найдено: ${ITEM_DEFINITIONS[lootEntry.itemId].name} (x${quantity})`, "event-positive");
-                            itemsFoundCount++;
-                        } else {
-                            this.log(`Нашли ${ITEM_DEFINITIONS[lootEntry.itemId].name} (x${quantity}), но не смогли унести (перевес!).`, "event-warning");
-                        }
-                    }
-                });
+            if (locState.searchAttemptsLeft <= 0) {
+                this.log(`Локация ${locDef.name} уже полностью обыскана.`, "event-neutral");
+                this.updateExploreTabDisplay(); 
+                return;
             }
 
-            if (locDef.specialEvents && locDef.specialEvents.length > 0) {
+            this.log(`Вы начинаете обыскивать локацию: ${locDef.name}...`, "event-neutral");
+            let itemsFoundCount = 0;
+            let specialItemFoundThisTurn = false;
+
+            if (locDef.specialFinds && locDef.specialFinds.length > 0) {
+                for (const special of locDef.specialFinds) {
+                    const flagId = special.oneTimeFlag || `${locId}_${special.itemId}_found`; 
+                    if (!this.state.flags[flagId] && (!locState.foundSpecialItems || !locState.foundSpecialItems[special.itemId])) { 
+                        if (Math.random() < (special.findChance || 0.1)) { 
+                            if (this.addItemToInventory(special.itemId, special.quantity || 1)) {
+                                this.log(special.descriptionLog || `ОСОБАЯ НАХОДКА: ${ITEM_DEFINITIONS[special.itemId].name}!`, "event-discovery");
+                                itemsFoundCount++;
+                                specialItemFoundThisTurn = true;
+                                this.state.flags[flagId] = true; 
+                                if (!locState.foundSpecialItems) locState.foundSpecialItems = {};
+                                locState.foundSpecialItems[special.itemId] = true; 
+                                break; 
+                            } else {
+                                this.log(`Нашли ${ITEM_DEFINITIONS[special.itemId].name}, но не смогли унести!`, "event-warning");
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!specialItemFoundThisTurn || (locDef.specialFindsContinueSearch)) { 
+                if (locDef.lootTable) {
+                    locDef.lootTable.forEach(lootEntry => {
+                        if (Math.random() < lootEntry.chance) {
+                            const quantity = Math.floor(Math.random() * (lootEntry.quantity[1] - lootEntry.quantity[0] + 1)) + lootEntry.quantity[0];
+                            if (this.addItemToInventory(lootEntry.itemId, quantity)) {
+                                this.log(`Найдено: ${ITEM_DEFINITIONS[lootEntry.itemId].name} (x${quantity})`, "event-positive");
+                                itemsFoundCount++;
+                            } else {
+                                this.log(`Нашли ${ITEM_DEFINITIONS[lootEntry.itemId].name} (x${quantity}), но не смогли унести (перевес!).`, "event-warning");
+                            }
+                        }
+                    });
+                }
+            }
+            
+            locState.searchAttemptsLeft = Math.max(0, locState.searchAttemptsLeft - 1);
+            this.updateExploreTabDisplay(); 
+
+            if (locDef.specialEvents && locDef.specialEvents.length > 0 && !this.state.locationEvent) { 
                 for (const eventDef of locDef.specialEvents) {
-                    const flagId = eventDef.id + "_" + this.state.currentLocationId; // Уникальный флаг для события на локации
+                    const flagId = eventDef.id + "_" + locId; 
                     if (Math.random() < eventDef.chance &&
                         (typeof eventDef.condition === 'function' ? eventDef.condition() : true) &&
                         (!this.state.flags[flagId] || eventDef.repeatable) 
                        ) {
-                        this.state.locationEvent = { ...eventDef, flagId: flagId }; // Сохраняем flagId для отметки
+                        this.state.locationEvent = { ...eventDef, flagId: flagId }; 
                         this.log(`СОБЫТИЕ НА ЛОКАЦИИ: ${eventDef.text}`, "event-discovery");
                         this.displayLocationEventChoices();
                         return; 
@@ -692,10 +785,10 @@ const game = {
                 }
             }
             
-            if (itemsFoundCount === 0 && !this.state.locationEvent) {
+            if (itemsFoundCount === 0 && !this.state.locationEvent && !specialItemFoundThisTurn) {
                 this.log("Ничего ценного не найдено в этот раз.", "event-neutral");
             }
-            if (!this.state.locationEvent) {
+            if (!this.state.locationEvent) { 
                  this.nextDayForLocationAction(locDef.scoutTime || 1);
             }
         }
@@ -705,17 +798,17 @@ const game = {
         this.log(`Исследование локации заняло ${daysSpent} дн.`, "event-neutral");
         for (let i = 0; i < daysSpent; i++) {
             if (this.state.gameOver) break;
-            this.state.day++; // Увеличиваем день вручную, т.к. nextDay() имеет проверки на события
+            this.state.day++; 
             this.log(`--- Наступил День ${this.state.day} ---`, "event-neutral");
             this.state.player.hunger -= (15 + this.state.survivors * 3); 
             this.state.player.thirst -= (20 + this.state.survivors * 4); 
             this.state.player.hunger = Math.max(0, this.state.player.hunger);
             this.state.player.thirst = Math.max(0, this.state.player.thirst);
-            this.updateDisplay(); // Обновляем статусы после изменения дня и потребностей
-            this.triggerRandomEvent(); // Проверяем глобальные события после изменения дня
-            if(this.state.gameOver) break; // Если глобальное событие привело к концу игры
+            this.updateDisplay(); 
+            this.triggerRandomEvent(); 
+            if(this.state.gameOver) break; 
         }
-        this.updateBuildActions(); // Обновляем доступность построек
+        this.updateBuildActions(); 
         this.saveGame();
     },
 
@@ -727,7 +820,7 @@ const game = {
         eventButtonsEl.innerHTML = ''; 
         if (!this.state.locationEvent) {
             eventContainer.style.display = 'none';
-            this.updateExploreTabDisplay(); // Разблокировать кнопки
+            this.updateExploreTabDisplay(); 
             return;
         }
 
@@ -742,13 +835,13 @@ const game = {
             btn.textContent = choice.text;
             btn.onclick = () => {
                 if (this.state.locationEvent) { 
-                    const currentLocEvent = this.state.locationEvent; // Сохраняем ссылку на текущее событие
+                    const currentLocEvent = this.state.locationEvent; 
                     const outcome = choice.outcome;
                     if (outcome.log) this.log(outcome.log, outcome.type || "event-neutral");
                     if (outcome.addItems) {
                         outcome.addItems.forEach(item => this.addItemToInventory(item.itemId, item.quantity));
                     }
-                    if (outcome.setFlag && currentLocEvent.flagId) this.state.flags[currentLocEvent.flagId] = true; // Используем сохраненный flagId
+                    if (outcome.setFlag && currentLocEvent.flagId) this.state.flags[currentLocEvent.flagId] = true; 
                     
                     this.state.locationEvent = null; 
                     eventButtonsEl.innerHTML = ''; 
@@ -798,7 +891,7 @@ const game = {
             let tooltipContent = definition.description;
             if (!atMaxLevel && costStringForTooltip) {
                  tooltipContent += `<br>Стоимость: ${costStringForTooltip}`; 
-            } else if (atMaxLevel) { // Если макс уровень, просто добавляем описание
+            } else if (atMaxLevel) { 
                  tooltipContent += `<br>${costStringForTooltip}`;
             }
 
@@ -810,7 +903,7 @@ const game = {
             this.dom.buildActions.appendChild(btn);
         }
     },
-    build: function(structureKey) { // Добавил проверку на locationEvent
+    build: function(structureKey) { 
         if (this.state.gameOver || this.state.currentEvent || this.state.locationEvent) return;
         const definition = BASE_STRUCTURE_DEFINITIONS[structureKey];
         const currentStructureState = this.state.structures[structureKey];
@@ -883,7 +976,7 @@ const game = {
         },
         {
             id: "minor_horde_near_base",
-            condition: () => Math.random() < 0.1 && game.state.day > 2, // Не сразу
+            condition: () => Math.random() < 0.1 && game.state.day > 2, 
             text: "Небольшая группа зомби замечена неподалеку от базы! Они могут напасть.",
             choices: [
                 { text: "Укрепить оборону (-5 дерева, -3 металла)", action: () => {
@@ -939,7 +1032,7 @@ const game = {
         eventButtonsEl.innerHTML = ''; 
         if (!this.state.currentEvent) {
             eventContainer.style.display = 'none';
-             this.updateExploreTabDisplay(); // Разблокировать кнопки на вкладке Разведка
+             this.updateExploreTabDisplay(); 
             return;
         }
 
@@ -1003,8 +1096,16 @@ const game = {
             carryWeight: 0, maxCarryWeight: 25,
             condition: "В порядке",
         };
+        const baseLocDef = LOCATION_DEFINITIONS["base_surroundings"];
         this.state.currentLocationId = "base_surroundings"; 
-        this.state.discoveredLocations = { "base_surroundings": { discovered: true, name: "Окрестности Базы" } }; 
+        this.state.discoveredLocations = { 
+            "base_surroundings": { 
+                discovered: true, 
+                name: baseLocDef.name,
+                searchAttemptsLeft: baseLocDef.initialSearchAttempts,
+                foundSpecialItems: {}
+            } 
+        }; 
         this.state.flags = {}; 
         this.state.logVisible = true; 
         
@@ -1015,27 +1116,24 @@ const game = {
         
         this.dom.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
         this.applyLogVisibility();
-        // Важно: Сначала обновить ExploreTab, чтобы кнопки стали активными (если не gameOver)
-        this.updateExploreTab(); 
-        this.updateDisplay(); // Затем общий updateDisplay
+        this.updateDisplay(); 
         this.updateBuildActions();
+        this.updateExploreTab(); 
 
 
         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
-            // Кнопка сброса в футере должна оставаться активной
             if(button.getAttribute('onclick') !== "game.resetGameConfirmation()") {
                  button.disabled = false;
             }
         });
-        // После разблокировки, кнопки строительства и разведки могут быть снова заблокированы, если не хватает ресурсов или есть событие
         this.updateBuildActions();
-        this.updateExploreTabDisplay(); // Перепроверить доступность кнопок разведки
+        this.updateExploreTabDisplay(); 
 
         const defaultNavLink = this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
         if (defaultNavLink) {
             this.openTab('main-tab', defaultNavLink);
         } else {
-            this.openTab('main-tab', null); // На всякий случай
+            this.openTab('main-tab', null); 
         }
         this.dom.eventActionsContainer.style.display = 'none'; 
 
