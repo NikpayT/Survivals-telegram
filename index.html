@@ -3,85 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Пустошь: Выживание v0.3</title>
+    <title>Пустошь: Выживание</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-container">
-        <header>
-            <h1>Пустошь: Выживание</h1>
-            <button id="inventory-button" class="header-button">Инвентарь</button>
-        </header>
-
-        <div id="stats-panel" class="panel">
-            <h2>Состояние Базы и Персонажа</h2>
-            <p>День: <span id="day">1</span></p>
-            <p>Выжившие: <span id="survivors">1</span> / <span id="max-survivors">1</span></p>
-            <!-- Убрали прямые счетчики еды/воды и т.д. Они теперь в инвентаре -->
-            <p>Сытость: <span id="hunger-status">Норма</span> (<span id="total-food-value">0</span>)</p>
-            <p>Жажда: <span id="thirst-status">Норма</span> (<span id="total-water-value">0</span>)</p>
-            <p>Здоровье: <span id="health-status">100</span>%</p>
-            <p>Состояние: <span id="player-condition">В порядке</span></p>
-        </div>
-
-        <div id="log-panel" class="panel">
-            <h2>Журнал Событий</h2>
-            <div id="log-messages">
-                <p>Добро пожаловать в Пустошь. Ваша задача - выжить и развить базу.</p>
+    <div id="game-wrapper">
+        <aside id="sidebar">
+            <div id="sidebar-header">
+                <h2>Пустошь</h2>
+                <button id="inventory-button" class="sidebar-button">Инвентарь</button>
             </div>
-        </div>
-
-        <div id="actions-panel" class="panel">
-            <h2>Действия</h2>
-            <!-- Вкладки для действий -->
-            <div class="tabs">
-                <button class="tab-link active" onclick="game.openTab(event, 'main-tab')">Основные</button>
-                <button class="tab-link" onclick="game.openTab(event, 'base-tab')">База</button>
-                <button class="tab-link" onclick="game.openTab(event, 'explore-tab')">Разведка</button>
-                <button class="tab-link" onclick="game.openTab(event, 'craft-tab')">Крафт</button>
+            <nav id="main-nav">
+                <button class="nav-link active" data-tab="main-tab">Обзор</button>
+                <button class="nav-link" data-tab="base-tab">База</button>
+                <button class="nav-link" data-tab="explore-tab">Разведка</button>
+                <button class="nav-link" data-tab="craft-tab">Крафт</button>
+            </nav>
+            <div id="player-status-condensed" class="panel">
+                <h4>Состояние</h4>
+                <p>День: <span id="day">1</span></p>
+                <p>Здоровье: <span id="health-status">100</span>%</p>
+                <p>Сытость: <span id="hunger-status">Норма</span></p>
+                <p>Жажда: <span id="thirst-status">Норма</span></p>
+                <p>Выжившие: <span id="survivors">1</span> / <span id="max-survivors">1</span></p>
             </div>
+             <div id="quick-stats" class="panel">
+                <h4>Ресурсы (кратко)</h4>
+                <p>Еда (общ): <span id="total-food-value">0</span></p>
+                <p>Вода (общ): <span id="total-water-value">0</span></p>
+                <!-- Можно добавить основные материалы, если часто нужны -->
+            </div>
+        </aside>
 
-            <div id="main-tab" class="tab-content" style="display: block;">
-                <h3>Основные действия</h3>
-                <div id="main-actions">
-                    <button onclick="game.nextDay()">Следующий день</button>
-                    <!-- Кнопки "Поесть", "Попить" теперь будут в инвентаре или контекстно -->
+        <main id="main-content">
+            <header id="main-header">
+                <h1>Выживание в Пустоши</h1>
+                <div id="player-condition-display">Состояние: <span id="player-condition">В порядке</span></div>
+            </header>
+
+            <div id="tab-content-area">
+                <div id="main-tab" class="tab-content" style="display: block;">
+                    <h2>Обзор и События</h2>
+                    <div class="action-group">
+                        <h3>Действия Дня</h3>
+                        <button onclick="game.nextDay()">Завершить день</button>
+                        <!-- Дополнительные общие действия могут быть здесь -->
+                    </div>
+                    <div id="event-actions-container" class="action-group">
+                        <h3>Текущее Событие</h3>
+                        <div id="event-text-display"></div>
+                        <div id="event-actions">
+                            <!-- Кнопки для событий -->
+                        </div>
+                    </div>
                 </div>
-                 <div id="event-actions">
-                    <!-- Кнопки для событий -->
+
+                <div id="base-tab" class="tab-content">
+                    <h2>Управление Базой</h2>
+                    <div id="build-actions" class="action-grid">
+                        <!-- Кнопки строительства -->
+                    </div>
+                </div>
+
+                <div id="explore-tab" class="tab-content">
+                    <h2>Разведка Местности</h2>
+                    <button onclick="game.scoutArea()">Разведать окрестности (1 день)</button>
+                    <div id="discovered-locations">
+                        <p><em>Пока нет известных локаций для исследования.</em></p>
+                    </div>
+                </div>
+
+                <div id="craft-tab" class="tab-content">
+                    <h2>Изготовление Предметов</h2>
+                    <div id="crafting-recipes">
+                        <p><em>Нет доступных рецептов или не хватает материалов/инструментов.</em></p>
+                    </div>
                 </div>
             </div>
 
-            <div id="base-tab" class="tab-content">
-                <h3>Управление Базой</h3>
-                <div id="build-actions">
-                    <!-- Кнопки строительства -->
+            <div id="log-panel-container">
+                 <div id="log-panel" class="panel">
+                    <div class="log-header">
+                        <h2>Журнал Событий</h2>
+                        <button id="toggle-log" title="Скрыть/Показать лог">-</button>
+                    </div>
+                    <div id="log-messages">
+                        <p>Добро пожаловать в Пустошь.</p>
+                    </div>
                 </div>
             </div>
-
-            <div id="explore-tab" class="tab-content">
-                <h3>Разведка Местности</h3>
-                <button onclick="game.scoutArea()">Разведать окрестности (1 день)</button>
-                <div id="discovered-locations">
-                    <p><em>Пока нет известных локаций для исследования.</em></p>
-                </div>
-            </div>
-
-            <div id="craft-tab" class="tab-content">
-                <h3>Изготовление Предметов</h3>
-                <div id="crafting-recipes">
-                    <p><em>Нет доступных рецептов или не хватает материалов/инструментов.</em></p>
-                </div>
-            </div>
-        </div>
-
-        <footer>
-            <button onclick="game.resetGameConfirmation()">Начать игру заново</button>
-            <p>Alpha v0.3 - Инвентарь</p>
-        </footer>
+        </main>
     </div>
 
-    <!-- Модальное окно Инвентаря -->
+    <!-- Модальное окно Инвентаря (остается без изменений в структуре) -->
     <div id="inventory-modal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="game.closeInventoryModal()">×</span>
@@ -89,17 +103,22 @@
             <div class="inventory-filters">
                 <button data-filter="all" class="active">Все</button>
                 <button data-filter="food">Еда</button>
-                <button data-filter="water_source">Вода</button> <!-- Изменено на water_source для грязной воды -->
+                <button data-filter="water_source">Вода</button>
                 <button data-filter="medicine">Медикаменты</button>
                 <button data-filter="material">Материалы</button>
                 <button data-filter="tool">Инструменты</button>
+                <button data-filter="weapon">Оружие</button>
+                <button data-filter="armor">Броня</button>
                 <button data-filter="quest_item">Особое</button>
             </div>
-            <div id="inventory-items-list">
-                <!-- Предметы будут добавляться сюда JS -->
-            </div>
+            <div id="inventory-items-list"></div>
         </div>
     </div>
+
+    <footer>
+        <button onclick="game.resetGameConfirmation()">Начать игру заново</button>
+        <p id="game-version">Версия: 0.0.0</p>
+    </footer>
 
     <script src="items.js"></script>
     <script src="buildings.js"></script>
