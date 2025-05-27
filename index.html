@@ -22,16 +22,37 @@
             <div id="player-status-condensed" class="panel">
                 <h4>Состояние</h4>
                 <p>День: <span id="day">1</span></p>
-                <p>Здоровье: <span id="health-status">100</span>%</p>
-                <p>Сытость: <span id="hunger-status">Норма</span></p>
-                <p>Жажда: <span id="thirst-status">Норма</span></p>
-                <p>Выжившие: <span id="survivors">1</span> / <span id="max-survivors">1</span></p>
+                
+                <div class="status-bar-container">
+                    <span class="status-label">Здоровье:</span>
+                    <div class="progress-bar-outer" id="health-bar-outer">
+                        <div class="progress-bar-inner" id="health-bar-inner"></div>
+                        <span class="progress-bar-text" id="health-bar-text">100%</span>
+                    </div>
+                </div>
+                
+                <div class="status-bar-container">
+                    <span class="status-label">Сытость:</span>
+                    <div class="progress-bar-outer" id="hunger-bar-outer">
+                        <div class="progress-bar-inner" id="hunger-bar-inner"></div>
+                        <span class="progress-bar-text" id="hunger-bar-text">Норма</span>
+                    </div>
+                </div>
+
+                <div class="status-bar-container">
+                     <span class="status-label">Жажда:</span>
+                    <div class="progress-bar-outer" id="thirst-bar-outer">
+                        <div class="progress-bar-inner" id="thirst-bar-inner"></div>
+                        <span class="progress-bar-text" id="thirst-bar-text">Норма</span>
+                    </div>
+                </div>
+
+                <p style="margin-top: 10px;">Выжившие: <span id="survivors">1</span> / <span id="max-survivors">1</span></p>
             </div>
              <div id="quick-stats" class="panel">
                 <h4>Ресурсы (кратко)</h4>
                 <p>Еда (общ): <span id="total-food-value">0</span></p>
                 <p>Вода (общ): <span id="total-water-value">0</span></p>
-                <!-- Можно добавить основные материалы, если часто нужны -->
             </div>
         </aside>
 
@@ -47,13 +68,11 @@
                     <div class="action-group">
                         <h3>Действия Дня</h3>
                         <button onclick="game.nextDay()">Завершить день</button>
-                        <!-- Дополнительные общие действия могут быть здесь -->
                     </div>
                     <div id="event-actions-container" class="action-group">
                         <h3>Текущее Событие</h3>
                         <div id="event-text-display"></div>
                         <div id="event-actions">
-                            <!-- Кнопки для событий -->
                         </div>
                     </div>
                 </div>
@@ -61,7 +80,6 @@
                 <div id="base-tab" class="tab-content">
                     <h2>Управление Базой</h2>
                     <div id="build-actions" class="action-grid">
-                        <!-- Кнопки строительства -->
                     </div>
                 </div>
 
@@ -95,7 +113,6 @@
         </main>
     </div>
 
-    <!-- Модальное окно Инвентаря (остается без изменений в структуре) -->
     <div id="inventory-modal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="game.closeInventoryModal()">×</span>
