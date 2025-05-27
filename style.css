@@ -1,1 +1,117 @@
 
+/* public/style.css */
+
+/* Общие стили для тела страницы и шрифтов */
+body {
+    font-family: 'Arial', sans-serif; /* Выбираем простой, читабельный шрифт */
+    margin: 0;
+    padding: 0;
+    background-color: #222; /* Темный фон для постапокалиптической атмосферы */
+    color: #eee; /* Светлый текст */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Минимальная высота, чтобы контейнер был по центру */
+    overflow: hidden; /* Скрываем прокрутку, если контент не выходит за пределы */
+}
+
+.game-container {
+    width: 90%;
+    max-width: 800px; /* Ограничиваем ширину для лучшей читаемости на больших экранах */
+    height: 90vh; /* Высота контейнера, чтобы хорошо смотрелось на мобильных */
+    display: flex;
+    flex-direction: column;
+    border: 2px solid #555; /* Рамка вокруг игрового поля */
+    border-radius: 8px;
+    overflow: hidden; /* Важно для прокрутки сообщений */
+    background-color: #333; /* Чуть светлее, чем фон страницы */
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Стили заголовка игры */
+.game-header {
+    background-color: #444;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #555;
+}
+
+.game-header h1 {
+    margin: 0;
+    font-size: 1.8em;
+    color: #ffd700; /* Золотой цвет для заголовка */
+}
+
+.game-status {
+    font-size: 1.1em;
+    color: #bbb;
+}
+
+/* Стили панели ресурсов */
+.resource-panel {
+    display: flex;
+    flex-wrap: wrap; /* Чтобы ресурсы переносились на новую строку, если их много */
+    background-color: #555;
+    padding: 10px 15px;
+    border-bottom: 1px solid #666;
+    font-size: 0.95em;
+}
+
+.resource-item {
+    margin-right: 20px;
+    margin-bottom: 5px; /* Небольшой отступ снизу для переноса строк */
+    color: #eee;
+}
+
+/* Стили основной области сообщений */
+.main-content {
+    flex-grow: 1; /* Занимает все доступное пространство по высоте */
+    padding: 20px;
+    overflow-y: auto; /* Делаем прокрутку для сообщений */
+    line-height: 1.6;
+    color: #ddd;
+    text-align: justify; /* Выравнивание текста по ширине */
+}
+
+.game-messages p {
+    margin-bottom: 1em;
+}
+
+/* Стили панели действий (кнопок) */
+.action-panel {
+    background-color: #444;
+    padding: 15px 20px;
+    display: flex;
+    flex-wrap: wrap; /* Чтобы кнопки переносились, если их много */
+    gap: 10px; /* Отступ между кнопками */
+    border-top: 1px solid #555;
+    justify-content: center; /* Центрируем кнопки */
+}
+
+.action-button {
+    background-color: #007bff; /* Синяя кнопка */
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 1.1em;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.action-button:hover {
+    background-color: #0056b3; /* Темнее при наведении */
+    transform: translateY(-1px); /* Легкий эффект поднятия */
+}
+
+.action-button:active {
+    background-color: #004085; /* Ещё темнее при нажатии */
+    transform: translateY(0);
+}
+
+/* Дополнительные стили для лучшей читаемости */
+p:last-child {
+    margin-bottom: 0; /* Убираем лишний отступ у последнего параграфа */
+}
