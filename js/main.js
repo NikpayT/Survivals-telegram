@@ -12,9 +12,35 @@ window.gameState = {
     // Дополнительные игровые состояния, если нужны
 };
 
+// --- Основные функции игры ---
+
+// !!! ВАЖНОЕ ИСПРАВЛЕНИЕ !!!
+// Делаем функцию добавления в лог глобально доступной сразу.
+// Теперь она будет вызывать метод uiManager.addGameLog, который уже настроен на работу с DOM и gameState.
+// uiManager.js должен быть загружен в HTML до main.js для этого.
+window.addGameLog = function(message) {
+    // window.uiManager.addGameLog() сам управляет timestamp и сохранением в gameState.gameLog,
+    // а также обновлением DOM.
+    if (window.uiManager && typeof window.uiManager.addGameLog === 'function') {
+        window.uiManager.addGameLog(message);
+    } else {
+        // Запасной вариант, если uiManager еще не инициализирован или не содержит addGameLog
+        console.warn("UIManager.addGameLog еще не доступен. Сообщение: " + message);
+        // Можно добавить сообщение в gameLog напрямую, но оно не будет отображено сразу
+        if (window.gameState && window.gameState.gameLog) {
+            const timestamp = new Date().toLocaleTimeString();
+            window.gameState.gameLog.unshift(`[${timestamp}] ${message}`);
+            if (window.gameState.gameLog.length > 50) {
+                window.gameState.gameLog.pop();
+            }
+        }
+    }
+};
+
+
 // Загружаем DOM перед инициализацией скриптов
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Игра загружена! Инициализация...');
+    window.addGameLog('Игра загружена! Инициализация...'); // Используем новую глобальную функцию
 
     // Инициализируем игровые объекты
     window.gameState.player = new Player();
@@ -24,29 +50,15 @@ document.addEventListener('DOMContentLoaded', () => {
     window.craftingManager = new CraftingManager();
     window.factionManager = new FactionManager();
     window.combatManager = new CombatManager(); // Инициализируем CombatManager
-    // Инициализируем репутацию фракций
-    window.factionManager.initFactions();
-
-    // Запускаем UIManager (он будет отвечать за обновление HTML)
+    
+    // Инициализируем UIManager (он будет отвечать за обновление HTML)
     // Важно: uiManager должен быть инициализирован после player и community
     // и после того, как все GameScenes, GameItems и т.д. загружены.
-    window.uiManager.init();
+    // А также после определения window.addGameLog, если мы его используем как глобальную функцию.
+    window.uiManager.init(); // Теперь uiManager.init() вызовется после того, как window.addGameLog существует
 
-    // --- Основные функции игры ---
-
-    /**
-     * Добавляет сообщение в игровой лог.
-     * @param {string} message - Сообщение для добавления.
-     */
-    window.addGameLog = function(message) {
-        const timestamp = new Date().toLocaleTimeString();
-        window.gameState.gameLog.push(`[${timestamp}] ${message}`);
-        if (window.gameState.gameLog.length > 50) { // Ограничиваем размер лога
-            window.gameState.gameLog.shift();
-        }
-        window.uiManager.updateGameLog(); // Обновляем UI-элемент лога, если такой есть
-        console.log(`[GAME LOG] ${message}`); // Также выводим в консоль
-    };
+    // Инициализируем репутацию фракций
+    window.factionManager.initFactions(); // Теперь эта функция сможет использовать window.addGameLog
 
     /**
      * Загружает и отображает новую сцену.
@@ -88,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })));
 
-
         // Проверяем условия Game Over после загрузки сцены
         checkGameOverConditions();
         window.uiManager.updateAllStatus(); // Убеждаемся, что статус всегда актуален
@@ -107,7 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         }
         // Если выживших в общине нет (кроме самого игрока) И игрок не погиб
-        if (community.survivors <= 1 && player.health > 0 && community.facilities.shelter_level === 0) { // Добавим условие, что убежище разрушено
+        // Добавлено условие, что убежище должно быть разрушено, иначе можно просто умереть от голода/жажды и община будет жива
+        if (community.survivors <= 1 && player.health > 0 && community.facilities.shelter_level === 0) {
             window.addGameLog('Ваше убежище разрушено, а община погибла. Вы остались один, без надежды на восстановление.');
             window.loadScene('player_death', false); // Можно сделать отдельную сцену "Одинокий конец"
             return true;
@@ -123,48 +135,24 @@ document.addEventListener('DOMContentLoaded', () => {
         window.gameState.gameDay++;
         window.addGameLog(`Наступил день ${window.gameState.gameDay}.`);
 
-        // Ежедневное потребление ресурсов общиной
-        window.gameState.community.dailyConsumption();
+        // Ежедневные действия игрока
+        window.gameState.player.passDay();
 
-        // Ежедневные потребности игрока
-        window.gameState.player.adjustHunger(Math.floor(Math.random() * 10) + 10); // 10-20
-        window.gameState.player.adjustThirst(Math.floor(Math.random() * 15) + 15); // 15-30
-        window.gameState.player.adjustFatigue(Math.floor(Math.random() * 20) + 20); // 20-40
-
-        // Проверка на последствия голода/жажды/усталости для игрока
-        if (window.gameState.player.hunger >= 90) {
-            window.gameState.player.adjustHealth(-5);
-            window.addGameLog('Вы очень голодны и чувствуете слабость. Ваше здоровье ухудшается.');
-        } else if (window.gameState.player.hunger >= 70) {
-            window.addGameLog('Вы начинаете сильно голодать.');
-        }
-
-        if (window.gameState.player.thirst >= 90) {
-            window.gameState.player.adjustHealth(-10);
-            window.addGameLog('Вас мучает невыносимая жажда, силы покидают вас. Здоровье критически падает.');
-        } else if (window.gameState.player.thirst >= 70) {
-            window.addGameLog('Вы испытываете сильную жажду.');
-        }
-
-        if (window.gameState.player.fatigue >= 100) {
-            window.gameState.player.adjustHealth(-3);
-            window.addGameLog('Вы измотаны до предела. Вам срочно нужен отдых.');
-        } else if (window.gameState.player.fatigue >= 80) {
-            window.addGameLog('Вы очень устали и нуждаетесь в отдыхе.');
-        }
+        // Ежедневные действия общины
+        window.gameState.community.passDay();
 
         // Обновляем UI
         window.uiManager.updateAllStatus();
-        // Перезагружаем текущую сцену, чтобы отобразить новые опции/текст, если изменился
-        window.loadScene(window.gameState.currentSceneId, false); // false, чтобы не вызывать onEnter снова
-        checkGameOverConditions();
+        window.uiManager.addGameLog('Произошли ежедневные события.');
 
-        // Здесь будут вызываться случайные события дня
-        // window.gameLoop.triggerDailyEvents();
+        // Загружаем текущую сцену заново, чтобы обновились опции
+        // (например, если какие-то действия стали доступны/недоступны)
+        window.loadScene(window.gameState.currentSceneId, false); // false, чтобы не вызывать onEnter снова
+
+        // Проверяем условия Game Over после всех ежедневных событий
+        checkGameOverConditions();
     };
 
-    // --- Инициализация интерфейса и загрузка первой сцены ---
-    // Убедимся, что все элементы UI доступны перед первой загрузкой сцены
-    window.uiManager.updateAllStatus(); // Обновляем статус-бар при старте
-    window.loadScene(window.gameState.currentSceneId); // Загружаем начальную сцену
+    // Запускаем первую сцену после полной инициализации
+    window.loadScene(window.gameState.currentSceneId);
 });
