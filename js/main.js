@@ -1,5 +1,8 @@
 // main.js - Основной файл для инициализации игры и управления глобальным состоянием
 
+// Глобальная переменная для версии игры
+const GAME_VERSION = "0.0.1"; // Устанавливаем текущую версию игры
+
 // Глобальный объект для хранения состояния игры
 // Доступен по всему приложению через window.gameState
 window.gameState = {
@@ -136,6 +139,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // можно безопасно использовать window.addGameLog
     window.addGameLog('Игра загружена! Инициализация...');
 
+    // Обновляем отображение версии игры
+    const gameVersionElement = document.getElementById('game-version');
+    if (gameVersionElement) {
+        gameVersionElement.textContent = `Версия: ${GAME_VERSION}`;
+    } else {
+        console.warn("Элемент 'game-version' не найден для отображения версии игры.");
+    }
+
+
     // Инициализируем игровые объекты
     window.gameState.player = new Player();
     window.gameState.community = new Community();
@@ -145,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.craftingManager = new CraftingManager();
     window.factionManager = new FactionManager();
     window.combatManager = new CombatManager(); // Инициализируем CombatManager
+    window.inventoryManager = new InventoryManager(); // УБЕДИТЕСЬ, ЧТО InventoryManager ИНИЦИАЛИЗИРУЕТСЯ ЗДЕСЬ!
     
     // Инициализируем репутацию фракций
     // Здесь factionManager будет вызывать window.addGameLog, который уже настроен.
