@@ -47,7 +47,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    transition: left 0.3s ease-in-out; /* Для мобильной анимации */
+    transition: left 0.3s ease-in-out; 
 }
 
 #sidebar-header {
@@ -505,6 +505,95 @@ footer button:hover { background-color: #660000; }
 .location-entry .location-danger.very-high { color: #F44336; font-weight: bolder; }
 
 
+/* Стили для вкладки Крафт */
+#craft-tab p {
+    margin-bottom: 10px;
+}
+#workshop-level-display {
+    font-weight: bold;
+    color: #FFC107;
+}
+.crafting-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Адаптивные колонки */
+    gap: 15px;
+}
+.crafting-recipe {
+    background-color: #181818;
+    border: 1px solid #2a2a2a;
+    padding: 12px;
+    border-radius: 3px;
+}
+.crafting-recipe h4 {
+    margin: 0 0 8px 0;
+    color: #eee;
+    font-size: 1.1em;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+}
+.crafting-recipe .recipe-description {
+    font-size: 0.85em;
+    color: #aaa;
+    margin-bottom: 10px;
+    min-height: 30px; /* Чтобы описание не прыгало по высоте */
+}
+.crafting-recipe .recipe-details {
+    font-size: 0.8em;
+    margin-bottom: 8px;
+}
+.crafting-recipe .recipe-details strong {
+    color: #ccc;
+}
+.crafting-recipe .recipe-details ul {
+    list-style-type: "- ";
+    padding-left: 15px;
+    margin: 5px 0;
+}
+.crafting-recipe .recipe-details li.has-enough { color: #88CC88; }
+.crafting-recipe .recipe-details li.not-enough { color: #FF6666; }
+.crafting-recipe .recipe-tools.missing-tool { color: #FF9800; }
+
+.crafting-recipe button {
+    width: 100%;
+    padding: 8px;
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+/* Стили для статистики на вкладке Обзор */
+.overview-stats-container {
+    display: flex;
+    flex-wrap: wrap; /* Перенос на новую строку на маленьких экранах */
+    gap: 20px; /* Отступ между панелями */
+    margin-bottom: 20px;
+}
+.overview-panel {
+    background-color: #0e0e0e;
+    border: 1px solid #252525;
+    padding: 15px;
+    border-radius: 4px;
+    flex: 1; /* Равномерное распределение места */
+    min-width: 250px; /* Минимальная ширина панели */
+}
+.overview-panel h3 {
+    color: #00AEEF;
+    margin: 0 0 10px 0;
+    font-size: 1.1em;
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+}
+.overview-panel p {
+    margin: 6px 0;
+    font-size: 0.9em;
+    color: #bbb;
+}
+.overview-panel p span {
+    color: #E0E0E0;
+    font-weight: bold;
+    float: right;
+}
+
+
 /* Стили для сообщений разных типов в логе */
 .event-positive { color: #88CC88; }
 .event-negative { color: #FF6666; }
@@ -545,7 +634,7 @@ footer button:hover { background-color: #660000; }
     #main-content {
         width: 100%; 
         padding-top: 60px; 
-        box-sizing: border-box; /* Чтобы padding не увеличивал общую ширину */
+        box-sizing: border-box; 
     }
     
     #log-messages {
@@ -553,11 +642,17 @@ footer button:hover { background-color: #660000; }
     }
 
     .modal-content {
-        width: 95%; /* На мобильных делаем модалки чуть шире */
+        width: 95%; 
         margin: 10% auto;
     }
     .inventory-filters button {
-        padding: 5px 8px; /* Уменьшаем кнопки фильтров */
+        padding: 5px 8px; 
         font-size: 0.8em;
+    }
+    .overview-stats-container {
+        flex-direction: column; /* Панели статистики в столбик */
+    }
+    .crafting-grid {
+        grid-template-columns: 1fr; /* Рецепты в один столбец */
     }
 }
