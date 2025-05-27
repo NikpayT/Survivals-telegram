@@ -1,4 +1,7 @@
 // script.js
+
+const GAME_VERSION = "0.3.1"; // Обновляем версию
+
 const game = {
     state: {
         day: 1,
@@ -11,17 +14,16 @@ const game = {
         player: {
             health: 100,
             maxHealth: 100,
-            hunger: 100, // Текущая сытость, от 0 до 100 (или больше, если есть бонусы)
+            hunger: 100, 
             maxHunger: 100,
-            thirst: 100, // Текущая жажда
+            thirst: 100, 
             maxThirst: 100,
             carryWeight: 0,
             maxCarryWeight: 25, // кг
-            condition: "В порядке", // "Ранен", "Болен", "Голоден", "Истощен" и т.д.
-            // Можно добавить SPECIAL или другие атрибуты позже
+            condition: "В порядке", 
         },
-        discoveredLocations: {}, // Объекты вида { locationId: { name: "...", ...} }
-        // fedToday, wateredToday больше не нужны в таком виде
+        discoveredLocations: {}, 
+        logVisible: true, // Для скрытия/показа лога
     },
 
     // --- GETTERS для вычисляемых свойств ---
@@ -36,16 +38,14 @@ const game = {
     getHungerThresholds: function() { return { critical: 20, low: 40, normal: 100 }; },
     getThirstThresholds: function() { return { critical: 15, low: 35, normal: 100 }; },
 
-    getTotalResourceValue: function(type) { // type: 'food', 'water'
+    getTotalResourceValue: function(type) { // type: 'food', 'water_source' (для общего отображения)
         let totalValue = 0;
         this.state.inventory.forEach(itemSlot => {
             const itemDef = ITEM_DEFINITIONS[itemSlot.itemId];
-            if (itemDef && itemDef.type === type && itemDef.effect) {
-                if (type === 'food' && itemDef.effect.hunger) {
+            if (itemDef && itemDef.effect) {
+                if (type === 'food' && itemDef.type === 'food' && itemDef.effect.hunger) {
                     totalValue += itemDef.effect.hunger * itemSlot.quantity;
-                }
-            } else if (itemDef && itemDef.type === 'water_source' && type === 'water' && itemDef.effect) { // Для грязной воды, если считаем ее ценность
-                 if (itemDef.effect.thirst) {
+                } else if (type === 'water_source' && (itemDef.type === 'water' || itemDef.type === 'water_source') && itemDef.effect.thirst) {
                     totalValue += itemDef.effect.thirst * itemSlot.quantity;
                 }
             }
@@ -53,9 +53,9 @@ const game = {
         return totalValue;
     },
 
-
     // --- DOM ELEMENTS ---
     dom: {
+        gameVersionDisplay: document.getElementById('game-version'),
         day: document.getElementById('day'),
         survivors: document.getElementById('survivors'),
         maxSurvivors: document.getElementById('max-survivors'),
@@ -65,51 +65,72 @@ const game = {
         thirstStatus: document.getElementById('thirst-status'),
         totalWaterValue: document.getElementById('total-water-value'),
         healthStatus: document.getElementById('health-status'),
-        playerCondition: document.getElementById('player-condition'),
+        playerCondition: document.getElementById('player-condition'), // В main-header
 
         logMessages: document.getElementById('log-messages'),
-        // mainActions: document.getElementById('main-actions'), // Теперь внутри вкладок
-        buildActions: document.getElementById('build-actions'),
-        eventActions: document.getElementById('event-actions'),
+        buildActions: document.getElementById('build-actions'), // Вкладка База
+        eventActionsContainer: document.getElementById('event-actions-container'), // На вкладке Обзор
+        eventTextDisplay: document.getElementById('event-text-display'),
+        eventActions: document.getElementById('event-actions'), 
         
-        inventoryButton: document.getElementById('inventory-button'),
+        inventoryButton: document.getElementById('inventory-button'), // В сайдбаре
         inventoryModal: document.getElementById('inventory-modal'),
         inventoryItemsList: document.getElementById('inventory-items-list'),
         inventoryWeight: document.getElementById('inventory-weight'),
         inventoryMaxWeight: document.getElementById('inventory-max-weight'),
         inventoryFilters: document.querySelector('.inventory-filters'),
 
-        discoveredLocationsContainer: document.getElementById('discovered-locations'),
-        craftingRecipesContainer: document.getElementById('crafting-recipes'),
-
-        // Вкладки
-        tabLinks: document.querySelectorAll('.tab-link'),
-        tabContents: document.querySelectorAll('.tab-content')
+        discoveredLocationsContainer: document.getElementById('discovered-locations'), // Вкладка Разведка
+        craftingRecipesContainer: document.getElementById('crafting-recipes'), // Вкладка Крафт
+        
+        sidebar: document.getElementById('sidebar'),
+        mainNav: document.getElementById('main-nav'),
+        mainContent: document.getElementById('main-content'),
+        mainHeader: document.getElementById('main-header'),
+        tabContentArea: document.getElementById('tab-content-area'),
+        
+        logPanel: document.getElementById('log-panel'),
+        toggleLogButton: document.getElementById('toggle-log'),
     },
 
     // --- INITIALIZATION ---
     init: function() {
+        this.dom.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
         this.initializeStructures();
-        this.loadGame(); // Загрузка после инициализации структур, но до добавления начальных предметов
+        this.loadGame(); 
         
-        if (!localStorage.getItem('zombieSurvivalGame_v3')) { // Только для новой игры
+        if (!localStorage.getItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`)) { 
             this.addInitialItems();
         }
         
-        this.updateDisplay();
+        this.updateDisplay(); // Важно вызвать после загрузки и добавления предметов
         this.updateBuildActions();
-        // this.updateFeedDrinkStatus(); // Заменено на updatePlayerStatus
         
         this.dom.inventoryButton.onclick = () => this.openInventoryModal();
         this.dom.inventoryFilters.querySelectorAll('button').forEach(button => {
             button.addEventListener('click', (e) => this.filterInventory(e.target.dataset.filter));
         });
+
+        this.dom.mainNav.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => this.openTab(e.target.dataset.tab, e.target));
+        });
         
+        this.dom.toggleLogButton.addEventListener('click', () => this.toggleLogVisibility());
+        this.applyLogVisibility();
+
         this.log("Игра началась. Пустошь ждет.", "event-neutral");
-        this.openTab(null, 'main-tab'); // Открыть первую вкладку по умолчанию
+        this.openTab('main-tab', this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]'));
     },
 
-    initializeStructures: function() { /* ... осталась без изменений ... */ },
+    initializeStructures: function() {
+        this.state.structures = {}; 
+        for (const key in BASE_STRUCTURE_DEFINITIONS) {
+            const def = BASE_STRUCTURE_DEFINITIONS[key];
+            this.state.structures[key] = {
+                level: def.initialLevel || 0,
+            };
+        }
+    },
 
     addInitialItems: function() {
         this.addItemToInventory("food_canned", 3);
@@ -120,17 +141,37 @@ const game = {
     },
 
     // --- TABS ---
-    openTab: function(event, tabName) {
-        this.dom.tabContents.forEach(tc => tc.style.display = "none");
-        this.dom.tabLinks.forEach(tl => tl.classList.remove("active"));
-        document.getElementById(tabName).style.display = "block";
-        if (event) event.currentTarget.classList.add("active");
-        else { // Если вызвано программно, найти и активировать нужную кнопку
-            this.dom.tabLinks.forEach(tl => {
-                if (tl.getAttribute('onclick').includes(tabName)) {
-                    tl.classList.add('active');
-                }
-            });
+    openTab: function(tabName, clickedLinkElement) {
+        this.dom.tabContentArea.querySelectorAll('.tab-content').forEach(tc => tc.style.display = "none");
+        this.dom.mainNav.querySelectorAll('.nav-link').forEach(tl => tl.classList.remove("active"));
+        
+        const tabElement = document.getElementById(tabName);
+        if (tabElement) {
+            tabElement.style.display = "block";
+        } else {
+            console.error("Tab not found: " + tabName);
+            // Открыть первую вкладку по умолчанию, если запрошенная не найдена
+            document.getElementById('main-tab').style.display = "block";
+            const defaultLink = this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
+            if (defaultLink) defaultLink.classList.add('active');
+            return;
+        }
+
+        if (clickedLinkElement) {
+            clickedLinkElement.classList.add("active");
+        } else { 
+            const linkToActivate = this.dom.mainNav.querySelector(`.nav-link[data-tab="${tabName}"]`);
+            if (linkToActivate) linkToActivate.classList.add('active');
+        }
+        
+        if (tabName === 'main-tab') {
+            if (this.state.currentEvent) {
+                this.dom.eventTextDisplay.textContent = this.state.currentEvent.text;
+                this.dom.eventActionsContainer.style.display = 'block';
+            } else {
+                this.dom.eventTextDisplay.textContent = '';
+                this.dom.eventActionsContainer.style.display = 'none';
+            }
         }
     },
     
@@ -141,7 +182,7 @@ const game = {
             this.state.player.hunger = 0;
             this.dom.hungerStatus.textContent = "Смертельный голод";
             this.dom.hungerStatus.className = 'status-critical';
-            this.takeDamage(5, "голод"); // Урон от голода каждый ход при 0
+            this.takeDamage(5, "голод"); 
         } else if (this.state.player.hunger <= hungerTh.critical) {
             this.dom.hungerStatus.textContent = "Истощение";
             this.dom.hungerStatus.className = 'status-critical';
@@ -158,7 +199,7 @@ const game = {
             this.state.player.thirst = 0;
             this.dom.thirstStatus.textContent = "Смертельная жажда";
             this.dom.thirstStatus.className = 'status-critical';
-            this.takeDamage(10, "обезвоживание"); // Урон от жажды
+            this.takeDamage(10, "обезвоживание"); 
         } else if (this.state.player.thirst <= thirstTh.critical) {
             this.dom.thirstStatus.textContent = "Сильная жажда";
             this.dom.thirstStatus.className = 'status-critical';
@@ -170,13 +211,9 @@ const game = {
             this.dom.thirstStatus.className = 'status-ok';
         }
         
-        this.dom.totalFoodValue.textContent = this.getTotalResourceValue('food');
-        this.dom.totalWaterValue.textContent = this.getTotalResourceValue('water_source'); // Показываем общее количество воды, включая грязную
-
         this.dom.healthStatus.textContent = `${this.state.player.health} / ${this.state.player.maxHealth}`;
-        this.dom.playerCondition.textContent = this.state.player.condition;
+        this.dom.playerCondition.textContent = this.state.player.condition; // Обновление состояния в хедере
 
-        // Обновление доступности действий в инвентаре, если он открыт
         if (this.dom.inventoryModal.style.display === 'block') {
             this.renderInventory();
         }
@@ -197,8 +234,7 @@ const game = {
         } else if ((itemDef.type === "water" || itemDef.type === "water_source") && itemDef.effect.thirst) {
             if (itemDef.effect.sickness_chance && Math.random() < itemDef.effect.sickness_chance) {
                 this.log(`Вы выпили ${itemDef.name}, но почувствовали себя хуже. Возможно, отравление.`, "event-negative");
-                this.state.player.condition = "Подташнивает"; // Добавить механику болезней
-                // this.takeDamage(5, "отравление");
+                this.state.player.condition = "Подташнивает"; 
             } else {
                 this.state.player.thirst = Math.min(this.state.player.maxThirst, this.state.player.thirst + itemDef.effect.thirst);
                 this.log(`Вы выпили: ${itemDef.name}. Жажда утолена на +${itemDef.effect.thirst}.`, "event-positive");
@@ -209,16 +245,15 @@ const game = {
              this.log(`Вы использовали ${itemDef.name}. Здоровье +${itemDef.effect.healing}.`, "event-positive");
             consumed = true;
         }
-        // Добавить другие типы эффектов (баффы и т.д.)
 
         if (consumed) {
-            this.removeItemFromInventory(itemId, 1, inventoryItemIndex); // Удаляем именно из этого слота
+            this.removeItemFromInventory(itemId, 1, inventoryItemIndex); 
         }
-        this.updatePlayerStatus();
-        this.updateDisplay(); // Обновит вес в инвентаре, если он открыт
+        this.updateDisplay(); // Обновит все, включая PlayerStatus и вес в инвентаре
     },
 
     takeDamage: function(amount, source) {
+        if (this.state.gameOver) return;
         this.state.player.health -= amount;
         this.log(`Вы получили ${amount} урона (${source}).`, "event-negative");
         if (this.state.player.health <= 0) {
@@ -228,20 +263,17 @@ const game = {
         this.updatePlayerStatus();
     },
 
-
     // --- INVENTORY MANAGEMENT ---
     addItemToInventory: function(itemId, quantity = 1) {
         if (!ITEM_DEFINITIONS[itemId]) {
             console.error(`Попытка добавить несуществующий предмет: ${itemId}`);
-            return;
+            return false;
         }
         const itemDef = ITEM_DEFINITIONS[itemId];
         
-        // Проверка веса
         if (this.state.player.carryWeight + (itemDef.weight * quantity) > this.state.player.maxCarryWeight) {
             this.log(`Недостаточно места в инвентаре для ${itemDef.name} (x${quantity}).`, "event-warning");
-            // Можно добавить механику выбрасывания части предметов, если не влезает все
-            return false; // Не удалось добавить
+            return false; 
         }
 
         const existingItemIndex = this.state.inventory.findIndex(slot => slot.itemId === itemId && itemDef.stackable);
@@ -251,11 +283,10 @@ const game = {
             this.state.inventory.push({ itemId: itemId, quantity: quantity });
         }
         this.state.player.carryWeight += itemDef.weight * quantity;
-        this.state.player.carryWeight = parseFloat(this.state.player.carryWeight.toFixed(2)); // Округление
+        this.state.player.carryWeight = parseFloat(this.state.player.carryWeight.toFixed(2)); 
         
-        // this.log(`Добавлено в инвентарь: ${itemDef.name} (x${quantity})`, "event-discovery"); // Часто слишком много логов
-        this.updateDisplay(); // Обновит вес и т.д.
-        return true; // Успешно добавлено
+        this.updateDisplay(); 
+        return true; 
     },
 
     removeItemFromInventory: function(itemId, quantity = 1, specificIndex = -1) {
@@ -274,7 +305,7 @@ const game = {
             if (itemSlot.quantity > quantity) {
                 itemSlot.quantity -= quantity;
             } else {
-                quantity = itemSlot.quantity; // Убираем ровно столько, сколько есть
+                quantity = itemSlot.quantity; 
                 this.state.inventory.splice(itemIndex, 1);
             }
             this.state.player.carryWeight -= itemDef.weight * quantity;
@@ -282,7 +313,7 @@ const game = {
             this.updateDisplay();
             return true;
         }
-        return false; // Предмет не найден или недостаточно
+        return false; 
     },
     
     countItemInInventory: function(itemId) {
@@ -297,7 +328,7 @@ const game = {
 
     openInventoryModal: function() {
         this.dom.inventoryModal.style.display = 'block';
-        this.filterInventory('all'); // Показать все при открытии
+        this.filterInventory('all'); 
     },
 
     closeInventoryModal: function() {
@@ -306,7 +337,8 @@ const game = {
 
     filterInventory: function(filterType) {
         this.dom.inventoryFilters.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-        this.dom.inventoryFilters.querySelector(`button[data-filter="${filterType}"]`).classList.add('active');
+        const activeButton = this.dom.inventoryFilters.querySelector(`button[data-filter="${filterType}"]`);
+        if (activeButton) activeButton.classList.add('active');
         this.renderInventory(filterType);
     },
 
@@ -314,29 +346,29 @@ const game = {
         this.dom.inventoryItemsList.innerHTML = '';
         if (this.state.inventory.length === 0) {
             this.dom.inventoryItemsList.innerHTML = '<p>Инвентарь пуст.</p>';
+            this.updateInventoryWeightDisplay();
             return;
         }
-
+        
+        let SOmethingRendered = false;
         this.state.inventory.forEach((itemSlot, index) => {
             const itemDef = ITEM_DEFINITIONS[itemSlot.itemId];
             if (!itemDef) return;
 
             if (filterType !== 'all' && itemDef.type !== filterType) {
-                return; // Пропускаем, если не соответствует фильтру
+                if (filterType === 'water_source' && itemDef.type !== 'water' && itemDef.type !== 'water_source') return; // Особый случай для воды
+                else if (filterType !== 'water_source') return; 
             }
+            SOmethingRendered = true;
 
             const itemDiv = document.createElement('div');
             itemDiv.className = 'inventory-item';
 
             let itemActionsHTML = '';
-            // Кнопка "Использовать" для еды, воды, медикаментов
             if (itemDef.type === 'food' || itemDef.type === 'water' || itemDef.type === 'water_source' || itemDef.type === 'medicine') {
                 itemActionsHTML += `<button onclick="game.consumeItem('${itemSlot.itemId}', ${index})">Использовать</button>`;
             }
-            // Кнопка "Выбросить" (пока не делаем, чтобы не усложнять)
-            // itemActionsHTML += `<button onclick="game.dropItem('${itemSlot.itemId}', ${index}, 1)">Выбросить 1</button>`;
-
-
+            
             itemDiv.innerHTML = `
                 <div class="item-info">
                     <h4>${itemDef.name} <span class="item-quantity">(x${itemSlot.quantity})</span></h4>
@@ -348,7 +380,8 @@ const game = {
             `;
             this.dom.inventoryItemsList.appendChild(itemDiv);
         });
-        if(this.dom.inventoryItemsList.children.length === 0 && filterType !== 'all') {
+
+        if(!SOmethingRendered && filterType !== 'all') {
              this.dom.inventoryItemsList.innerHTML = `<p>Нет предметов типа '${filterType}'.</p>`;
         }
         this.updateInventoryWeightDisplay();
@@ -365,35 +398,63 @@ const game = {
         this.dom.survivors.textContent = this.state.survivors;
         this.dom.maxSurvivors.textContent = this.maxSurvivors;
         
-        this.updatePlayerStatus(); // Обновляет голод, жажду, здоровье, состояние
-        this.updateInventoryWeightDisplay(); // Обновляет вес в шапке инвентаря
+        this.updatePlayerStatus(); 
+        this.updateInventoryWeightDisplay(); 
 
-        // Если инвентарь открыт, перерисовать его, т.к. могли измениться количества
+        this.dom.totalFoodValue.textContent = this.getTotalResourceValue('food');
+        this.dom.totalWaterValue.textContent = this.getTotalResourceValue('water_source');
+
         if (this.dom.inventoryModal.style.display === 'block') {
-            const activeFilter = this.dom.inventoryFilters.querySelector('button.active').dataset.filter;
+            const activeFilter = this.dom.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all';
             this.renderInventory(activeFilter);
         }
     },
 
-    log: function(message, type = "event-neutral") { /* ... осталась без изменений ... */ },
-    saveGame: function() { localStorage.setItem('zombieSurvivalGame_v3', JSON.stringify(this.state)); },
+    log: function(message, type = "event-neutral") {
+        const p = document.createElement('p');
+        p.innerHTML = `[Д:${this.state.day}] ${message}`; 
+        p.className = type;
+        this.dom.logMessages.prepend(p);
+        if (this.dom.logMessages.children.length > 30) {
+            this.dom.logMessages.removeChild(this.dom.logMessages.lastChild);
+        }
+        if(this.state.logVisible) this.dom.logMessages.scrollTop = 0; 
+    },
+
+    toggleLogVisibility: function() {
+        this.state.logVisible = !this.state.logVisible;
+        this.applyLogVisibility();
+        this.saveGame(); 
+    },
+
+    applyLogVisibility: function() {
+        if (this.state.logVisible) {
+            this.dom.logMessages.classList.remove('hidden');
+            this.dom.toggleLogButton.textContent = '-';
+        } else {
+            this.dom.logMessages.classList.add('hidden');
+            this.dom.toggleLogButton.textContent = '+';
+        }
+    },
+
+    saveGame: function() {
+        localStorage.setItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`, JSON.stringify(this.state));
+    },
     loadGame: function() {
-        const savedGame = localStorage.getItem('zombieSurvivalGame_v3');
+        const savedGame = localStorage.getItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`);
         if (savedGame) {
             const loadedState = JSON.parse(savedGame);
             
-            // Слияние состояния, сохраняя новые поля из дефолтного state, если их нет в savedGame
             for (const key in this.state) {
                 if (loadedState.hasOwnProperty(key)) {
                     if (typeof this.state[key] === 'object' && this.state[key] !== null && !Array.isArray(this.state[key])) {
-                        // Глубокое слияние для объектов (например, player, structures)
                         this.state[key] = { ...this.state[key], ...loadedState[key] };
                     } else {
                         this.state[key] = loadedState[key];
                     }
                 }
             }
-            // Убедимся, что все структуры определены, если сохранение старое или неполное
+            
             const defaultStructureKeys = Object.keys(BASE_STRUCTURE_DEFINITIONS);
             defaultStructureKeys.forEach(key => {
                 if (!this.state.structures[key]) {
@@ -401,6 +462,12 @@ const game = {
                 }
             });
 
+            if (loadedState.logVisible !== undefined) {
+                this.state.logVisible = loadedState.logVisible;
+            } else {
+                this.state.logVisible = true; 
+            }
+            // this.applyLogVisibility(); // Вызывается в init после loadGame
 
             this.log("Сохраненная игра загружена.", "event-discovery");
         } else {
@@ -418,41 +485,32 @@ const game = {
         this.state.day++;
         this.log(`--- Наступил День ${this.state.day} ---`, "event-neutral");
 
-        // Естественное уменьшение голода и жажды
-        this.state.player.hunger -= (15 + this.state.survivors * 5); // Базовое + за каждого выжившего (они тоже едят абстрактно)
-        this.state.player.thirst -= (20 + this.state.survivors * 5);
+        this.state.player.hunger -= (15 + this.state.survivors * 3); // Уменьшил потребление на выжившего
+        this.state.player.thirst -= (20 + this.state.survivors * 4); // Уменьшил потребление на выжившего
         this.state.player.hunger = Math.max(0, this.state.player.hunger);
         this.state.player.thirst = Math.max(0, this.state.player.thirst);
         
-        // Проверка накормленности и напоенности (уже делается в updatePlayerStatus с уроном)
-        // Здесь можно добавить более мягкие дебаффы, если не критично, но голод/жажда есть
-
-        // Производство ресурсов от структур (пока не реализовано через инвентарь)
-        // const foodProduced = this.foodPerDayFromStructures;
-        // if (foodProduced > 0) { this.addItemToInventory("food_garden_produce", foodProduced); ... }
-        // const waterProduced = this.waterPerDayFromStructures;
-        // if (waterProduced > 0) { this.addItemToInventory("water_purified", waterProduced); ... }
-        
-        // Шанс найти нового выжившего с радиовышкой
-        // ... (логика осталась прежней, но нужно проверить, что maxSurvivors работает)
-
         this.triggerRandomEvent();
+        
+        if (!this.state.currentEvent) {
+             this.dom.eventActionsContainer.style.display = 'none';
+             this.dom.eventTextDisplay.textContent = '';
+             this.dom.eventActions.innerHTML = '';
+        }
+
         this.updateDisplay();
         this.updateBuildActions();
         this.saveGame();
     },
 
-    scoutArea: function() { // Заменяет старый scavenge
+    scoutArea: function() { 
         if (this.state.gameOver || this.state.currentEvent) return;
         this.log("Вы отправляетесь на разведку окрестностей...", "event-neutral");
-
-        // TODO: Реализовать механику нахождения новых локаций или случайных находок/событий в "окрестностях"
-        // Пока просто имитация старого scavenge с новыми предметами
         
         let encounter = Math.random();
         let foundSomething = false;
 
-        if (encounter < 0.7) { // 70% шанс что-то найти
+        if (encounter < 0.7) { 
             const lootRoll = Math.random();
             let itemFoundId = null;
             let quantityFound = 0;
@@ -468,27 +526,27 @@ const game = {
                  foundSomething = true;
             }
 
-            if (Math.random() < 0.15) { // Малый шанс найти что-то получше
+            if (Math.random() < 0.15) { 
                 if (this.addItemToInventory("components", 1)) {
                     this.log("Удалось найти редкие компоненты!", "event-discovery");
                     foundSomething = true;
                 }
             }
 
-        } else if (encounter < 0.9) { // 20% шанс на неприятности
+        } else if (encounter < 0.9) { 
             this.log("Разведка оказалась опасной. Вы едва унесли ноги.", "event-negative");
             this.takeDamage(Math.floor(Math.random() * 10) + 5, "засада");
-        } else { // 10% ничего
+        } else { 
              this.log("Разведка не принесла результатов.", "event-neutral");
         }
         
-        if(!foundSomething && encounter >= 0.7 && encounter < 0.9) {} // Если была только опасность, без находок
-        else if (!foundSomething) {
-            this.log("Ничего ценного не найдено.", "event-neutral");
+        if(!foundSomething && !(encounter < 0.7)) { // Если не нашли и не было опасности (т.е. просто "ничего")
+            // Уже залогировано как "не принесла результатов"
+        } else if (!foundSomething && encounter < 0.7) { // Если был шанс найти, но addItemToInventory вернул false (перевес)
+             this.log("Что-то нашли, но не смогли унести.", "event-warning");
         }
 
-
-        this.nextDay(); // Разведка занимает день
+        this.nextDay(); 
     },
 
     build: function(structureKey) {
@@ -529,7 +587,7 @@ const game = {
     },
     
     updateBuildActions: function() {
-        this.dom.buildActions.innerHTML = ''; // Убрали заголовок, т.к. он уже есть во вкладке
+        this.dom.buildActions.innerHTML = ''; 
         for (const key in this.state.structures) {
             const definition = BASE_STRUCTURE_DEFINITIONS[key];
             const currentStructureState = this.state.structures[key];
@@ -563,21 +621,148 @@ const game = {
     },
 
     // --- EVENTS ---
-    possibleEvents: [ /* ... можно оставить или адаптировать награды под предметы ... */ ],
-    triggerRandomEvent: function() { /* ... осталась без изменений, но действия в событиях могут давать предметы ... */ },
-    displayEventChoices: function() { /* ... осталась без изменений ... */ },
+    possibleEvents: [
+         {
+            id: "found_survivor",
+            condition: () => game.state.survivors < game.maxSurvivors && Math.random() < 0.08, // Уменьшил шанс
+            text: "Вы слышите стук в ворота. Одинокий путник просит убежища.",
+            choices: [
+                { text: "Принять (+1 выживший)", action: () => {
+                    if (game.state.survivors < game.maxSurvivors) {
+                        game.state.survivors++;
+                        game.log("Новый выживший присоединился к вам.", "event-positive");
+                    } else {
+                        game.log("На базе нет места для нового выжившего.", "event-neutral");
+                    }
+                }},
+                { text: "Отказать", action: () => game.log("Вы отказали путнику. Он ушел в неизвестность.", "event-neutral") }
+            ]
+        },
+        {
+            id: "trader_visit",
+            condition: () => Math.random() < 0.07,
+            text: "К базе подошел торговец. Предлагает 3 'Стимулятора' за 15 'Металлолома'.",
+            choices: [
+                { text: "Обменять (Метал.-15, Стим.+3)", action: () => {
+                    if (game.countItemInInventory("scrap_metal") >= 15) {
+                        game.removeItemFromInventory("scrap_metal", 15);
+                        game.addItemToInventory("stimpack_fallout", 3);
+                        game.log("Сделка совершена. Вы получили стимуляторы.", "event-positive");
+                    } else {
+                        game.log("Недостаточно металлолома для обмена.", "event-negative");
+                    }
+                }},
+                { text: "Отказаться", action: () => game.log("Торговец ушел, ворча себе под нос.", "event-neutral") }
+            ]
+        },
+        {
+            id: "minor_horde_near_base",
+            condition: () => Math.random() < 0.1,
+            text: "Небольшая группа зомби замечена неподалеку от базы! Они могут напасть.",
+            choices: [
+                { text: "Укрепить оборону (-5 дерева, -3 металла)", action: () => {
+                    if (game.countItemInInventory("wood") >=5 && game.countItemInInventory("scrap_metal") >=3){
+                        game.removeItemFromInventory("wood", 5);
+                        game.removeItemFromInventory("scrap_metal", 3);
+                        game.log("Оборона усилена. Зомби не решились атаковать.", "event-positive");
+                    } else {
+                         game.log("Не хватило материалов для укрепления! Зомби прорвались!", "event-negative");
+                         game.takeDamage(10 * game.state.survivors, "атака зомби");
+                         if(Math.random() < 0.2 * game.state.survivors && game.state.survivors > 0){
+                             game.state.survivors--;
+                             game.log("Один из выживших погиб во время атаки...", "event-negative");
+                         }
+                    }
+                }},
+                { text: "Рискнуть и ничего не делать", action: () => {
+                     if (Math.random() < 0.6) { // 60% шанс, что пронесет
+                        game.log("Зомби прошли мимо, не заметив базу.", "event-neutral");
+                     } else {
+                        game.log("Зомби атаковали неподготовленную базу!", "event-negative");
+                        game.takeDamage(15 * game.state.survivors, "внезапная атака");
+                         if(Math.random() < 0.3 * game.state.survivors && game.state.survivors > 0){
+                             game.state.survivors--;
+                             game.log("Потери среди выживших...", "event-negative");
+                         }
+                     }
+                }}
+            ]
+        }
+    ],
+    triggerRandomEvent: function() {
+        if (this.state.currentEvent || this.state.gameOver) return;
+
+        const availableEvents = this.possibleEvents.filter(event => event.condition());
+        if (availableEvents.length > 0) {
+            this.state.currentEvent = availableEvents[Math.floor(Math.random() * availableEvents.length)];
+            this.log(`СОБЫТИЕ: ${this.state.currentEvent.text}`, "event-discovery");
+            this.displayEventChoices();
+        } else {
+            if (document.getElementById('main-tab').style.display === 'block') { // Только если активна главная вкладка
+                 this.dom.eventActionsContainer.style.display = 'none';
+            }
+        }
+    },
+
+    displayEventChoices: function() {
+        const eventContainer = this.dom.eventActionsContainer;
+        const eventTextEl = this.dom.eventTextDisplay;
+        const eventButtonsEl = this.dom.eventActions;
+
+        eventButtonsEl.innerHTML = ''; 
+        if (!this.state.currentEvent) {
+            eventContainer.style.display = 'none';
+            return;
+        }
+
+        eventTextEl.textContent = this.state.currentEvent.text;
+        eventContainer.style.display = 'block';
+
+        this.state.currentEvent.choices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.textContent = choice.text;
+            btn.onclick = () => {
+                choice.action();
+                this.state.currentEvent = null;
+                eventButtonsEl.innerHTML = ''; 
+                eventTextEl.textContent = '';
+                eventContainer.style.display = 'none'; 
+                this.updateDisplay(); // Обновить всё после действия события
+                this.saveGame();
+            };
+            eventButtonsEl.appendChild(btn);
+        });
+    },
 
     // --- GAME OVER & RESET ---
-    gameOver: function(message) { /* ... осталась без изменений ... */ },
-    resetGameConfirmation: function() { /* ... осталась без изменений ... */ },
+    gameOver: function(message) {
+        if(this.state.gameOver) return; // Предотвратить многократный вызов
+        this.log(message, "event-negative");
+        this.state.gameOver = true;
+        // Блокируем кнопки действий, кроме "Начать заново"
+        document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
+            if(button.textContent !== "Начать игру заново" && !button.closest('footer')) { // Не блокируем кнопку в футере
+                button.disabled = true;
+            }
+        });
+        this.dom.eventActionsContainer.style.display = 'none'; // Скрыть панель событий
+        // localStorage.removeItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`); // Спорный момент, удалять ли сразу
+    },
+    
+    resetGameConfirmation: function() {
+        if (confirm("Вы уверены, что хотите начать игру заново? Весь прогресс будет потерян.")) {
+            this.resetGame();
+        }
+    },
+
     resetGame: function() {
-        localStorage.removeItem('zombieSurvivalGame_v3');
+        localStorage.removeItem(`zombieSurvivalGame_v${GAME_VERSION.split('.')[0]}.${GAME_VERSION.split('.')[1]}`);
         this.state.day = 1;
         this.state.survivors = 1;
         this.state.gameOver = false;
         this.state.currentEvent = null;
-        this.state.inventory = []; // Очищаем инвентарь
-        this.state.player = { // Сброс состояния игрока
+        this.state.inventory = []; 
+        this.state.player = { 
             health: 100, maxHealth: 100,
             hunger: 100, maxHunger: 100,
             thirst: 100, maxThirst: 100,
@@ -585,13 +770,20 @@ const game = {
             condition: "В порядке",
         };
         this.state.discoveredLocations = {};
+        this.state.logVisible = true; 
         
         this.initializeStructures();
-        this.addInitialItems(); // Добавляем стартовые предметы
+        this.addInitialItems(); 
 
-        this.dom.mainActions.innerHTML = `<button onclick="game.nextDay()">Следующий день</button>`; // Восстанавливаем, если gameOver менял
-        this.dom.logMessages.innerHTML = '';
-        this.init(); // Переинициализация
+        this.dom.logMessages.innerHTML = ''; // Очистить лог на экране
+        this.init(); 
+        
+        // Разблокировать кнопки
+         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
+            button.disabled = false;
+        });
+        this.updateBuildActions(); // Обновить доступность кнопок строительства (могут быть задизейблены из-за ресурсов)
+
         this.log("Новая игра начата.", "event-neutral");
     }
 };
@@ -599,6 +791,3 @@ const game = {
 window.onload = () => {
     game.init();
 };
-
-// Вспомогательная функция для getStructureUpgradeCost в buildings.js, если она там нужна глобально
-// window.getStructureUpgradeCost = getStructureUpgradeCost;
