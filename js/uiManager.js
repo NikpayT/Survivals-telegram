@@ -43,14 +43,24 @@ if (typeof window.uiManager === 'undefined') {
                 console.log('UIManager: Инициализация...');
                 initializeElements();
                 console.log('UIManager: Инициализация завершена. Проверенные элементы:');
-                console.log({ gameLogElement, gameTextElement, optionsContainer, playerStatusElement, communityStatusElement, playerInventoryList, communityStorageList, craftingRecipesElement });
-                this.addGameLog('Система интерфейса инициализирована.');
+                // Выводим только имена переменных, чтобы избежать вывода всего DOM-элемента, если он большой
+                console.log({
+                    gameLogElement: !!gameLogElement,
+                    gameTextElement: !!gameTextElement,
+                    optionsContainer: !!optionsContainer,
+                    playerStatusElement: !!playerStatusElement,
+                    communityStatusElement: !!communityStatusElement,
+                    playerInventoryList: !!playerInventoryList,
+                    communityStorageList: !!communityStorageList,
+                    craftingRecipesElement: !!craftingRecipesElement
+                });
+                // this.addGameLog('Система интерфейса инициализирована.'); // Закомментировано, чтобы избежать вызова до полной инициализации gameState
             },
 
             // Обновляет текстовое описание игры
             displayGameText: function(text) {
                 if (gameTextElement) {
-                    gameTextElement.innerHTML = `<p>${text}</p>`;
+                    gameTextElement.innerHTML = `<p>${text || ''}</p>`; // Добавлена проверка на undefined text
                 } else {
                     console.warn("displayGameText: Элемент #game-text не найден.");
                 }
@@ -60,19 +70,25 @@ if (typeof window.uiManager === 'undefined') {
             displayOptions: function(options) {
                 if (optionsContainer) {
                     optionsContainer.innerHTML = ''; // Очищаем предыдущие опции
-                    options.forEach(option => {
-                        const button = document.createElement('button');
-                        button.textContent = option.text;
-                        button.classList.add('game-option-button');
-                        button.addEventListener('click', () => {
-                            // Отключаем все кнопки, чтобы предотвратить множественные клики
-                            Array.from(optionsContainer.children).forEach(btn => btn.disabled = true);
-                            if (option.action && typeof option.action === 'function') {
-                                option.action();
-                            }
+                    if (options && options.length > 0) {
+                        options.forEach(option => {
+                            const button = document.createElement('button');
+                            button.textContent = option.text;
+                            // Убедимся, что класс добавляется, как в твоем CSS, если есть (.option-button или .game-option-button)
+                            button.classList.add('option-button'); // или 'game-option-button' в зависимости от твоего CSS
+                            button.addEventListener('click', () => {
+                                // Отключаем все кнопки, чтобы предотвратить множественные клики
+                                Array.from(optionsContainer.children).forEach(btn => btn.disabled = true);
+                                if (option.action && typeof option.action === 'function') {
+                                    option.action();
+                                }
+                            });
+                            optionsContainer.appendChild(button);
                         });
-                        optionsContainer.appendChild(button);
-                    });
+                    } else {
+                         // Можно добавить сообщение, если опций нет, или оставить пустым
+                        // optionsContainer.innerHTML = '<p>Нет доступных действий.</p>';
+                    }
                 } else {
                     console.warn("displayOptions: Элемент #options-container не найден.");
                 }
@@ -80,35 +96,37 @@ if (typeof window.uiManager === 'undefined') {
 
             // Добавляет сообщение в игровой лог
             addGameLog: function(message) {
-                // НОВОЕ: Проверка на isGameOver, чтобы не добавлять логи после смерти
-                if (window.gameState && window.gameState.isGameOver && message.includes('погибли') || message.includes('здоровье иссякло') || message.includes('община погибла')) {
-                    // Это сообщение о Game Over, его можно добавить, но не после этого
+                // Проверка на isGameOver, чтобы не добавлять логи после смерти
+                // Логика определения "сообщений о смерти" и блокировки логов после Game Over
+                // (A && B && C) || D || E - (window.gameState && window.gameState.isGameOver && message.includes('погибли')) || message.includes('здоровье иссякло') || message.includes('община погибла')
+                if ((window.gameState && window.gameState.isGameOver && message && message.includes('погибли')) || (message && message.includes('здоровье иссякло')) || (message && message.includes('община погибла'))) {
                     if (gameLogElement) {
-                         const entry = document.createElement('p');
-                         entry.classList.add('game-log-entry', 'game-over-log');
-                         entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-                         gameLogElement.prepend(entry); // Добавляем в начало
-                         if (gameLogElement.children.length > 50) { // Ограничиваем количество записей
-                             gameLogElement.removeChild(gameLogElement.lastChild);
-                         }
-                     }
-                    return; // Не добавляем другие логи, если игра окончена
+                        const entry = document.createElement('p');
+                        entry.classList.add('game-log-entry', 'game-over-log'); // Класс для особых сообщений
+                        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                        gameLogElement.prepend(entry);
+                        if (gameLogElement.children.length > 50) {
+                            gameLogElement.removeChild(gameLogElement.lastChild);
+                        }
+                    }
+                    return; 
                 } else if (window.gameState && window.gameState.isGameOver) {
-                    return; // Блокируем все логи, кроме сообщений Game Over, после Game Over
+                    // Блокируем все остальные логи, если игра уже завершена
+                    // console.log(`[LOG BLOCKED DUE TO GAME OVER] ${message}`); // для отладки
+                    return; 
                 }
-
 
                 if (gameLogElement) {
                     const entry = document.createElement('p');
                     entry.classList.add('game-log-entry');
                     entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-                    gameLogElement.prepend(entry); // Добавляем в начало
-                    // Ограничиваем количество записей в логе
-                    if (gameLogElement.children.length > 50) { // Например, 50 последних записей
+                    gameLogElement.prepend(entry);
+                    if (gameLogElement.children.length > 50) { 
                         gameLogElement.removeChild(gameLogElement.lastChild);
                     }
                 } else {
-                    console.warn("addGameLog: Элемент #game-log не найден. Сообщение: " + message);
+                    // Лог в консоль, если элемент не найден (может случиться при очень ранних ошибках)
+                    console.warn(`addGameLog: Элемент #game-log не найден. Сообщение: [${new Date().toLocaleTimeString()}] ${message}`);
                 }
             },
 
@@ -116,50 +134,86 @@ if (typeof window.uiManager === 'undefined') {
             updateAllStatus: function() {
                 this.updatePlayerStatus();
                 this.updateCommunityStatus();
-                if (window.inventoryManager) {
+                
+                // Обновление инвентаря и крафта, если менеджеры доступны
+                if (window.inventoryManager && typeof window.inventoryManager.displayPlayerInventory === 'function') {
                     window.inventoryManager.displayPlayerInventory();
+                } else {
+                     console.warn("updateAllStatus: window.inventoryManager.displayPlayerInventory не доступен.");
+                }
+                if (window.inventoryManager && typeof window.inventoryManager.displayCommunityStorage === 'function') {
                     window.inventoryManager.displayCommunityStorage();
                 } else {
-                    console.warn("updateAllStatus: InventoryManager не инициализирован.");
+                    console.warn("updateAllStatus: window.inventoryManager.displayCommunityStorage не доступен.");
                 }
-                if (window.craftingManager) {
+
+                if (window.craftingManager && typeof window.craftingManager.displayCraftingRecipes === 'function') {
                     window.craftingManager.displayCraftingRecipes();
                 } else {
-                     console.warn("updateAllStatus: CraftingManager не инициализирован.");
+                     console.warn("updateAllStatus: window.craftingManager.displayCraftingRecipes не доступен.");
                 }
             },
 
-            // Обновляет статус игрока
+            // Обновляет статус игрока (БЕЗ ИЗОБРАЖЕНИЙ)
             updatePlayerStatus: function() {
-                if (!playerStatusElement || !window.gameState.player) {
-                    console.warn("updatePlayerStatus: Элемент статуса игрока или данные игрока не найдены.");
+                if (!playerStatusElement || !window.gameState || !window.gameState.player) {
+                    console.warn("updatePlayerStatus: Элемент статуса игрока (#player-status), gameState или gameState.player не найдены/не инициализированы.");
+                    if(playerStatusElement) playerStatusElement.innerHTML = '<p>Данные игрока недоступны.</p>';
                     return;
                 }
                 const player = window.gameState.player;
+                // Убедимся, что все свойства игрока существуют перед использованием
+                const health = player.health !== undefined ? player.health : 'N/A';
+                const maxHealth = player.maxHealth !== undefined ? player.maxHealth : 'N/A';
+                const stamina = player.stamina !== undefined ? player.stamina : 'N/A';
+                const maxStamina = player.maxStamina !== undefined ? player.maxStamina : 'N/A';
+                const hungerPercent = (player.hunger !== undefined && player.maxHunger) ? Math.round((player.hunger / player.maxHunger) * 100) : 'N/A';
+                const thirstPercent = (player.thirst !== undefined && player.maxThirst) ? Math.round((player.thirst / player.maxThirst) * 100) : 'N/A';
+                const fatiguePercent = (player.fatigue !== undefined && player.maxFatigue) ? Math.round((player.fatigue / player.maxFatigue) * 100) : 'N/A';
+                const weapon = player.weapon ? player.weapon.name : 'Нет'; // Предполагается, что оружие - объект с именем
+
                 playerStatusElement.innerHTML = `
-                    <p><img src="assets/icons/heart.png" alt="Здоровье" class="status-icon"> Здоровье:${player.health}/${player.maxHealth}</p>
-                    <p><img src="assets/icons/stamina.png" alt="Выносливость" class="status-icon"> Выносливость:${player.stamina}/${player.maxStamina}</p>
-                    <p><img src="assets/icons/hunger.png" alt="Голод" class="status-icon"> Голод:${Math.round((player.hunger / player.maxHunger) * 100)}%</p>
-                    <p><img src="assets/icons/thirst.png" alt="Жажда" class="status-icon"> Жажда:${Math.round((player.thirst / player.maxThirst) * 100)}%</p>
-                    <p><img src="assets/icons/fatigue.png" alt="Усталость" class="status-icon"> Усталость:${Math.round((player.fatigue / player.maxFatigue) * 100)}%</p>
-                    <p><img src="assets/icons/weapon.png" alt="Оружие" class="status-icon"> Оружие:Нет</p>
+                    <p>Здоровье: ${health}/${maxHealth}</p>
+                    <p>Выносливость: ${stamina}/${maxStamina}</p>
+                    <p>Голод: ${hungerPercent}%</p>
+                    <p>Жажда: ${thirstPercent}%</p>
+                    <p>Усталость: ${fatiguePercent}%</p>
+                    <p>Оружие: ${weapon}</p>
                     `;
             },
 
-            // Обновляет статус общины
+            // Обновляет статус общины (БЕЗ ИЗОБРАЖЕНИЙ)
             updateCommunityStatus: function() {
-                if (!communityStatusElement || !window.gameState.community) {
-                    console.warn("updateCommunityStatus: Элемент статуса общины или данные общины не найдены.");
+                if (!communityStatusElement || !window.gameState || !window.gameState.community) {
+                    console.warn("updateCommunityStatus: Элемент статуса общины (#community-status), gameState или gameState.community не найдены/не инициализированы.");
+                     if(communityStatusElement) communityStatusElement.innerHTML = '<p>Данные общины недоступны.</p>';
                     return;
                 }
                 const community = window.gameState.community;
+                // Убедимся, что все свойства общины существуют
+                const survivors = community.survivors !== undefined ? community.survivors : 'N/A';
+                const morale = community.morale !== undefined ? community.morale : 'N/A';
+                const maxMorale = community.maxMorale !== undefined ? community.maxMorale : 'N/A';
+                const safetyPercent = (community.safety !== undefined && community.maxSafety) ? Math.round((community.safety / community.maxSafety) * 100) : 'N/A';
+                const food = (community.resources && community.resources.food !== undefined) ? community.resources.food : 'N/A';
+                const water = (community.resources && community.resources.water !== undefined) ? community.resources.water : 'N/A';
+                const shelterLevel = (community.facilities && community.facilities.shelter_level !== undefined) ? community.facilities.shelter_level : 'N/A';
+                const gameDay = window.gameState.gameDay !== undefined ? window.gameState.gameDay : 'N/A';
+
+
+                // Обновление заголовка с днем игры
+                const dayDisplayElement = document.getElementById('game-day-display');
+                if (dayDisplayElement) {
+                    dayDisplayElement.textContent = gameDay;
+                }
+
                 communityStatusElement.innerHTML = `
-                    <p><img src="assets/icons/survivor.png" alt="Выжившие" class="status-icon"> Выживших:${community.survivors}</p>
-                    <p><img src="assets/icons/morale.png" alt="Мораль" class="status-icon"> Мораль:${community.morale}/${community.maxMorale}</p>
-                    <p><img src="assets/icons/safety.png" alt="Безопасность" class="status-icon"> Безопасность:${Math.round((community.safety / community.maxSafety) * 100)}%</p>
-                    <p><img src="assets/icons/food.png" alt="Еда" class="status-icon"> Еда:${community.resources.food}</p>
-                    <p><img src="assets/icons/water.png" alt="Вода" class="status-icon"> Вода:${community.resources.water}</p>
-                    <p><img src="assets/icons/shelter.png" alt="Убежище" class="status-icon"> Убежище:Уровень ${community.facilities.shelter_level}</p>
+                    <p>Выживших: ${survivors}</p>
+                    <p>Мораль: ${morale}/${maxMorale}</p>
+                    <p>Безопасность: ${safetyPercent}%</p>
+                    <p>Еда: ${food}</p>
+                    <p>Вода: ${water}</p>
+                    <p>Убежище: Уровень ${shelterLevel}</p>
                     `;
             },
         };
