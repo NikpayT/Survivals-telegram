@@ -1,14 +1,11 @@
 // script.js
 
-const GAME_VERSION = "0.5.0"; // Версия: Крафтинг
+const GAME_VERSION = "0.5.0"; // Версия: Крафтинг, Статистика на Обзоре, EntryLoot
 
 // Используем gameState и domElements, определенные в game_state.js и dom_elements.js
 // Предполагается, что эти файлы загружены РАНЬШЕ script.js в index.html
 
 const game = {
-    // state и dom теперь берутся из глобальных gameState и domElements
-    // Функции, которые ранее были геттерами в game.state, теперь в GameStateGetters
-
     init: function() {
         domElements.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
         this.initializeStructures();
@@ -20,7 +17,7 @@ const game = {
         if (!gameState.discoveredLocations || Object.keys(gameState.discoveredLocations).length === 0) {
             gameState.discoveredLocations = {}; 
         }
-        const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
+        const baseLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5, entryLoot: []};
         if (!gameState.discoveredLocations["base_surroundings"] || 
             gameState.discoveredLocations["base_surroundings"].searchAttemptsLeft === undefined) {
             gameState.discoveredLocations["base_surroundings"] = { 
@@ -48,9 +45,11 @@ const game = {
         this.updateExploreTab(); 
         
         domElements.inventoryButton.onclick = () => this.openInventoryModal();
-        domElements.inventoryFilters.querySelectorAll('button').forEach(button => {
-            button.addEventListener('click', (e) => this.filterPlayerInventory(e.target.dataset.filter));
-        });
+        if(domElements.inventoryFilters) {
+            domElements.inventoryFilters.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', (e) => this.filterPlayerInventory(e.target.dataset.filter));
+            });
+        }
         
         if (domElements.baseInventoryFilters) { 
             domElements.baseInventoryFilters.querySelectorAll('button').forEach(button => {
@@ -103,7 +102,7 @@ const game = {
         this.addItemToInventory(gameState.inventory, "food_canned", 1); 
         this.addItemToInventory(gameState.inventory, "water_purified", 1);
         this.addItemToInventory(gameState.inventory, "bandages_crude", 1);
-        this.addItemToInventory(gameState.inventory, "tool_hammer", 1); // Даем молоток для старта
+        this.addItemToInventory(gameState.inventory, "tool_hammer", 1); 
     },
     addInitialItemsToBase: function() {
         this.addItemToInventory(gameState.baseInventory, "food_canned", 5);
@@ -137,6 +136,7 @@ const game = {
         }
         
         if (tabName === 'main-tab') {
+            this.updateOverviewTabStats(); 
             if (gameState.currentEvent) { 
                 domElements.eventTextDisplay.textContent = gameState.currentEvent.text;
                 domElements.eventActionsContainer.style.display = 'block';
@@ -288,7 +288,7 @@ const game = {
     
     countItemInInventory: function(targetInventory, itemId) {
         let count = 0;
-        if (!targetInventory || !Array.isArray(targetInventory)) return 0; // Защита
+        if (!targetInventory || !Array.isArray(targetInventory)) return 0; 
         targetInventory.forEach(slot => {
             if (slot.itemId === itemId) {
                 count += slot.quantity;
@@ -305,9 +305,11 @@ const game = {
         domElements.inventoryModal.style.display = 'none';
     },
     filterPlayerInventory: function(filterType) {
-        domElements.inventoryFilters.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-        const activeButton = domElements.inventoryFilters.querySelector(`button[data-filter="${filterType}"]`);
-        if (activeButton) activeButton.classList.add('active');
+        if (domElements.inventoryFilters) {
+            domElements.inventoryFilters.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            const activeButton = domElements.inventoryFilters.querySelector(`button[data-filter="${filterType}"]`);
+            if (activeButton) activeButton.classList.add('active');
+        }
         this.renderPlayerInventory(filterType);
     },
     renderPlayerInventory: function(filterType = 'all') { 
@@ -483,6 +485,11 @@ const game = {
         domElements.totalFoodValue.textContent = GameStateGetters.countBaseFoodItems(); 
         domElements.totalWaterValue.textContent = GameStateGetters.countBaseWaterItems(); 
 
+        if (document.getElementById('main-tab').style.display === 'block') {
+            this.updateOverviewTabStats();
+        }
+
+
         if (domElements.inventoryModal.style.display === 'block') {
             const activeFilter = domElements.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all';
             this.renderPlayerInventory(activeFilter);
@@ -498,6 +505,28 @@ const game = {
             this.renderCraftingRecipes();
         }
     },
+
+    updateOverviewTabStats: function() {
+        domElements.overviewHealth.textContent = `${gameState.player.health}/${gameState.player.maxHealth}`;
+        const hungerTh = GameStateGetters.getHungerThresholds(); 
+        if (gameState.player.hunger <= 0) domElements.overviewHunger.textContent = "Смертельный голод";
+        else if (gameState.player.hunger <= hungerTh.critical) domElements.overviewHunger.textContent = "Истощение";
+        else if (gameState.player.hunger <= hungerTh.low) domElements.overviewHunger.textContent = "Голод";
+        else domElements.overviewHunger.textContent = "Сыт";
+
+        const thirstTh = GameStateGetters.getThirstThresholds(); 
+        if (gameState.player.thirst <= 0) domElements.overviewThirst.textContent = "Смертельная жажда";
+        else if (gameState.player.thirst <= thirstTh.critical) domElements.overviewThirst.textContent = "Сильная жажда";
+        else if (gameState.player.thirst <= thirstTh.low) domElements.overviewThirst.textContent = "Жажда";
+        else domElements.overviewThirst.textContent = "Норма";
+        
+        domElements.overviewCondition.textContent = gameState.player.condition;
+        domElements.overviewDay.textContent = gameState.day;
+        domElements.overviewSurvivors.textContent = `${gameState.survivors}/${GameStateGetters.getMaxSurvivors()}`;
+        domElements.overviewBaseFood.textContent = GameStateGetters.countBaseFoodItems();
+        domElements.overviewBaseWater.textContent = GameStateGetters.countBaseWaterItems();
+    },
+
 
     log: function(message, type = "event-neutral") {
         const p = document.createElement('p');
@@ -566,7 +595,7 @@ const game = {
              if (!gameState.baseInventory) gameState.baseInventory = []; 
 
             if (!gameState.currentLocationId) gameState.currentLocationId = "base_surroundings";
-            const baseLocDefDefault = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
+            const baseLocDefDefault = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5, entryLoot: []};
             if (!gameState.discoveredLocations || Object.keys(gameState.discoveredLocations).length === 0) {
                 gameState.discoveredLocations = { "base_surroundings": { discovered: true, name: baseLocDefDefault.name, searchAttemptsLeft: baseLocDefDefault.initialSearchAttempts, foundSpecialItems: {} } };
             } else { 
@@ -785,6 +814,23 @@ const game = {
             }
             gameState.currentLocationId = locationId;
             this.log(`Вы переместились в локацию: ${LOCATION_DEFINITIONS[locationId].name}.`, "event-neutral");
+            
+            const locDef = LOCATION_DEFINITIONS[locationId];
+            if (locDef.entryLoot && locDef.entryLoot.length > 0) {
+                let entryLootGained = false;
+                locDef.entryLoot.forEach(loot => {
+                    if (Math.random() < loot.chance) {
+                        const quantity = Array.isArray(loot.quantity) ? 
+                                         Math.floor(Math.random() * (loot.quantity[1] - loot.quantity[0] + 1)) + loot.quantity[0] :
+                                         loot.quantity;
+                        if (this.addItemToInventory(gameState.inventory, loot.itemId, quantity)) {
+                            this.log(`Прибыв в ${locDef.name}, вы нашли: ${ITEM_DEFINITIONS[loot.itemId].name} (x${quantity}).`, "event-discovery");
+                            entryLootGained = true;
+                        }
+                    }
+                });
+                if (entryLootGained) this.updateDisplay();
+            }
             this.updateExploreTab();
         } else {
             this.log("Невозможно переместиться в эту локацию.", "event-negative");
@@ -1241,6 +1287,142 @@ const game = {
         });
     },
 
+    renderCraftingRecipes: function() {
+        if (!domElements.craftingRecipesList || typeof CRAFTING_RECIPES === 'undefined') {
+            if (domElements.craftingRecipesList) domElements.craftingRecipesList.innerHTML = '<p>Ошибка загрузки рецептов.</p>';
+            return;
+        }
+        
+        const workshopLevel = gameState.structures.workshop ? gameState.structures.workshop.level : 0;
+        domElements.workshopLevelDisplay.textContent = workshopLevel;
+        domElements.craftingRecipesList.innerHTML = '';
+        let recipesAvailableToDisplay = 0;
+
+        for (const recipeId in CRAFTING_RECIPES) {
+            const recipe = CRAFTING_RECIPES[recipeId];
+            if (workshopLevel < (recipe.workshopLevelRequired || 0)) {
+                continue; 
+            }
+
+            recipesAvailableToDisplay++;
+            const recipeDiv = document.createElement('div');
+            recipeDiv.className = 'crafting-recipe';
+
+            let ingredientsHTML = '<ul>';
+            let canCraftThis = true;
+            recipe.ingredients.forEach(ing => {
+                const has = this.countItemInInventory(gameState.baseInventory, ing.itemId); 
+                const hasEnough = has >= ing.quantity;
+                if (!hasEnough) canCraftThis = false;
+                ingredientsHTML += `<li class="${hasEnough ? 'has-enough' : 'not-enough'}">${ITEM_DEFINITIONS[ing.itemId].name}: ${has}/${ing.quantity}</li>`;
+            });
+            ingredientsHTML += '</ul>';
+
+            let toolsHTML = '';
+            if (recipe.toolsRequired && recipe.toolsRequired.length > 0) {
+                toolsHTML = '<strong>Инструменты:</strong> <span class="recipe-tools">';
+                let allToolsPresent = true;
+                recipe.toolsRequired.forEach((toolId, index) => {
+                    const hasTool = this.countItemInInventory(gameState.inventory, toolId) > 0; 
+                    if (!hasTool) allToolsPresent = false;
+                    toolsHTML += `${ITEM_DEFINITIONS[toolId].name} ${hasTool ? '✔' : '✘'}`;
+                    if (index < recipe.toolsRequired.length - 1) toolsHTML += ', ';
+                });
+                if (!allToolsPresent) {
+                    canCraftThis = false;
+                    toolsHTML = toolsHTML.replace('<span class="recipe-tools">', '<span class="recipe-tools missing-tool">');
+                }
+                toolsHTML += '</span>';
+            }
+            
+            let additionalResultsHTML = '';
+            if (recipe.additionalResults && recipe.additionalResults.length > 0) {
+                additionalResultsHTML = '<strong>Доп. результат:</strong> <ul>';
+                recipe.additionalResults.forEach(addRes => {
+                     additionalResultsHTML += `<li>${ITEM_DEFINITIONS[addRes.itemId].name} (x${Array.isArray(addRes.quantity) ? addRes.quantity.join('-') : addRes.quantity})</li>`;
+                });
+                additionalResultsHTML += '</ul>';
+            }
+
+
+            recipeDiv.innerHTML = `
+                <h4>${recipe.name}</h4>
+                <p class="recipe-description">${recipe.description}</p>
+                <div class="recipe-details">
+                    <strong>Результат:</strong> ${ITEM_DEFINITIONS[recipe.resultItemId].name} (x${recipe.resultQuantity})<br>
+                    <strong>Ингредиенты (со склада):</strong>
+                    ${ingredientsHTML}
+                    ${toolsHTML ? toolsHTML + '<br>' : ''}
+                    ${additionalResultsHTML}
+                    ${recipe.workshopLevelRequired > 0 ? `<strong>Требуется Мастерская Ур:</strong> ${recipe.workshopLevelRequired}<br>` : ''}
+                </div>
+                <button onclick="game.craftItem('${recipeId}')" ${!canCraftThis ? 'disabled' : ''}>Создать</button>
+            `;
+            domElements.craftingRecipesList.appendChild(recipeDiv);
+        }
+
+        if (recipesAvailableToDisplay === 0) {
+            domElements.craftingRecipesList.innerHTML = '<p><em>Нет доступных рецептов или не выполнены условия. Улучшите Мастерскую или соберите больше ресурсов/инструментов.</em></p>';
+        }
+    },
+
+    canCraft: function(recipeId) {
+        const recipe = CRAFTING_RECIPES[recipeId];
+        if (!recipe) return false;
+
+        const workshopLevel = gameState.structures.workshop ? gameState.structures.workshop.level : 0;
+        if (workshopLevel < (recipe.workshopLevelRequired || 0)) {
+            return false;
+        }
+
+        for (const ing of recipe.ingredients) {
+            if (this.countItemInInventory(gameState.baseInventory, ing.itemId) < ing.quantity) {
+                return false;
+            }
+        }
+        if (recipe.toolsRequired && recipe.toolsRequired.length > 0) {
+            for (const toolId of recipe.toolsRequired) {
+                if (this.countItemInInventory(gameState.inventory, toolId) === 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    },
+
+    craftItem: function(recipeId) {
+        if (!this.canCraft(recipeId)) {
+            this.log("Невозможно создать предмет: не хватает ресурсов, инструментов или не тот уровень мастерской.", "event-negative");
+            this.renderCraftingRecipes(); 
+            return;
+        }
+
+        const recipe = CRAFTING_RECIPES[recipeId];
+
+        recipe.ingredients.forEach(ing => {
+            this.removeItemFromInventory(gameState.baseInventory, ing.itemId, ing.quantity);
+        });
+
+        this.addItemToInventory(gameState.inventory, recipe.resultItemId, recipe.resultQuantity);
+        this.log(`Создано: ${ITEM_DEFINITIONS[recipe.resultItemId].name} (x${recipe.resultQuantity})`, "event-positive");
+
+        if (recipe.additionalResults) {
+            recipe.additionalResults.forEach(addRes => {
+                const quantity = Array.isArray(addRes.quantity) ? 
+                                 Math.floor(Math.random() * (addRes.quantity[1] - addRes.quantity[0] + 1)) + addRes.quantity[0] :
+                                 addRes.quantity;
+                if (this.addItemToInventory(gameState.inventory, addRes.itemId, quantity)) {
+                    this.log(`Дополнительно получено: ${ITEM_DEFINITIONS[addRes.itemId].name} (x${quantity})`, "event-discovery");
+                }
+            });
+        }
+        
+        this.updateDisplay(); 
+        this.renderCraftingRecipes(); 
+        this.saveGame();
+    },
+
+
     gameOver: function(message) {
         if(gameState.gameOver) return; 
         this.log(message, "event-negative");
@@ -1265,7 +1447,7 @@ const game = {
         localStorage.removeItem(`zombieSurvivalGame_v${major}.${minor}`);
         
         gameState = JSON.parse(JSON.stringify(initialGameState));
-        const baseLocDefDefault = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5};
+        const baseLocDefDefault = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5, entryLoot: []};
         gameState.discoveredLocations = { 
             "base_surroundings": { 
                 discovered: true, 
@@ -1314,9 +1496,10 @@ window.onload = () => {
     if (typeof ITEM_DEFINITIONS !== 'undefined' && 
         typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined' &&
         typeof LOCATION_DEFINITIONS !== 'undefined' &&
-        typeof CRAFTING_RECIPES !== 'undefined' && // Проверяем новый файл
+        typeof CRAFTING_RECIPES !== 'undefined' && 
         typeof gameState !== 'undefined' && 
-        typeof domElements !== 'undefined' 
+        typeof domElements !== 'undefined' &&
+        typeof GameStateGetters !== 'undefined' // Добавил проверку GameStateGetters
         ) {
         game.init();
     } else {
