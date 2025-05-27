@@ -1,98 +1,321 @@
-/* style.css - Основные стили для интерфейса игры */
+/* style.css - Основные стили для интерфейса игры (обновленная версия) */
 
+:root {
+    /* Цветовая палитра */
+    --color-background-dark: #1a1a1a;
+    --color-background-medium: #2a2a2a;
+    --color-background-light: #3a3a3a;
+    --color-border: #4a4a4a;
+    --color-text-light: #e0e0e0;
+    --color-text-medium: #b0b0b0;
+    --color-text-dark: #808080;
+    --color-primary: #4CAF50; /* Зеленый - для акцентов, здоровья */
+    --color-primary-hover: #5cb85c;
+    --color-secondary: #FFC107; /* Желтый - для предупреждений, ресурсов */
+    --color-danger: #F44336; /* Красный - для опасностей, урона */
+    --color-info: #2196F3; /* Синий - для информации */
+
+    /* Отступы и размеры */
+    --spacing-xs: 5px;
+    --spacing-sm: 10px;
+    --spacing-md: 15px;
+    --spacing-lg: 20px;
+    --spacing-xl: 30px;
+
+    /* Шрифты */
+    --font-primary: 'Roboto', sans-serif;
+    --font-secondary: 'Press Start 2P', cursive; /* Для заголовков или ретро-эффектов */
+    --font-size-base: 1em;
+    --font-size-lg: 1.2em;
+    --font-size-xl: 1.5em;
+}
+
+/* Общие стили для тела страницы */
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #222; /* Темный фон для постапокалиптической атмосферы */
-    color: #eee; /* Светлый текст */
+    font-family: var(--font-primary);
+    background-color: var(--color-background-dark);
+    color: var(--color-text-light);
     margin: 0;
-    padding: 20px;
+    padding: var(--spacing-lg);
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Выравнивание по верху, чтобы контент не прижимался к центру */
-    min-height: 100vh; /* Минимальная высота на весь экран */
-    box-sizing: border-box; /* Учитываем padding в общей ширине/высоте */
+    align-items: flex-start;
+    min-height: 100vh;
+    box-sizing: border-box;
+    line-height: 1.6;
+    font-size: var(--font-size-base);
 }
 
+/* Главный контейнер игры */
 #game-container {
-    background-color: #333; /* Более светлый фон для контейнера игры */
-    border: 1px solid #555;
-    border-radius: 8px;
-    padding: 25px;
-    max-width: 600px; /* Максимальная ширина игрового поля */
+    background-color: var(--color-background-medium);
+    border: 1px solid var(--color-border);
+    border-radius: var(--spacing-md);
+    padding: var(--spacing-xl);
+    max-width: 900px; /* Увеличиваем ширину для масштабности */
     width: 100%;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.7);
     display: flex;
     flex-direction: column;
-    gap: 20px; /* Отступы между секциями */
+    gap: var(--spacing-lg);
 }
 
-#game-text {
-    background-color: #444;
-    border: 1px solid #666;
-    border-radius: 5px;
-    padding: 20px;
-    min-height: 150px; /* Минимальная высота для текста */
-    line-height: 1.6;
+/* Заголовок игры */
+#game-header {
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+#game-header h1 {
+    font-family: var(--font-secondary);
+    color: var(--color-primary);
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-sm);
+    text-shadow: 0 0 5px rgba(76, 175, 80, 0.5); /* Небольшая тень для свечения */
+}
+
+/* Статус-бар */
+#status-bar {
+    background-color: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--spacing-sm);
+    padding: var(--spacing-md);
+    display: flex;
+    flex-wrap: wrap; /* Для переноса элементов на новую строку */
+    gap: var(--spacing-md);
+    justify-content: space-around;
+    font-size: 0.95em;
+}
+
+.status-group {
+    flex: 1; /* Распределяем пространство равномерно */
+    min-width: 250px; /* Минимальная ширина для каждого блока статуса */
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--spacing-sm);
+    background-color: #333;
+}
+
+.status-group h3 {
+    font-family: var(--font-primary);
+    color: var(--color-secondary);
+    margin-top: 0;
+    margin-bottom: var(--spacing-sm);
     font-size: 1.1em;
-    white-space: pre-wrap; /* Сохраняет переносы строк и пробелы */
+    border-bottom: 1px dashed var(--color-border);
+    padding-bottom: var(--spacing-xs);
 }
 
+.status-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+    color: var(--color-text-medium);
+}
+
+.status-item .icon {
+    margin-right: var(--spacing-xs);
+    font-size: 1.2em; /* Увеличиваем размер иконок */
+    color: var(--color-primary); /* Цвет иконок */
+}
+/* Специфичные цвета для иконок */
+.status-item.health .icon { color: var(--color-primary); }
+.status-item.hunger .icon, .status-item.thirst .icon { color: var(--color-secondary); }
+.status-item.fatigue .icon { color: var(--color-info); }
+.status-item.survivors .icon { color: var(--color-info); }
+.status-item.morale .icon { color: var(--color-secondary); }
+.status-item.security .icon { color: var(--color-danger); }
+.status-item.food .icon, .status-item.water .icon { color: var(--color-primary); }
+
+
+/* Навигационные кнопки */
+#game-navigation {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+    flex-wrap: wrap; /* Для адаптивности */
+}
+
+.nav-button {
+    background-color: var(--color-background-light);
+    color: var(--color-text-light);
+    border: 1px solid var(--color-border);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--spacing-xs);
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+    flex-grow: 1; /* Чтобы кнопки занимали доступное место */
+    max-width: 150px; /* Ограничиваем максимальную ширину кнопки */
+}
+
+.nav-button:hover {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    color: var(--color-background-dark); /* Текст темнеет при наведении */
+}
+
+.nav-button.active {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-background-dark);
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+}
+
+/* Основной контент игры */
+#game-main-content {
+    background-color: var(--color-background-medium);
+    border: 1px solid var(--color-border);
+    border-radius: var(--spacing-md);
+    padding: var(--spacing-lg);
+    min-height: 400px; /* Увеличиваем для масштабности */
+    position: relative; /* Для позиционирования секций */
+}
+
+.game-section {
+    display: none; /* По умолчанию все секции скрыты */
+    flex-direction: column; /* Используем flex для расположения элементов внутри секции */
+    gap: var(--spacing-md);
+    min-height: 350px; /* Чтобы секции не "прыгали" по высоте */
+}
+
+.game-section.active {
+    display: flex; /* Активная секция отображается */
+}
+
+/* Текстовое окно игры */
+#game-text {
+    background-color: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--spacing-sm);
+    padding: var(--spacing-md);
+    min-height: 180px; /* Увеличиваем высоту для большего текста */
+    line-height: 1.7;
+    font-size: var(--font-size-base);
+    white-space: pre-wrap;
+    overflow-y: auto; /* Добавляем прокрутку, если текста много */
+    max-height: 250px; /* Ограничиваем максимальную высоту текста */
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3); /* Внутренняя тень для глубины */
+}
+
+/* Контейнер для кнопок действий */
 #options-container {
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Отступы между кнопками */
+    gap: var(--spacing-sm);
 }
 
 .game-option-button {
-    background-color: #555;
-    color: #eee;
-    border: none;
-    padding: 12px 18px;
-    border-radius: 5px;
-    font-size: 1em;
+    background-color: var(--color-background-light);
+    color: var(--color-text-light);
+    border: 1px solid var(--color-border);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--spacing-xs);
+    font-size: 1.05em;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-    text-align: left; /* Выравнивание текста кнопки по левому краю */
+    transition: background-color 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+    text-align: left;
 }
 
 .game-option-button:hover {
-    background-color: #777;
-    transform: translateY(-2px); /* Небольшой эффект при наведении */
+    background-color: var(--color-info);
+    border-color: var(--color-info);
+    transform: translateY(-2px);
+    color: var(--color-background-dark);
 }
 
 .game-option-button:active {
-    background-color: #666;
+    background-color: var(--color-info);
+    border-color: var(--color-info);
     transform: translateY(0);
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
-#status-bar {
+/* Стили для списков предметов/рецептов */
+.item-list {
+    background-color: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--spacing-sm);
+    padding: var(--spacing-md);
+    max-height: 300px; /* Ограничиваем высоту списков */
+    overflow-y: auto; /* Прокрутка для длинных списков */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Адаптивная сетка */
+    gap: var(--spacing-sm);
+}
+
+.item-list-item, .recipe-item {
     background-color: #444;
-    border: 1px solid #666;
-    border-radius: 5px;
-    padding: 10px 15px;
-    font-size: 0.9em;
-    text-align: center;
-    color: #bbb; /* Чуть более тусклый цвет для статус-бара */
+    border: 1px solid #555;
+    border-radius: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    transition: background-color 0.2s ease;
 }
 
-/* Адаптивность для маленьких экранов (телефонов) */
+.item-list-item:hover, .recipe-item:hover {
+    background-color: #555;
+}
+
+.item-name {
+    font-weight: bold;
+    color: var(--color-primary);
+}
+
+.item-description {
+    font-size: 0.9em;
+    color: var(--color-text-medium);
+}
+
+/* Адаптивность для маленьких экранов */
 @media (max-width: 768px) {
     body {
-        padding: 10px;
+        padding: var(--spacing-sm);
     }
 
     #game-container {
-        padding: 15px;
-        border-radius: 5px;
+        padding: var(--spacing-md);
+        border-radius: var(--spacing-sm);
+    }
+
+    #game-header h1 {
+        font-size: 1.2em;
+    }
+
+    #status-bar {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .status-group {
+        min-width: unset; /* Снимаем ограничение */
+        width: 100%; /* Занимаем всю ширину */
+    }
+
+    #game-navigation {
+        flex-direction: column;
+    }
+
+    .nav-button {
+        max-width: 100%;
     }
 
     #game-text {
-        min-height: 120px;
-        font-size: 1em;
+        min-height: 100px;
+        font-size: 0.95em;
     }
 
     .game-option-button {
-        padding: 10px 15px;
-        font-size: 0.95em;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.9em;
+    }
+
+    .item-list {
+        grid-template-columns: 1fr; /* Одна колонка на мобильных */
     }
 }
