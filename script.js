@@ -1,6 +1,6 @@
 // script.js
 
-const GAME_VERSION = "0.4.3"; // Версия: UI Склада, начало рефакторинга, адаптивность бургер
+const GAME_VERSION = "0.5.0"; // Версия: Крафтинг
 
 // Используем gameState и domElements, определенные в game_state.js и dom_elements.js
 // Предполагается, что эти файлы загружены РАНЬШЕ script.js в index.html
@@ -62,7 +62,7 @@ const game = {
         domElements.mainNav.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 this.openTab(e.target.dataset.tab, e.target);
-                if (window.innerWidth <= 768 && domElements.sidebar.classList.contains('open')) { // Закрыть сайдбар на мобильных после выбора
+                if (window.innerWidth <= 768 && domElements.sidebar.classList.contains('open')) { 
                     this.toggleSidebar();
                 }
             });
@@ -71,7 +71,6 @@ const game = {
         domElements.toggleLogButton.addEventListener('click', () => this.toggleLogVisibility());
         this.applyLogVisibility();
 
-        // Логика для бургер-меню
         domElements.burgerMenuButton.onclick = () => this.toggleSidebar();
 
 
@@ -104,12 +103,15 @@ const game = {
         this.addItemToInventory(gameState.inventory, "food_canned", 1); 
         this.addItemToInventory(gameState.inventory, "water_purified", 1);
         this.addItemToInventory(gameState.inventory, "bandages_crude", 1);
+        this.addItemToInventory(gameState.inventory, "tool_hammer", 1); // Даем молоток для старта
     },
     addInitialItemsToBase: function() {
         this.addItemToInventory(gameState.baseInventory, "food_canned", 5);
         this.addItemToInventory(gameState.baseInventory, "water_purified", 5);
         this.addItemToInventory(gameState.baseInventory, "scrap_metal", 10);
         this.addItemToInventory(gameState.baseInventory, "wood", 10);
+        this.addItemToInventory(gameState.baseInventory, "cloth", 5);
+        this.addItemToInventory(gameState.baseInventory, "broken_electronics", 2);
     },
 
     openTab: function(tabName, clickedLinkElement) {
@@ -152,6 +154,8 @@ const game = {
             this.updateExploreTab(); 
         } else if (tabName === 'storage-tab') {
             this.filterBaseInventory('all'); 
+        } else if (tabName === 'craft-tab') {
+            this.renderCraftingRecipes();
         }
     },
     
@@ -284,6 +288,7 @@ const game = {
     
     countItemInInventory: function(targetInventory, itemId) {
         let count = 0;
+        if (!targetInventory || !Array.isArray(targetInventory)) return 0; // Защита
         targetInventory.forEach(slot => {
             if (slot.itemId === itemId) {
                 count += slot.quantity;
@@ -486,7 +491,11 @@ const game = {
             this.updateExploreTabDisplay();
         }
         if (document.getElementById('storage-tab')?.style.display === 'block') {
-            this.renderBaseInventory(domElements.baseInventoryFilters?.querySelector('button.active')?.dataset.filter || 'all');
+            const storageActiveFilter = domElements.baseInventoryFilters?.querySelector('button.active')?.dataset.filter || 'all';
+            this.renderBaseInventory(storageActiveFilter);
+        }
+        if (document.getElementById('craft-tab')?.style.display === 'block') {
+            this.renderCraftingRecipes();
         }
     },
 
@@ -692,7 +701,7 @@ const game = {
                 amountFulfilled += canConsumeFromSlot * itemValue;
                 
                 const originalLength = inventory.length;
-                const originalItemId = slot.itemId; // Сохраняем itemId перед возможным удалением
+                const originalItemId = slot.itemId; 
                 this.removeItemFromInventory(gameState.baseInventory, slot.itemId, canConsumeFromSlot, i);
                 
                 if (inventory.length < originalLength || (inventory[i] && inventory[i].itemId !== originalItemId)) {
@@ -1305,12 +1314,13 @@ window.onload = () => {
     if (typeof ITEM_DEFINITIONS !== 'undefined' && 
         typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined' &&
         typeof LOCATION_DEFINITIONS !== 'undefined' &&
-        typeof gameState !== 'undefined' && // Проверяем gameState
-        typeof domElements !== 'undefined' // Проверяем domElements
+        typeof CRAFTING_RECIPES !== 'undefined' && // Проверяем новый файл
+        typeof gameState !== 'undefined' && 
+        typeof domElements !== 'undefined' 
         ) {
         game.init();
     } else {
-        console.error("Один или несколько файлов определений (items, buildings, locations, game_state, dom_elements) не загружены или загружены не в том порядке!");
+        console.error("Один или несколько файлов определений (items, buildings, locations, recipes, game_state, dom_elements) не загружены или загружены не в том порядке!");
         document.body.innerHTML = "<p style='color:red; font-size:18px; text-align:center; margin-top: 50px;'>Ошибка загрузки игровых данных. Пожалуйста, проверьте консоль (F12) и обновите страницу.</p>";
     }
 };
