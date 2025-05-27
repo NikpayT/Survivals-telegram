@@ -36,7 +36,7 @@ window.addGameLog = function(message) {
         window.uiManager.addGameLog(message);
     } else {
         // Если uiManager еще не полностью инициализирован, логируем напрямую в консоль
-        console.warn(`[FALLBACK LOG] ${message}`);
+        console.warn(`[FALLBACK LOG] UIManager or addGameLog not ready. Message: ${message}`);
     }
 };
 
@@ -52,6 +52,14 @@ window.loadScene = function(sceneId, triggerOnEnter = true) {
         return;
     }
 
+    // Проверка доступности GameScenes
+    if (typeof GameScenes === 'undefined' || !GameScenes) {
+        console.error("GameScenes не определен! Невозможно загрузить сцену.");
+        window.addGameLog("Критическая ошибка: Файл сцен не загружен.");
+        // Можно добавить обработку критической ошибки, например, остановку игры
+        return;
+    }
+    
     const scene = GameScenes[sceneId];
     if (!scene) {
         window.addGameLog(`Ошибка: Сцена с ID "${sceneId}" не найдена! Переход к сцене смерти.`);
@@ -64,7 +72,7 @@ window.loadScene = function(sceneId, triggerOnEnter = true) {
     }
 
     window.gameState.currentSceneId = sceneId;
-    window.addGameLog(`Загружена сцена: "${scene.name}"`);
+    window.addGameLog(`Загружена сцена: "${scene.name || sceneId}"`); // Используем scene.name, если есть
 
     // Выполняем действия, которые должны произойти при входе в сцену (если есть)
     if (triggerOnEnter && scene.onEnter && typeof scene.onEnter === 'function') {
@@ -72,46 +80,54 @@ window.loadScene = function(sceneId, triggerOnEnter = true) {
             scene.onEnter(window.gameState.player, window.gameState.community);
         } catch (e) {
             console.error(`Ошибка при выполнении onEnter для сцены ${sceneId}:`, e);
-            window.addGameLog(`Произошла ошибка в сцене "${scene.name}".`);
+            window.addGameLog(`Произошла ошибка в сцене "${scene.name || sceneId}".`);
         }
     }
 
-    // Обновляем UI
-    window.uiManager.displayGameText(scene.description);
-    // Мапим опции для displayOptions, чтобы они вызывали loadScene
-    const displayableOptions = scene.options.map(option => ({
-        text: option.text,
-        action: () => {
-            // Если игра окончена, кнопки опций не должны работать, кроме тех, что на сцене Game Over
-            if (window.gameState.isGameOver && sceneId !== 'player_death') {
-                return;
-            }
+    // Обновляем UI, убедившись, что uiManager доступен
+    if (window.uiManager && typeof window.uiManager.displayGameText === 'function') {
+        window.uiManager.displayGameText(scene.description);
+    } else {
+        console.error("uiManager.displayGameText не доступен для отображения описания сцены.");
+    }
 
-            // Если опция ведет к новой сцене, просто загружаем её
-            if (option.nextScene) {
-                window.loadScene(option.nextScene);
-            } else if (option.customAction && typeof option.customAction === 'function') {
-                // Если есть кастомное действие, выполняем его
-                try {
-                    option.customAction();
-                } catch (e) {
-                    console.error(`Ошибка при выполнении customAction для опции:`, e);
-                    window.addGameLog(`Произошла ошибка при выполнении действия.`);
+    if (window.uiManager && typeof window.uiManager.displayOptions === 'function') {
+        const displayableOptions = scene.options.map(option => ({
+            text: option.text,
+            action: () => {
+                if (window.gameState.isGameOver && sceneId !== 'player_death' && sceneId !== 'game_over_placeholder') { // Добавил плейсхолдер для общей сцены конца игры
+                    return;
                 }
-                // После кастомного действия, возможно, нужно обновить текущую сцену
-                // или перейти к новой, если действие не привело к смене сцены
-                window.loadScene(window.gameState.currentSceneId, false); // Обновляем текущую сцену без вызова onEnter
-            } else {
-                console.warn("Опция не имеет nextScene и customAction или customAction не является функцией.");
-            }
-        }
-    }));
-    window.uiManager.displayOptions(displayableOptions);
 
-    window.uiManager.updateAllStatus(); // Убеждаемся, что статус всегда актуален
+                if (option.nextScene) {
+                    window.loadScene(option.nextScene);
+                } else if (option.customAction && typeof option.customAction === 'function') {
+                    try {
+                        option.customAction();
+                    } catch (e) {
+                        console.error(`Ошибка при выполнении customAction для опции:`, e);
+                        window.addGameLog(`Произошла ошибка при выполнении действия.`);
+                    }
+                    // Обновление текущей сцены (или новой, если customAction изменил gameState.currentSceneId)
+                    // false, чтобы не вызывать onEnter повторно, если это не нужно.
+                    window.loadScene(window.gameState.currentSceneId, false); 
+                } else {
+                    console.warn("Опция не имеет nextScene и customAction или customAction не является функцией.");
+                }
+            }
+        }));
+        window.uiManager.displayOptions(displayableOptions);
+    } else {
+        console.error("uiManager.displayOptions не доступен для отображения опций.");
+    }
+    
+    if (window.uiManager && typeof window.uiManager.updateAllStatus === 'function') {
+        window.uiManager.updateAllStatus();
+    } else {
+        console.error("uiManager.updateAllStatus не доступен.");
+    }
 
     // Проверяем условия Game Over после загрузки сцены
-    // Если Game Over, устанавливаем флаг и загружаем сцену смерти один раз
     if (checkGameOverConditions() && !window.gameState.isGameOver) {
         window.gameState.isGameOver = true;
         window.loadScene('player_death', false); 
@@ -131,42 +147,31 @@ function checkGameOverConditions() {
         return false; 
     }
 
-    // Добавим логирование начальных значений для отладки
-    // Это поможет увидеть, почему Game Over срабатывает
-    console.log(`[DEBUG] checkGameOverConditions: Player Health: ${player.health}, Community Survivors: ${community.survivors}, Shelter Level: ${community.facilities.shelter_level}`);
+    // Логирование для отладки
+    // console.log(`[DEBUG] checkGameOverConditions: Player Health: ${player.health}, Community Survivors: ${community.survivors}, Shelter Level: ${community.facilities.shelter_level}`);
 
     if (player.health <= 0) {
         window.addGameLog('Ваше здоровье иссякло. Вы не смогли больше бороться. Это конец вашего пути.');
         return true; 
     }
     
-    // Если выживших в общине нет (кроме самого игрока) И убежище разрушено
-    // community.survivors <= 1 подразумевает, что выживших 0 или 1 (сам игрок)
-    // shelter_level === 0 подразумевает, что убежище разрушено
-    if (community.survivors <= 1 && community.facilities.shelter_level === 0) { 
-        window.addGameLog('Ваше убежище разрушено, а община погибла. Вы остались один, без надежды на восстановление.');
-        return true; 
-    }
-    
-    // Если община полностью уничтожена (нет никого, даже игрока)
-    // Это условие, по сути, перекрывается первым, если игрок тоже погиб.
-    // Если игрок еще жив, но община (кроме него) погибла и убежища нет.
-    if (community.survivors <= 0 && community.facilities.shelter_level === 0) {
+    if (community.survivors <= 0) { // Если все в общине погибли (включая игрока, если он считается частью survivors)
         window.addGameLog('Ваша община полностью истреблена. Вы остались в одиночестве.');
         return true;
     }
+    // Другие условия, например, если убежище разрушено и нет выживших (кроме игрока)
+    // if (community.survivors <= 1 && community.facilities.shelter_level === 0) { 
+    // window.addGameLog('Ваше убежище разрушено, а община погибла. Вы остались один, без надежды на восстановление.');
+    // return true; 
+    // }
 
-
-    // Если игра еще не закончилась
     return false;
 }
 
 /**
  * Функция для перехода к следующему игровому дню (ежедневный цикл).
- * Вызывается по триггеру (например, кнопка "Отдохнуть" или событие).
  */
 window.nextGameDay = function() {
-    // Если игра уже закончилась, не переходим к следующему дню
     if (window.gameState.isGameOver) {
         window.addGameLog('Игра окончена. Нельзя перейти к следующему дню.');
         return;
@@ -175,70 +180,64 @@ window.nextGameDay = function() {
     window.gameState.gameDay++;
     window.addGameLog(`Наступил день ${window.gameState.gameDay}.`);
 
-    // Ежедневные действия игрока
     if (window.gameState.player && typeof window.gameState.player.passDay === 'function') {
         window.gameState.player.passDay();
     } else {
         console.error("Player.passDay не найден или не является функцией.");
     }
 
-    // Ежедневные действия общины
     if (window.gameState.community && typeof window.gameState.community.passDay === 'function') {
         window.gameState.community.passDay();
     } else {
         console.error("Community.passDay не найден или не является функцией.");
     }
 
-    // НОВОЕ: Запускаем механику исследования
-    // Это можно сделать здесь, если "следующий день" означает и "исследование"
-    // Или вызывать explorationManager.explore() отдельно из опций сцены.
-    // Для данной реализации, "Исследовать окрестности (Начать день)" будет вызывать это.
     if (window.explorationManager && typeof window.explorationManager.explore === 'function') {
-        // Передаем ID текущей сцены, чтобы знать, куда возвращаться
-        window.explorationManager.explore(window.gameState.currentSceneId); 
+        // window.explorationManager.explore(window.gameState.currentSceneId); // Реши, когда это вызывать
     } else {
-        console.error("ExplorationManager не инициализирован или не имеет метода explore.");
-        // Если ExplorationManager не работает, просто загрузим текущую сцену
-        window.loadScene(window.gameState.currentSceneId, false);
+        // console.error("ExplorationManager не инициализирован или не имеет метода explore.");
     }
 
-
-    // Обновляем UI
     if (window.uiManager && typeof window.uiManager.updateAllStatus === 'function') {
         window.uiManager.updateAllStatus();
     } else {
         console.error("UIManager.updateAllStatus не найден или не является функцией.");
     }
 
-    // Проверяем условия Game Over после всех ежедневных событий
     if (checkGameOverConditions() && !window.gameState.isGameOver) {
         window.gameState.isGameOver = true;
         window.loadScene('player_death', false); 
         return; 
     }
-
-    // Загружаем текущую сцену заново, чтобы обновились опции
-    // Если explore() уже вызвал loadScene, это может быть избыточным.
-    // Однако, для надежности, оставим, если explore() не гарантирует loadScene.
-    // Если explore() *всегда* вызывает loadScene, эту строку можно убрать.
-    // Поскольку explore() вызывает loadScene(currentLocationId, false), здесь нет необходимости повторно загружать.
-    // window.loadScene(window.gameState.currentSceneId, false); // false, чтобы не вызывать onEnter снова
+    
+    // Обычно после nextGameDay следует загрузка какой-то "домашней" или базовой сцены,
+    // или обновление текущей, если логика игры это подразумевает.
+    // Например, вернуться в убежище:
+    // window.loadScene('shelter_scene_id', false); 
+    // Или просто обновить текущую сцену, если nextGameDay не меняет локацию:
+    window.loadScene(window.gameState.currentSceneId, false);
 };
 
 
 // Загружаем DOM перед инициализацией скриптов
 document.addEventListener('DOMContentLoaded', () => {
-    // Инициализируем UIManager первым делом!
-    // Его методы используются другими менеджерами и функциями
-    if (typeof UIManager !== 'undefined' && typeof window.uiManager !== 'undefined') { // Проверка, что UIManager объект загружен
+    // ИСПРАВЛЕННАЯ ПРОВЕРКА UIManager
+    if (typeof window.uiManager !== 'undefined' && typeof window.uiManager.init === 'function') {
         window.uiManager.init(); 
-        window.addGameLog('Игра загружена! Инициализация...');
+        window.addGameLog('Игра загружена! UIManager инициализирован.'); // Изменено сообщение для ясности
     } else {
-        console.error("UIManager не загружен или не доступен. Убедитесь, что uiManager.js подключен до main.js.");
+        console.error("window.uiManager не загружен, не определен или не имеет метода init. Убедитесь, что uiManager.js подключен корректно и до main.js, и что он определяет window.uiManager с методом init.");
+        // Попытка инициализировать лог напрямую, если uiManager не работает, чтобы видеть ошибки
+        const logEl = document.getElementById('game-log');
+        if (logEl) {
+            const p = document.createElement('p');
+            p.textContent = "КРИТИЧЕСКАЯ ОШИБКА: UIManager не удалось инициализировать!";
+            p.style.color = "red";
+            logEl.prepend(p);
+        }
         return; // Прекращаем выполнение, если UI Manager не доступен
     }
 
-    // Обновляем отображение версии игры
     const gameVersionElement = document.getElementById('game-version');
     if (gameVersionElement) {
         gameVersionElement.textContent = `Версия: ${GAME_VERSION}`;
@@ -247,25 +246,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Инициализируем игровые объекты
-    // Убедимся, что классы Player и Community определены
     if (typeof Player !== 'undefined') {
         window.gameState.player = new Player();
-        console.log("[DEBUG] Player initialized:", window.gameState.player); // Отладочный лог
+        console.log("[DEBUG] Player initialized:", window.gameState.player);
     } else {
-        console.error("Класс Player не определен. Убедитесь, что player.js подключен.");
+        console.error("Класс Player не определен. Убедитесь, что player.js подключен и определяет Player.");
+        window.addGameLog("Ошибка: Не удалось инициализировать игрока.");
         return;
     }
     if (typeof Community !== 'undefined') {
         window.gameState.community = new Community();
-        console.log("[DEBUG] Community initialized:", window.gameState.community); // Отладочный лог
+        console.log("[DEBUG] Community initialized:", window.gameState.community);
     } else {
-        console.error("Класс Community не определен. Убедитесь, что community.js подключен.");
+        console.error("Класс Community не определен. Убедитесь, что community.js подключен и определяет Community.");
+        window.addGameLog("Ошибка: Не удалось инициализировать общину.");
         return;
     }
 
     // Инициализируем менеджеры
-    // Эти менеджеры используют window.addGameLog, который теперь работает через uiManager.
-    // Важно: Порядок инициализации менеджеров может иметь значение, если они зависят друг от друга.
     if (typeof CraftingManager !== 'undefined') {
         window.craftingManager = new CraftingManager();
     } else {
@@ -274,7 +272,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (typeof FactionManager !== 'undefined') {
         window.factionManager = new FactionManager();
-        window.factionManager.initFactions(); // Инициализируем репутацию фракций
+        if (typeof window.factionManager.initFactions === 'function') {
+            window.factionManager.initFactions();
+        } else {
+            console.error("Метод FactionManager.initFactions не найден.");
+        }
     } else {
         console.error("Класс FactionManager не определен. Убедитесь, что factionManager.js подключен.");
     }
@@ -285,25 +287,25 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Класс CombatManager не определен. Убедитесь, что combatManager.js подключен.");
     }
     
-    // НОВОЕ: Инициализация ExplorationManager
     if (typeof ExplorationManager !== 'undefined') {
         window.explorationManager = new ExplorationManager();
     } else {
         console.error("Класс ExplorationManager не определен. Убедитесь, что explorationManager.js подключен.");
     }
 
-    // Инициализация InventoryManager - он должен быть последним, чтобы Player и Community были готовы
     if (typeof InventoryManager !== 'undefined') {
         window.inventoryManager = new InventoryManager();
+        // inventoryManager может потребовать uiManager для обновления UI сразу после инициализации
+        // или gameState.player / gameState.community
     } else {
         console.error("Класс InventoryManager не определен. Убедитесь, что inventoryManager.js подключен.");
     }
 
     // Запускаем первую сцену после полной инициализации
-    // Проверяем, что GameScenes доступны
     if (typeof GameScenes !== 'undefined') {
         window.loadScene(window.gameState.currentSceneId);
     } else {
-        console.error("Объект GameScenes не определен. Убедитесь, что scenes.js подключен.");
+        console.error("Объект GameScenes не определен. Убедитесь, что scenes.js подключен и определяет GameScenes.");
+        window.addGameLog("Критическая ошибка: Сцены игры не загружены. Невозможно начать игру.");
     }
 });
