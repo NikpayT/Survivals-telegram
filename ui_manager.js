@@ -2,7 +2,8 @@
 
 // Предполагается, что gameState, domElements, GameStateGetters, ITEM_DEFINITIONS, 
 // BASE_STRUCTURE_DEFINITIONS, LOCATION_DEFINITIONS, CRAFTING_RECIPES 
-// и game (для вызова game.build, game.craftItem и т.д. из кнопок) доступны глобально.
+// и game (для вызова game.build, game.craftItem и т.д. из кнопок, сгенерированных здесь) доступны глобально.
+// Также InventoryManager, LocationManager, EventManager должны быть доступны.
 
 const UIManager = {
     openTab: function(tabName, clickedLinkElement) {
@@ -27,26 +28,25 @@ const UIManager = {
             if (linkToActivate) linkToActivate.classList.add('active');
         }
         
-        // Обновление контента вкладки при её открытии
         if (tabName === 'main-tab') {
             this.updateOverviewTabStats(); 
-            if (gameState.currentEvent) { 
+            if (gameState.currentEvent && typeof EventManager !== 'undefined') { 
                 domElements.eventTextDisplay.textContent = gameState.currentEvent.text;
                 domElements.eventActionsContainer.style.display = 'block';
-                EventManager.displayEventChoices(); // Используем EventManager
-            } else if (gameState.locationEvent) { 
+                EventManager.displayEventChoices(); 
+            } else if (gameState.locationEvent && typeof EventManager !== 'undefined') { 
                  domElements.eventTextDisplay.textContent = gameState.locationEvent.text;
                  domElements.eventActionsContainer.style.display = 'block';
-                 EventManager.displayLocationEventChoices(); // Используем EventManager
+                 EventManager.displayLocationEventChoices(); 
             }
             else {
                 domElements.eventTextDisplay.textContent = '';
                 domElements.eventActionsContainer.style.display = 'none';
             }
-        } else if (tabName === 'explore-tab') {
-            LocationManager.updateExploreTab(); // Используем LocationManager
-        } else if (tabName === 'storage-tab') {
-            InventoryManager.filterBaseInventory('all'); // Используем InventoryManager
+        } else if (tabName === 'explore-tab' && typeof LocationManager !== 'undefined') {
+            LocationManager.updateExploreTab(); 
+        } else if (tabName === 'storage-tab' && typeof InventoryManager !== 'undefined') {
+            InventoryManager.filterBaseInventory('all'); 
         } else if (tabName === 'craft-tab') {
             this.renderCraftingRecipes();
         }
@@ -146,6 +146,7 @@ const UIManager = {
 
             let itemActionsHTML = '';
             if (itemDef.type === 'food' || itemDef.type === 'water' || itemDef.type === 'water_source' || itemDef.type === 'medicine') {
+                // Вызываем InventoryManager.consumeItem, предполагая, что game объект доступен InventoryManager
                 itemActionsHTML += `<button onclick="InventoryManager.consumeItem('${itemSlot.itemId}', ${index}, gameState.inventory)">Использовать</button>`;
             }
             itemActionsHTML += `<button onclick="InventoryManager.transferItem('${itemSlot.itemId}', ${index}, gameState.inventory, gameState.baseInventory, 1)">На склад (1)</button>`;
@@ -259,7 +260,9 @@ const UIManager = {
                 if (locId === gameState.currentLocationId) {
                     entryDiv.classList.add('active-location');
                 }
-                entryDiv.onclick = () => LocationManager.setCurrentLocation(locId); // Используем LocationManager
+                // ВАЖНО: Вызов должен быть game.LocationManager.setCurrentLocation, но LocationManager еще не полностью интегрирован в game
+                // Пока оставляем вызов через глобальный LocationManager, если он существует, или game, если он там определен.
+                entryDiv.onclick = () => (typeof LocationManager !== 'undefined' ? LocationManager.setCurrentLocation(locId) : game.setCurrentLocation(locId)); 
 
                 let dangerText = "Низкая";
                 let dangerClass = "low";
@@ -294,7 +297,7 @@ const UIManager = {
             let atMaxLevel = currentStructureState.level >= definition.maxLevel;
 
             if (!atMaxLevel) {
-                const costDef = getStructureUpgradeCost(key, currentStructureState.level);
+                const costDef = getStructureUpgradeCost(key, currentStructureState.level); // Глобальная функция
                 const costsForTooltip = [];
                 for (const itemId in costDef) {
                     const required = costDef[itemId];
@@ -321,7 +324,7 @@ const UIManager = {
             tooltipSpan.innerHTML = tooltipContent;
             btn.appendChild(tooltipSpan);
             
-            btn.onclick = () => game.build(key); // game.build останется в основном файле
+            btn.onclick = () => game.build(key); 
             btn.disabled = !canAffordAll || atMaxLevel || gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver;
             domElements.buildActions.appendChild(btn);
         }
@@ -349,7 +352,7 @@ const UIManager = {
             recipeDiv.className = 'crafting-recipe';
 
             let ingredientsHTML = '<ul>';
-            let canCraftThis = true; // Переместили сюда, чтобы проверка была для каждого рецепта
+            let canCraftThis = true; 
             recipe.ingredients.forEach(ing => {
                 const has = InventoryManager.countItemInInventory(gameState.baseInventory, ing.itemId); 
                 const hasEnough = has >= ing.quantity;
@@ -411,69 +414,22 @@ const UIManager = {
         domElements.eventTextDisplay.textContent = '';
         domElements.eventActionsContainer.style.display = 'none'; 
         
-        // Разблокируем кнопки действий на локации и глобальные действия, если они были заблокированы событием
-        const currentLocDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[gameState.currentLocationId] : null;
-        if (currentLocDef) {
-            const locState = gameState.discoveredLocations[gameState.currentLocationId];
-            const canSearch = locState && (locState.searchAttemptsLeft || 0) > 0;
-            domElements.scoutCurrentLocationButton.disabled = !canSearch || gameState.gameOver;
+        this.updateDisplay(); // Было UIManager.updateDisplay()
+        this.updateBuildActions(); // Было UIManager.updateBuildActions()
+        if (typeof LocationManager !== 'undefined') { // Проверка перед вызовом
+             LocationManager.updateExploreTab(); // Обновляем, чтобы кнопки разблокировались
         } else {
-            domElements.scoutCurrentLocationButton.disabled = true;
+            this.updateExploreTabDisplay(); // Альтернатива, если LocationManager еще не готов
+            this.renderDiscoveredLocations();
         }
-        domElements.discoverNewLocationButton.disabled = gameState.gameOver;
-
-
-        this.updateDisplay(); 
-        // this.updateExploreTabDisplay(); // Уже вызывается в updateDisplay, если вкладка открыта
-        this.updateBuildActions(); 
-        this.saveGame();
+        game.saveGame(); // game.saveGame останется в основном файле
     },
 
-    // Общая функция обновления всего UI, вызывается после значимых изменений состояния
-    updateAllUI: function() {
-        this.updateDisplay(); // Обновит базовую статистику, инвентарь, текущую вкладку
+    updateAllUI: function() { // Эту функцию можно будет вызывать из game объекта
+        this.updateDisplay(); 
         this.updateBuildActions();
-        // updateExploreTab() вызывается из openTab или updateDisplay, если вкладка активна
-        // renderCraftingRecipes() вызывается из openTab или updateDisplay, если вкладка активна
+        if (typeof LocationManager !== 'undefined') LocationManager.updateExploreTab();
+        if (document.getElementById('craft-tab')?.style.display === 'block') this.renderCraftingRecipes();
+        if (document.getElementById('storage-tab')?.style.display === 'block') this.renderBaseInventory();
     }
 };
-
-// Функции, которые будут в InventoryManager
-const InventoryManager = {
-    addItemToInventory: game.addItemToInventory, // Ссылки на функции из game, пока не перенесли
-    removeItemFromInventory: game.removeItemFromInventory,
-    countItemInInventory: game.countItemInInventory,
-    transferItem: game.transferItem,
-    filterPlayerInventory: game.filterPlayerInventory,
-    filterBaseInventory: game.filterBaseInventory,
-    openInventoryModal: game.openInventoryModal,
-    closeInventoryModal: game.closeInventoryModal,
-    consumeItem: game.consumeItem,
-    consumeResourceFromBase: game.consumeResourceFromBase // Хотя это больше про логику базы
-};
-
-// Функции, которые будут в LocationManager
-const LocationManager = {
-    updateExploreTab: game.updateExploreTab,
-    updateExploreTabDisplay: UIManager.updateExploreTabDisplay, // Уже в UIManager
-    renderDiscoveredLocations: UIManager.renderDiscoveredLocations, // Уже в UIManager
-    setCurrentLocation: game.setCurrentLocation,
-    discoverNewLocationAction: game.discoverNewLocationAction,
-    exploreCurrentLocationAction: game.exploreCurrentLocationAction,
-    nextDayForLocationAction: game.nextDayForLocationAction
-};
-
-// Функции, которые будут в EventManager
-const EventManager = {
-    possibleEvents: game.possibleEvents, // Массив событий
-    triggerRandomEvent: game.triggerRandomEvent,
-    displayEventChoices: game.displayEventChoices,
-    displayLocationEventChoices: game.displayLocationEventChoices
-};
-
-// Заменяем вызовы в UIManager на новые менеджеры, где это осмысленно
-// (Это нужно будет делать постепенно, по мере переноса функций)
-// Например, в UIManager.openTab:
-// EventManager.displayEventChoices();
-// LocationManager.updateExploreTab();
-// InventoryManager.filterBaseInventory('all');
