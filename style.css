@@ -320,16 +320,42 @@ button:disabled {
 #log-messages p:last-child { border-bottom: none; }
 
 
-/* Модальное окно Инвентаря */
+/* Модальное окно Инвентаря и Склад */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
 .modal-content { background-color: #0c0c0c; margin: 5% auto; padding: 20px; border: 1px solid #333; width: 90%; max-width: 700px; color: #ccc; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .modal-content h2 { color: #00AEEF; border-bottom: 1px solid #222; padding-bottom: 10px; margin-top: 0; }
 .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; position: absolute; top: 10px; right: 15px; }
 .close-button:hover, .close-button:focus { color: #fff; text-decoration: none; cursor: pointer; }
-.inventory-filters { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #222; text-align: center; }
-.inventory-filters button { background-color: #1a1a1a; color: #00AEEF; font-size: 0.85em; padding: 6px 10px; margin: 3px; border: 1px solid #333; }
-.inventory-filters button.active { background-color: #004488; color: #fff; border-color: #0066CC; }
-#inventory-items-list { max-height: 400px; overflow-y: auto; }
+
+.inventory-filters { /* Общий стиль для фильтров */
+    margin-bottom: 15px; 
+    padding-bottom: 10px; 
+    border-bottom: 1px solid #222; 
+    text-align: center; 
+}
+.inventory-filters button { 
+    background-color: #1a1a1a; 
+    color: #00AEEF; 
+    font-size: 0.85em; 
+    padding: 6px 10px; 
+    margin: 3px; 
+    border: 1px solid #333; 
+}
+.inventory-filters button.active { 
+    background-color: #004488; 
+    color: #fff; 
+    border-color: #0066CC; 
+}
+
+.inventory-list-shared-style { /* Общий стиль для списков предметов */
+    max-height: 400px; 
+    overflow-y: auto; 
+}
+#base-inventory-list { /* Для вкладки Склад */
+     max-height: calc(100vh - 350px); /* Примерная высота для вкладки склада */
+}
+
+
 .inventory-item { background-color: #181818; border: 1px solid #2a2a2a; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 .inventory-item:hover { background-color: #202020; border-color: #444; }
 .item-info { flex-grow: 1; }
@@ -419,9 +445,9 @@ footer button:hover { background-color: #660000; }
 
 #discovered-locations-list {
     margin-bottom: 15px;
-    max-height: 250px; /* Ограничиваем высоту списка */
-    overflow-y: auto; /* Добавляем скролл, если локаций много */
-    border: 1px solid #1a1a1a; /* Легкая рамка */
+    max-height: 250px; 
+    overflow-y: auto; 
+    border: 1px solid #1a1a1a; 
     padding: 5px;
 }
 
