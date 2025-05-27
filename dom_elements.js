@@ -28,7 +28,7 @@ const domElements = {
     inventoryItemsList: document.getElementById('inventory-items-list'),
     inventoryWeight: document.getElementById('inventory-weight'),
     inventoryMaxWeight: document.getElementById('inventory-max-weight'),
-    inventoryFilters: document.querySelector('.inventory-filters'),
+    inventoryFilters: document.querySelector('.player-inventory-filters'), // Уточнили селектор для личного инвентаря
     
     sidebar: document.getElementById('sidebar'),
     mainNav: document.getElementById('main-nav'),
@@ -48,6 +48,9 @@ const domElements = {
     craftingRecipesContainer: document.getElementById('crafting-recipes'),
     
     // Элементы для вкладки "Склад"
-    baseInventoryList: document.getElementById('base-inventory-list'), // Добавим позже в HTML
-    baseInventoryFilters: document.querySelector('#storage-tab .inventory-filters') // Добавим позже в HTML
+    baseInventoryList: document.getElementById('base-inventory-list'), 
+    baseInventoryFilters: document.querySelector('.base-storage-filters'), // Уточнили селектор для фильтров склада
+
+    // Кнопка бургер-меню
+    burgerMenuButton: document.getElementById('burger-menu-button')
 };
