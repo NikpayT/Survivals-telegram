@@ -14,6 +14,11 @@
     --color-secondary: #FFC107; /* Желтый - для предупреждений, ресурсов */
     --color-danger: #F44336; /* Красный - для опасностей, урона */
     --color-info: #2196F3; /* Синий - для информации */
+    --color-disabled: #666; /* Цвет для отключенных элементов */
+    --color-unavailable: #503030; /* Фон для недоступных элементов (крафт) */
+    --color-missing-ingredient: #f44336; /* Красный для отсутствующих ингредиентов */
+    --color-has-ingredient: #4CAF50; /* Зеленый для имеющихся ингредиентов */
+
 
     /* Отступы и размеры */
     --spacing-xs: 5px;
@@ -201,14 +206,15 @@ body {
     box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3); /* Внутренняя тень для глубины */
 }
 
-/* Контейнер для кнопок действий */
+/* Контейнер для кнопок действий в сценах */
 #options-container {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
 }
 
-.game-option-button {
+/* Стили для всех игровых кнопок (опции, действия) */
+.game-option-button, .game-action-button {
     background-color: var(--color-background-light);
     color: var(--color-text-light);
     border: 1px solid var(--color-border);
@@ -218,21 +224,35 @@ body {
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
     text-align: left;
+    width: 100%; /* Делаем кнопки на всю ширину */
+    box-sizing: border-box; /* Учитываем padding и border в ширине */
 }
 
-.game-option-button:hover {
+.game-option-button:hover, .game-action-button:hover {
     background-color: var(--color-info);
     border-color: var(--color-info);
     transform: translateY(-2px);
     color: var(--color-background-dark);
 }
 
-.game-option-button:active {
+.game-option-button:active, .game-action-button:active {
     background-color: var(--color-info);
     border-color: var(--color-info);
     transform: translateY(0);
     box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
 }
+
+.game-action-button.primary-button { /* Для особо важных действий */
+    background-color: var(--color-primary);
+    color: var(--color-background-dark);
+    font-weight: bold;
+    border-color: var(--color-primary);
+}
+.game-action-button.primary-button:hover {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
 
 /* Стили для списков предметов/рецептов */
 .item-list {
@@ -247,7 +267,7 @@ body {
     gap: var(--spacing-sm);
 }
 
-.item-list-item, .recipe-item {
+.item-list-item, .recipe-item, .faction-item {
     background-color: #444;
     border: 1px solid #555;
     border-radius: var(--spacing-xs);
@@ -258,7 +278,7 @@ body {
     transition: background-color 0.2s ease;
 }
 
-.item-list-item:hover, .recipe-item:hover {
+.item-list-item:hover, .recipe-item:hover, .faction-item:hover {
     background-color: #555;
 }
 
@@ -271,6 +291,98 @@ body {
     font-size: 0.9em;
     color: var(--color-text-medium);
 }
+
+.item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-sm);
+}
+
+.item-actions .game-action-button {
+    width: auto; /* Кнопки действий внутри инвентаря могут быть уже */
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.85em;
+    text-align: center;
+}
+
+/* Стили для экипированных предметов */
+.equipped-item {
+    background-color: #4a5d4a; /* Более зеленый фон для экипированных */
+    border-color: var(--color-primary);
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.4);
+}
+
+/* Стили для рецептов */
+.recipe-item.unavailable {
+    background-color: var(--color-unavailable); /* Более темный красный для недоступных */
+    border-color: var(--color-danger);
+    opacity: 0.7;
+}
+
+.recipe-item .game-action-button[disabled] {
+    background-color: var(--color-disabled);
+    cursor: not-allowed;
+    border-color: #444;
+    color: #bbb;
+    transform: none;
+    box-shadow: none;
+}
+
+.missing-ingredient {
+    color: var(--color-missing-ingredient);
+    font-weight: bold;
+}
+.has-ingredient {
+    color: var(--color-has-ingredient);
+}
+.missing-requirement {
+    color: var(--color-danger);
+    font-weight: bold;
+    display: block; /* Каждое требование на новой строке */
+}
+
+/* Стили для фракций */
+.faction-item .reputation-value {
+    font-weight: bold;
+}
+.reputation-hostile { color: var(--color-danger); }
+.reputation-unfriendly { color: #f96d00; } /* Оранжевый */
+.reputation-neutral { color: var(--color-secondary); }
+.reputation-friendly { color: var(--color-primary-hover); }
+.reputation-allied { color: var(--color-primary); }
+
+
+/* Игровой лог */
+#game-log-container {
+    background-color: var(--color-background-medium);
+    border: 1px solid var(--color-border);
+    border-radius: var(--spacing-md);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+#game-log {
+    background-color: #222;
+    border: 1px solid #333;
+    border-radius: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 0.85em;
+    color: var(--color-text-medium);
+    line-height: 1.4;
+}
+
+#game-log p {
+    margin: 0;
+    padding: 2px 0;
+    border-bottom: 1px dotted #333; /* Разделитель сообщений */
+}
+#game-log p:last-child {
+    border-bottom: none;
+}
+
 
 /* Адаптивность для маленьких экранов */
 @media (max-width: 768px) {
@@ -310,9 +422,10 @@ body {
         font-size: 0.95em;
     }
 
-    .game-option-button {
+    .game-option-button, .game-action-button {
         padding: var(--spacing-sm) var(--spacing-md);
         font-size: 0.9em;
+        text-align: center; /* Центрируем текст на мобильных */
     }
 
     .item-list {
