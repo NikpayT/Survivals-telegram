@@ -3,19 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Постапокалиптическое Выживание</title>
+    <title>Постапокалиптическое Выживание: Рассвет</title>
     <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="game-container">
-        <div id="game-text">
-            </div>
-        <div id="options-container">
-            </div>
-        <div id="status-bar">
-            </div>
+        <header id="game-header">
+            <h1>Постапокалиптическое Выживание: Рассвет</h1>
+            <div id="status-bar">
+                <div class="status-group player-status">
+                    <h3>Выживший</h3>
+                    <div class="status-item health"><span class="icon">❤️</span> Здоровье: <span id="player-health">100</span>%</div>
+                    <div class="status-item hunger"><span class="icon">🍔</span> Голод: <span id="player-hunger">0</span>%</div>
+                    <div class="status-item thirst"><span class="icon">💧</span> Жажда: <span id="player-thirst">0</span>%</div>
+                    <div class="status-item fatigue"><span class="icon">💤</span> Усталость: <span id="player-fatigue">0</span>%</div>
+                </div>
+                <div class="status-group community-status">
+                    <h3>Убежище</h3>
+                    <div class="status-item survivors"><span class="icon">👥</span> Выживших: <span id="community-survivors">1</span></div>
+                    <div class="status-item morale"><span class="icon">😊</span> Мораль: <span id="community-morale">100</span>%</div>
+                    <div class="status-item security"><span class="icon">🛡️</span> Безопасность: <span id="community-security">50</span>%</div>
+                    <div class="status-item food"><span class="icon">🥫</span> Еда: <span id="community-food">0</span></div>
+                    <div class="status-item water"><span class="icon">🚰</span> Вода: <span id="community-water">0</span></div>
+                </div>
+                </div>
+            <nav id="game-navigation">
+                <button id="nav-explore" class="nav-button active">Исследовать</button>
+                <button id="nav-inventory" class="nav-button">Инвентарь</button>
+                <button id="nav-crafting" class="nav-button">Создать</button>
+                <button id="nav-community" class="nav-button">Община</button>
+                <button id="nav-factions" class="nav-button">Фракции</button>
+            </nav>
+        </header>
+
+        <main id="game-main-content">
+            <section id="explore-section" class="game-section active">
+                <div id="game-text">
+                    </div>
+                <div id="options-container">
+                    </div>
+            </section>
+
+            <section id="inventory-section" class="game-section hidden">
+                <h2>Ваш Инвентарь</h2>
+                <div id="player-inventory-list" class="item-list">
+                    </div>
+                <h2>Склад Убежища</h2>
+                <div id="community-storage-list" class="item-list">
+                    </div>
+            </section>
+
+            <section id="crafting-section" class="game-section hidden">
+                <h2>Мастерская</h2>
+                <div id="crafting-recipes" class="item-list">
+                    </div>
+            </section>
+
+            <section id="community-section" class="game-section hidden">
+                <h2>Ваша Община</h2>
+                <div id="community-details">
+                    </div>
+            </section>
+
+            <section id="factions-section" class="game-section hidden">
+                <h2>Взаимодействие с Фракциями</h2>
+                <div id="factions-list">
+                    </div>
+            </section>
+        </main>
     </div>
 
-    <script src="js/main.js"></script>
-</body>
+    <script src="js/gameData/items.js"></script>
+    <script src="js/gameData/craftingRecipes.js"></script>
+    <script src="js/gameData/factions.js"></script>
+    <script src="js/gameData/scenes.js"></script>
+
+    <script src="js/gameLogic/player.js"></script>
+    <script src="js/gameLogic/community.js"></script>
+    <script src="js/gameLogic/inventoryManager.js"></script>
+    <script src="js/gameLogic/craftingManager.js"></script>
+    <script src="js/gameLogic/factionManager.js"></script>
+    <script src="js/gameLogic/gameLoop.js"></script>
+
+    <script src="js/uiManager.js"></script>
+    <script src="js/main.js"></script> </body>
 </html>
