@@ -5,21 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Survival Text RPG</title>
     <link rel="stylesheet" href="css/style.css">
-    {/* Закомментировано по запросу */}
+    {/* Закомментировано по запросу об удалении изображений */}
 </head>
 <body>
-    <div class="game-container">
-        <header>
+    <div class="game-container"> {/* В твоем CSS используется #game-container, здесь class. Убедись, что это соответствует твоему CSS или исправь */}
+        <header id="game-header"> {/* Добавил id для соответствия CSS, если он есть */}
             <h1>Выживание: Последний Рассвет</h1>
             <p id="game-version">Версия: Загрузка...</p>
         </header>
 
-        <main>
-            <div class="game-area">
+        <main> {/* Убрал обертку main, если game-area и sidebar - прямые дети game-container или другого основного блока */}
+            <div class="game-area"> {/* Если это основной контент */}
                 <div id="game-text" class="game-text-display">
                     <p>Загрузка игры...</p>
                 </div>
                 <div id="options-container" class="options-menu">
+                    {/* Кнопки опций будут генерироваться здесь */}
                 </div>
             </div>
 
@@ -27,6 +28,7 @@
                 <div class="status-panel player-status-panel">
                     <h2>Ваш Статус</h2>
                     <div id="player-status">
+                        {/* Статусы игрока без иконок */}
                         <p>Здоровье: 100/100</p>
                         <p>Выносливость: 100/100</p>
                         <p>Голод: 0%</p>
@@ -39,6 +41,7 @@
                 <div class="status-panel community-status-panel">
                     <h2>Статус Общины (День <span id="game-day-display">1</span>)</h2>
                     <div id="community-status">
+                        {/* Статусы общины без иконок */}
                         <p>Выживших: 5</p>
                         <p>Мораль: 70/100</p>
                         <p>Безопасность: 50%</p>
@@ -67,34 +70,41 @@
                     </div>
                 </div>
             </aside>
-        </main>
+        </main> {/* Закрывающий тег main, если он используется */}
 
-        <div class="game-log-container">
+
+        <div id="game-log-container" class="game-log-container"> {/* Добавил id для соответствия CSS */}
             <h2>Лог Событий</h2>
             <div id="game-log" class="game-log">
+                {/* Записи лога будут добавляться сюда */}
             </div>
         </div>
-    </div>
+    </div> {/* Закрытие game-container */}
 
-    {/* Исправленные пути и имена файлов */}
-    <script src="js/gameData/items.js"></script> {/* Было: js/data/gameItems.js */}
-    <script src="js/gameData/craftingRecipes.js"></script> {/* Было: js/data/craftingRecipes.js */}
-    <script src="js/gameData/factions.js"></script> {/* Было: js/data/factionsData.js */}
+    {/* Исправленные пути и имена файлов JS в правильном порядке */}
+    {/* Данные */}
+    <script src="js/gameData/items.js"></script>
+    <script src="js/gameData/craftingRecipes.js"></script>
+    <script src="js/gameData/factions.js"></script>
+    <script src="js/gameData/scenes.js"></script>
 
-    <script src="js/gameLogic/player.js"></script> {/* Было: js/entities/player.js */}
-    <script src="js/gameLogic/community.js"></script> {/* Было: js/entities/community.js */}
+    {/* Сущности */}
+    <script src="js/gameLogic/player.js"></script>
+    <script src="js/gameLogic/community.js"></script>
 
-    {/* Эти пути, скорее всего, были верны, но проверяем по структуре */}
+    {/* Менеджеры и Логика */}
     <script src="js/gameLogic/inventoryManager.js"></script>
     <script src="js/gameLogic/craftingManager.js"></script>
     <script src="js/gameLogic/factionManager.js"></script>
     <script src="js/gameLogic/combatManager.js"></script>
     <script src="js/gameLogic/explorationManager.js"></script> 
+    {/* gameLoop.js - если он используется, он есть в структуре, но не в списке скриптов. Добавь, если нужен. */}
+    {/* <script src="js/gameLogic/gameLoop.js"></script> */}
     
+    {/* UI Manager должен быть загружен до main.js и до других менеджеров, которые могут его использовать при инициализации */}
     <script src="js/uiManager.js"></script> 
 
-    <script src="js/gameData/scenes.js"></script> {/* Было: js/scenes/scenes.js */}
-
+    {/* Основной скрипт игры */}
     <script src="js/main.js"></script>
 </body>
 </html>
