@@ -138,39 +138,36 @@ const UIManager = {
 
         // Специальная логика для обновления контента при переключении секций
         // Здесь важно убедиться, что соответствующие менеджеры инициализированы
-        // Например, window.inventoryManager, window.craftingManager и т.д.
-        // ЭТОТ КОД БУДЕТ ЗАВИСЕТЬ ОТ ВАШЕЙ ВЕРСИИ ДРУГИХ МЕНЕДЖЕРОВ.
-        // Я ПРЕДПОЛАГАЮ, ЧТО ОНИ ИМЕЮТ МЕТОДЫ displayX().
+        // и имеют нужные методы.
         switch (sectionId) {
             case 'inventory-section':
-                if (window.inventoryManager) {
+                if (window.inventoryManager && typeof window.inventoryManager.displayPlayerInventory === 'function' && typeof window.inventoryManager.displayCommunityStorage === 'function') {
                     window.inventoryManager.displayPlayerInventory();
                     window.inventoryManager.displayCommunityStorage();
                 } else {
-                    console.warn("UIManager: inventoryManager не инициализирован для отображения инвентаря.");
+                    console.warn("UIManager: inventoryManager или его методы displayPlayerInventory/displayCommunityStorage не инициализированы.");
                 }
                 break;
             case 'crafting-section':
-                if (window.craftingManager) {
+                if (window.craftingManager && typeof window.craftingManager.displayCraftingRecipes === 'function') {
                     window.craftingManager.displayCraftingRecipes();
                 } else {
-                    console.warn("UIManager: craftingManager не инициализирован для отображения крафта.");
+                    console.warn("UIManager: craftingManager или его метод displayCraftingRecipes не инициализированы.");
                 }
                 break;
             case 'community-section':
-                // Предполагаем, что у Community есть метод displayCommunityDetails,
-                // или у вас есть отдельный менеджер для общины.
-                if (window.community && typeof window.community.displayCommunityDetails === 'function') {
-                     window.community.displayCommunityDetails();
+                // Предполагаем, что window.community (экземпляр Community) имеет метод displayCommunityDetails
+                if (window.gameState.community && typeof window.gameState.community.displayCommunityDetails === 'function') {
+                    window.gameState.community.displayCommunityDetails(); // <--- ИСПРАВЛЕНИЕ ЗДЕСЬ
                 } else {
-                    console.warn("UIManager: window.community.displayCommunityDetails не найден для отображения общины.");
+                    console.warn("UIManager: window.gameState.community или его метод displayCommunityDetails не найден.");
                 }
                 break;
             case 'factions-section':
                 if (window.factionManager && typeof window.factionManager.displayFactions === 'function') {
                     window.factionManager.displayFactions();
                 } else {
-                    console.warn("UIManager: factionManager.displayFactions не найден для отображения фракций.");
+                    console.warn("UIManager: factionManager или его метод displayFactions не найден.");
                 }
                 break;
             // explore-section обновляется через loadScene
@@ -179,10 +176,6 @@ const UIManager = {
                 break;
         }
     },
-
-    // ... (Остальные методы UIManager остаются такими же, как в предыдущем ответе)
-    // updateAllStatus, displayGameText, displayOptions, addGameLog, updateGameLogDisplay
-    // Убедитесь, что они совпадают с моей предыдущей версией.
 
     /**
      * Обновляет все элементы статуса игрока и общины.
