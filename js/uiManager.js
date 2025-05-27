@@ -8,12 +8,13 @@ const UIManager = {
     playerHungerElement: null,
     playerThirstElement: null,
     playerFatigueElement: null,
+    currentWeaponElement: null, // Добавляем элемент для текущего оружия
     communitySurvivorsElement: null,
     communityMoraleElement: null,
     communitySecurityElement: null,
     communityFoodElement: null,
     communityWaterElement: null,
-    gameLogElement: null, // Добавляем элемент для игрового лога
+    gameLogElement: null,
 
     // Секции главного контента
     exploreSection: null,
@@ -33,8 +34,8 @@ const UIManager = {
     playerInventoryList: null,
     communityStorageList: null,
     craftingRecipesList: null,
-    communityDetails: null, // Для отображения деталей общины
-    factionsList: null, // Для отображения фракций
+    communityDetails: null,
+    factionsList: null,
 
     init() {
         // Получаем ссылки на элементы DOM
@@ -46,6 +47,7 @@ const UIManager = {
         this.playerHungerElement = document.getElementById('player-hunger');
         this.playerThirstElement = document.getElementById('player-thirst');
         this.playerFatigueElement = document.getElementById('player-fatigue');
+        this.currentWeaponElement = document.getElementById('current-weapon'); // Инициализируем элемент оружия
 
         // Элементы статуса общины
         this.communitySurvivorsElement = document.getElementById('community-survivors');
@@ -55,7 +57,7 @@ const UIManager = {
         this.communityWaterElement = document.getElementById('community-water');
 
         // Элементы лога
-        this.gameLogElement = document.getElementById('game-log'); // Предполагаем наличие элемента с таким ID
+        this.gameLogElement = document.getElementById('game-log');
 
         // Секции
         this.exploreSection = document.getElementById('explore-section');
@@ -75,10 +77,10 @@ const UIManager = {
         this.playerInventoryList = document.getElementById('player-inventory-list');
         this.communityStorageList = document.getElementById('community-storage-list');
         this.craftingRecipesList = document.getElementById('crafting-recipes');
-        this.communityDetails = document.getElementById('community-details'); // Используем этот элемент для деталей общины
+        this.communityDetails = document.getElementById('community-details');
         this.factionsList = document.getElementById('factions-list');
 
-        this.setupNavigation(); // Настраиваем обработчики для навигационных кнопок
+        this.setupNavigation();
         console.log('UIManager инициализирован.');
     },
 
@@ -95,11 +97,11 @@ const UIManager = {
      * @param {Array<Object>} options - Массив объектов { text: string, action: Function }.
      */
     displayOptions(options) {
-        this.optionsContainerElement.innerHTML = ''; // Очищаем предыдущие кнопки
+        this.optionsContainerElement.innerHTML = '';
         options.forEach(option => {
             const button = document.createElement('button');
             button.textContent = option.text;
-            button.classList.add('game-option-button'); // !!! ИСПРАВЛЕНИЕ: Добавляем класс для стилизации и кликабельности
+            button.classList.add('game-option-button');
             button.onclick = option.action;
             this.optionsContainerElement.appendChild(button);
         });
@@ -124,6 +126,7 @@ const UIManager = {
         this.playerHungerElement.textContent = player.hunger;
         this.playerThirstElement.textContent = player.thirst;
         this.playerFatigueElement.textContent = player.fatigue;
+        this.currentWeaponElement.textContent = player.equipment.weapon ? GameItems[player.equipment.weapon].name : 'Нет'; // Обновление оружия
 
         // Можно добавить изменение цвета в зависимости от состояния
         this.playerHealthElement.style.color = player.health < 20 ? 'var(--color-danger)' : (player.health < 50 ? 'var(--color-secondary)' : 'var(--color-primary)');
@@ -206,6 +209,8 @@ const UIManager = {
                         break;
                     case 'explore-section':
                         // При возврате на "Исследовать" восстанавливаем текущую сцену
+                        // Используем UIManager.addGameLog вместо window.addGameLog
+                        this.addGameLog('Вы вернулись к исследованию.');
                         window.loadScene(window.gameState.currentSceneId, false); // false, чтобы не вызывать onEnter повторно
                         break;
                 }
@@ -237,10 +242,11 @@ const UIManager = {
             `;
             const unequipButton = document.createElement('button');
             unequipButton.textContent = 'Снять';
-            unequipButton.classList.add('game-action-button'); // Добавляем класс для стилизации
+            unequipButton.classList.add('game-action-button');
             unequipButton.onclick = () => {
                 player.unequipWeapon();
-                window.addGameLog(`Вы сняли ${weaponItem.name}.`);
+                // Используем UIManager.addGameLog вместо window.addGameLog
+                this.addGameLog(`Вы сняли ${weaponItem.name}.`);
                 this.updatePlayerInventory();
             };
             equippedWeaponDiv.appendChild(unequipButton);
@@ -261,7 +267,8 @@ const UIManager = {
             unequipButton.classList.add('game-action-button');
             unequipButton.onclick = () => {
                 player.unequipArmor(); // Нужна будет функция unequipArmor в Player
-                window.addGameLog(`Вы сняли ${armorItem.name}.`);
+                // Используем UIManager.addGameLog вместо window.addGameLog
+                this.addGameLog(`Вы сняли ${armorItem.name}.`);
                 this.updatePlayerInventory();
             };
             equippedArmorDiv.appendChild(unequipButton);
@@ -286,12 +293,14 @@ const UIManager = {
             if (item.type === 'consumable') {
                 const useButton = document.createElement('button');
                 useButton.textContent = 'Использовать';
-                useButton.classList.add('game-action-button'); // Добавляем класс
+                useButton.classList.add('game-action-button');
                 useButton.onclick = () => {
                     if (player.useItem(item.id)) {
-                        window.addGameLog(`Вы использовали ${item.name}.`);
+                        // Используем UIManager.addGameLog вместо window.addGameLog
+                        this.addGameLog(`Вы использовали ${item.name}.`);
                     } else {
-                        window.addGameLog(`Не удалось использовать ${item.name}.`);
+                        // Используем UIManager.addGameLog вместо window.addGameLog
+                        this.addGameLog(`Не удалось использовать ${item.name}.`);
                     }
                 };
                 actionsDiv.appendChild(useButton);
@@ -300,23 +309,26 @@ const UIManager = {
             if (item.type === 'weapon' && player.equipment.weapon !== item.id) {
                 const equipButton = document.createElement('button');
                 equipButton.textContent = 'Экипировать';
-                equipButton.classList.add('game-action-button'); // Добавляем класс
+                equipButton.classList.add('game-action-button');
                 equipButton.onclick = () => {
                     player.equipWeapon(item.id);
-                    window.addGameLog(`Вы экипировали ${item.name}.`);
-                    this.updatePlayerInventory(); // Обновить, чтобы кнопка исчезла
+                    // Используем UIManager.addGameLog вместо window.addGameLog
+                    this.addGameLog(`Вы экипировали ${item.name}.`);
+                    this.updatePlayerInventory();
                 };
                 actionsDiv.appendChild(equipButton);
             }
 
             const transferToCommunityButton = document.createElement('button');
             transferToCommunityButton.textContent = 'На склад';
-            transferToCommunityButton.classList.add('game-action-button'); // Добавляем класс
+            transferToCommunityButton.classList.add('game-action-button');
             transferToCommunityButton.onclick = () => {
                 if (InventoryManager.transferItem(item.id, 1, 'player', 'community')) {
-                    window.addGameLog(`Перемещено ${item.name} на склад.`);
+                    // Используем UIManager.addGameLog вместо window.addGameLog
+                    this.addGameLog(`Перемещено ${item.name} на склад.`);
                 } else {
-                    window.addGameLog(`Не удалось переместить ${item.name} на склад.`);
+                    // Используем UIManager.addGameLog вместо window.addGameLog
+                    this.addGameLog(`Не удалось переместить ${item.name} на склад.`);
                 }
             };
             actionsDiv.appendChild(transferToCommunityButton);
@@ -356,7 +368,7 @@ const UIManager = {
 
             const transferToPlayerButton = document.createElement('button');
             transferToPlayerButton.textContent = 'В инвентарь';
-            transferToPlayerButton.classList.add('game-action-button'); // Добавляем класс
+            transferToPlayerButton.classList.add('game-action-button');
 
             // Поиск соответствующего itemId из GameItems для передачи на склад
             const itemIdForTransfer = Object.keys(GameItems).find(key => {
@@ -378,15 +390,17 @@ const UIManager = {
 
 
             if (itemIdForTransfer) {
-                 transferToPlayerButton.onclick = () => {
+                transferToPlayerButton.onclick = () => {
                     if (InventoryManager.transferItem(itemIdForTransfer, 1, 'community', 'player')) {
-                        window.addGameLog(`Перемещено ${GameItems[itemIdForTransfer].name} в инвентарь.`);
+                        // Используем UIManager.addGameLog вместо window.addGameLog
+                        this.addGameLog(`Перемещено ${GameItems[itemIdForTransfer].name} в инвентарь.`);
                     } else {
-                        window.addGameLog(`Не удалось переместить ${GameItems[itemIdForTransfer].name} в инвентарь.`);
+                        // Используем UIManager.addGameLog вместо window.addGameLog
+                        this.addGameLog(`Не удалось переместить ${GameItems[itemIdForTransfer].name} в инвентарь.`);
                     }
                 };
             } else {
-                transferToPlayerButton.disabled = true; // Отключаем кнопку, если нет прямого соответствия
+                transferToPlayerButton.disabled = true;
                 transferToPlayerButton.textContent = 'Нельзя взять';
             }
             actionsDiv.appendChild(transferToPlayerButton);
@@ -410,7 +424,7 @@ const UIManager = {
             const recipeDiv = document.createElement('div');
             recipeDiv.classList.add('recipe-item');
             if (!canCraftResult.canCraft) {
-                recipeDiv.classList.add('unavailable'); // Добавляем класс для недоступных рецептов
+                recipeDiv.classList.add('unavailable');
             }
 
             // Ингредиенты
@@ -443,16 +457,18 @@ const UIManager = {
 
             const craftButton = document.createElement('button');
             craftButton.textContent = 'Создать';
-            craftButton.classList.add('game-action-button'); // Добавляем класс
-            craftButton.disabled = !canCraftResult.canCraft; // Отключаем кнопку, если нельзя скрафтить
+            craftButton.classList.add('game-action-button');
+            craftButton.disabled = !canCraftResult.canCraft;
             craftButton.onclick = () => {
                 if (window.craftingManager.craftItem(recipe.id)) {
-                    window.addGameLog(`Вы успешно создали: ${recipe.output.quantity} x ${GameItems[recipe.output.itemId].name}`);
-                    this.updateCraftingRecipes(); // Обновить список после крафта
-                    this.updatePlayerInventory(); // Обновить инвентарь, если что-то изменилось
-                    this.updateCommunityStorage(); // Обновить склад, если использованы ресурсы
+                    // Используем UIManager.addGameLog вместо window.addGameLog
+                    this.addGameLog(`Вы успешно создали: ${recipe.output.quantity} x ${GameItems[recipe.output.itemId].name}`);
+                    this.updateCraftingRecipes();
+                    this.updatePlayerInventory();
+                    this.updateCommunityStorage();
                 } else {
-                    window.addGameLog(`Не удалось создать ${recipe.name}. ${canCraftResult.reason || ''}`);
+                    // Используем UIManager.addGameLog вместо window.addGameLog
+                    this.addGameLog(`Не удалось создать ${recipe.name}. ${canCraftResult.reason || ''}`);
                 }
             };
             recipeDiv.appendChild(craftButton);
@@ -477,7 +493,7 @@ const UIManager = {
             <hr>
             <h3>Постройки и Улучшения</h3>
             <div class="item-list" id="community-build-options">
-                </div>
+            </div>
             <hr>
             <button onclick="window.nextGameDay()" class="game-action-button primary-button">Завершить день (Перейти к следующему дню)</button>
         `;
@@ -489,26 +505,22 @@ const UIManager = {
             buildWorkbenchButton.textContent = 'Построить Верстак (5 лома металла, 3 обломка дерева)';
             buildWorkbenchButton.classList.add('game-action-button');
             buildWorkbenchButton.onclick = () => {
-                // Предполагаем, что для постройки нужны ресурсы (например, из GameItems)
                 const cost = [{id: 'scraps_metal', qty: 5}, {id: 'scraps_wood', qty: 3}];
                 if (InventoryManager.checkCommunityResources(cost)) {
                     InventoryManager.removeCommunityResources(cost);
                     community.buildFacility('workbench_built');
-                    window.addGameLog('Верстак успешно построен!');
-                    this.updateCommunityDetails(); // Обновить UI
+                    // Используем UIManager.addGameLog вместо window.addGameLog
+                    this.addGameLog('Верстак успешно построен!');
+                    this.updateCommunityDetails();
                 } else {
-                    window.addGameLog('Недостаточно ресурсов для постройки верстака.');
+                    // Используем UIManager.addGameLog вместо window.addGameLog
+                    this.addGameLog('Недостаточно ресурсов для постройки верстака.');
                 }
             };
             buildOptionsContainer.appendChild(buildWorkbenchButton);
         } else {
             // Если верстак построен, можно предложить его улучшение или другие постройки
         }
-        // Здесь можно добавить другие кнопки для строительства/улучшения:
-        // - Улучшение убежища
-        // - Постройка фермы
-        // - Постройка источника воды
-        // - Постройка медпункта и т.д.
     },
 
     /**
@@ -516,11 +528,11 @@ const UIManager = {
      */
     updateFactionsList() {
         this.factionsList.innerHTML = '';
-        const playerFactions = window.gameState.factions; // Используем глобальный объект репутации
+        const playerFactions = window.gameState.factions;
 
         for (const factionId in GameFactions) {
             const faction = GameFactions[factionId];
-            const reputation = playerFactions[factionId]; // Берем текущую репутацию
+            const reputation = playerFactions[factionId];
             const status = window.factionManager.getReputationStatus(factionId, reputation);
 
             const factionDiv = document.createElement('div');
@@ -536,7 +548,7 @@ const UIManager = {
             //     const tradeButton = document.createElement('button');
             //     tradeButton.textContent = 'Торговать';
             //     tradeButton.classList.add('game-action-button');
-            //     tradeButton.onclick = () => window.addGameLog(`Начало торговли с ${faction.name}`);
+            //     tradeButton.onclick = () => this.addGameLog(`Начало торговли с ${faction.name}`); // Используем this.addGameLog
             //     factionDiv.appendChild(tradeButton);
             // }
 
@@ -545,25 +557,41 @@ const UIManager = {
     },
 
     /**
-     * Обновляет элемент игрового лога.
+     * Добавляет сообщение в игровой лог и обновляет его отображение.
+     * Эту функцию нужно будет вызывать извне как `window.uiManager.addGameLog(message);`
      * @param {string} message - Сообщение для лога.
      */
-    updateGameLog() {
-        if (!this.gameLogElement) return;
+    addGameLog(message) {
+        if (!this.gameLogElement) {
+            console.warn("gameLogElement не найден. Лог не будет обновлен.");
+            return;
+        }
 
+        // Добавляем сообщение в массив игрового состояния, если он существует
+        if (window.gameState && window.gameState.gameLog) {
+            window.gameState.gameLog.unshift(message); // Добавляем в начало массива
+            // Ограничиваем количество записей
+            if (window.gameState.gameLog.length > 50) { // Например, не более 50 записей в памяти
+                window.gameState.gameLog.pop(); // Удаляем старейшую запись
+            }
+        } else {
+            // Если gameState.gameLog еще не инициализирован, просто добавляем в DOM напрямую
+            console.warn("window.gameState.gameLog не инициализирован. Сообщения лога не будут сохранены.");
+        }
+
+        // Обновляем DOM
         this.gameLogElement.innerHTML = window.gameState.gameLog.map(msg => `<p>${msg}</p>`).join('');
         // Прокручиваем лог вниз, чтобы видеть новые сообщения
         this.gameLogElement.scrollTop = this.gameLogElement.scrollHeight;
-    },
-
-    /**
-     * Добавляет сообщение в игровой лог (для удобства).
-     * Просто проксирует вызов к window.addGameLog.
-     */
-    addMessageToLog(message) {
-        window.addGameLog(message);
     }
 };
 
 // Делаем UIManager глобально доступным
 window.uiManager = UIManager;
+
+// Дополнительный шаг: делаем функцию addGameLog глобальной функцией для удобства
+// чтобы другие менеджеры могли вызывать её без явного обращения к UIManager.
+// Однако, предпочтительнее везде использовать window.uiManager.addGameLog.
+// Если ты хочешь сохранить вызовы window.addGameLog, то добавь эту строку:
+// window.addGameLog = (message) => UIManager.addGameLog(message);
+// Но я рекомендую изменить все вызовы на window.uiManager.addGameLog
