@@ -1,6 +1,6 @@
 // script.js
 
-const GAME_VERSION = "0.5.2"; // Версия: Рефакторинг Location и Event Manager
+const GAME_VERSION = "0.5.2"; // Версия: Рефакторинг Location и Event Manager, исправление ошибок
 
 // Используем gameState, domElements, UIManager, InventoryManager, LocationManager, EventManager
 // Предполагается, что эти файлы загружены РАНЬШЕ script.js в index.html
@@ -40,45 +40,59 @@ const game = {
             this.addInitialItemsToBase(); 
         }
         
-        UIManager.updateDisplay(); 
-        UIManager.updateBuildActions();
-        LocationManager.updateExploreTab(); 
+        // Проверяем, что менеджеры определены перед вызовом их методов
+        if (typeof UIManager !== 'undefined') {
+            UIManager.updateDisplay(); 
+            UIManager.updateBuildActions();
+        }
+        if (typeof LocationManager !== 'undefined') {
+            LocationManager.updateExploreTab(); 
+        }
         
-        domElements.inventoryButton.onclick = () => InventoryManager.openInventoryModal();
-        if(domElements.inventoryFilters) {
+        if (domElements.inventoryButton && typeof InventoryManager !== 'undefined') {
+            domElements.inventoryButton.onclick = () => InventoryManager.openInventoryModal();
+        }
+        if(domElements.inventoryFilters && typeof InventoryManager !== 'undefined') {
             domElements.inventoryFilters.querySelectorAll('button').forEach(button => {
                 button.addEventListener('click', (e) => InventoryManager.filterPlayerInventory(e.target.dataset.filter));
             });
         }
         
-        if (domElements.baseInventoryFilters) { 
+        if (domElements.baseInventoryFilters && typeof InventoryManager !== 'undefined') { 
             domElements.baseInventoryFilters.querySelectorAll('button').forEach(button => {
                 button.addEventListener('click', (e) => InventoryManager.filterBaseInventory(e.target.dataset.filter));
             });
         }
 
-
-        domElements.mainNav.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                UIManager.openTab(e.target.dataset.tab, e.target); 
-                if (window.innerWidth <= 768 && domElements.sidebar.classList.contains('open')) { 
-                    UIManager.toggleSidebar(); 
-                }
+        if (domElements.mainNav && typeof UIManager !== 'undefined') {
+            domElements.mainNav.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    UIManager.openTab(e.target.dataset.tab, e.target); 
+                    if (window.innerWidth <= 768 && domElements.sidebar.classList.contains('open')) { 
+                        UIManager.toggleSidebar(); 
+                    }
+                });
             });
-        });
+        }
         
-        domElements.toggleLogButton.addEventListener('click', () => this.toggleLogVisibility()); 
-        UIManager.applyLogVisibility(); 
+        if (domElements.toggleLogButton) {
+            domElements.toggleLogButton.addEventListener('click', () => this.toggleLogVisibility()); 
+        }
+        if (typeof UIManager !== 'undefined') UIManager.applyLogVisibility(); 
 
-        domElements.burgerMenuButton.onclick = () => UIManager.toggleSidebar(); 
+        if (domElements.burgerMenuButton && typeof UIManager !== 'undefined') {
+            domElements.burgerMenuButton.onclick = () => UIManager.toggleSidebar(); 
+        }
 
 
         this.log("Игра началась. Пустошь ждет.", "event-neutral");
         const defaultNavLink = domElements.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
-        if (defaultNavLink) {
-            UIManager.openTab('main-tab', defaultNavLink); 
-        } else {
-             UIManager.openTab('main-tab', null); 
+        if (typeof UIManager !== 'undefined') {
+            if (defaultNavLink) {
+                UIManager.openTab('main-tab', defaultNavLink); 
+            } else {
+                 UIManager.openTab('main-tab', null); 
+            }
         }
     },
 
@@ -95,18 +109,22 @@ const game = {
     },
 
     addInitialItemsToPlayer: function() { 
-        InventoryManager.addItemToInventory(gameState.inventory, "food_canned", 1); 
-        InventoryManager.addItemToInventory(gameState.inventory, "water_purified", 1);
-        InventoryManager.addItemToInventory(gameState.inventory, "bandages_crude", 1);
-        InventoryManager.addItemToInventory(gameState.inventory, "tool_hammer", 1); 
+        if (typeof InventoryManager !== 'undefined') {
+            InventoryManager.addItemToInventory(gameState.inventory, "food_canned", 1); 
+            InventoryManager.addItemToInventory(gameState.inventory, "water_purified", 1);
+            InventoryManager.addItemToInventory(gameState.inventory, "bandages_crude", 1);
+            InventoryManager.addItemToInventory(gameState.inventory, "tool_hammer", 1); 
+        }
     },
     addInitialItemsToBase: function() {
-        InventoryManager.addItemToInventory(gameState.baseInventory, "food_canned", 5);
-        InventoryManager.addItemToInventory(gameState.baseInventory, "water_purified", 5);
-        InventoryManager.addItemToInventory(gameState.baseInventory, "scrap_metal", 10);
-        InventoryManager.addItemToInventory(gameState.baseInventory, "wood", 10);
-        InventoryManager.addItemToInventory(gameState.baseInventory, "cloth", 5);
-        InventoryManager.addItemToInventory(gameState.baseInventory, "broken_electronics", 2);
+        if (typeof InventoryManager !== 'undefined') {
+            InventoryManager.addItemToInventory(gameState.baseInventory, "food_canned", 5);
+            InventoryManager.addItemToInventory(gameState.baseInventory, "water_purified", 5);
+            InventoryManager.addItemToInventory(gameState.baseInventory, "scrap_metal", 10);
+            InventoryManager.addItemToInventory(gameState.baseInventory, "wood", 10);
+            InventoryManager.addItemToInventory(gameState.baseInventory, "cloth", 5);
+            InventoryManager.addItemToInventory(gameState.baseInventory, "broken_electronics", 2);
+        }
     },
     
     takeDamage: function(amount, source) {
@@ -117,7 +135,7 @@ const game = {
             gameState.player.health = 0;
             this.gameOver(`Вы погибли от ${source}. Пустошь беспощадна.`);
         }
-        UIManager.updatePlayerStatus(); 
+        if (typeof UIManager !== 'undefined') UIManager.updatePlayerStatus(); 
     },
 
     log: function(message, type = "event-neutral") {
@@ -128,12 +146,12 @@ const game = {
         if (domElements.logMessages.children.length > 30) {
             domElements.logMessages.removeChild(domElements.logMessages.lastChild);
         }
-        if(gameState.logVisible) domElements.logMessages.scrollTop = 0; 
+        if(gameState.logVisible && domElements.logMessages) domElements.logMessages.scrollTop = 0; 
     },
 
     toggleLogVisibility: function() { 
         gameState.logVisible = !gameState.logVisible;
-        UIManager.applyLogVisibility();
+        if (typeof UIManager !== 'undefined') UIManager.applyLogVisibility();
         this.saveGame(); 
     },
 
@@ -222,8 +240,13 @@ const game = {
         gameState.dailyFoodNeed = gameState.survivors * 10; 
         gameState.dailyWaterNeed = gameState.survivors * 15; 
 
-        let foodConsumedFromBase = InventoryManager.consumeResourceFromBase('food', gameState.dailyFoodNeed);
-        let waterConsumedFromBase = InventoryManager.consumeResourceFromBase('water', gameState.dailyWaterNeed);
+        let foodConsumedFromBase = 0;
+        let waterConsumedFromBase = 0;
+        if (typeof InventoryManager !== 'undefined') {
+            foodConsumedFromBase = InventoryManager.consumeResourceFromBase('food', gameState.dailyFoodNeed);
+            waterConsumedFromBase = InventoryManager.consumeResourceFromBase('water', gameState.dailyWaterNeed);
+        }
+
 
         if (foodConsumedFromBase < gameState.dailyFoodNeed) {
             this.log(`На складе не хватило еды для всех выживших! Потреблено ${foodConsumedFromBase} из ${gameState.dailyFoodNeed} необходимых. Выжившие голодают!`, "event-negative");
@@ -251,16 +274,17 @@ const game = {
              this.log(`Выжившие попили. Со склада потрачено ${waterConsumedFromBase} ед. утоления жажды.`, "event-neutral");
         }
         
-        EventManager.triggerRandomEvent(); 
+        if (typeof EventManager !== 'undefined') EventManager.triggerRandomEvent(); 
         
         if (!gameState.currentEvent && !gameState.locationEvent && document.getElementById('main-tab').style.display === 'block') {
              domElements.eventActionsContainer.style.display = 'none';
              domElements.eventTextDisplay.textContent = '';
              domElements.eventActions.innerHTML = '';
         }
-
-        UIManager.updateDisplay();
-        UIManager.updateBuildActions();
+        if (typeof UIManager !== 'undefined') {
+            UIManager.updateDisplay();
+            UIManager.updateBuildActions();
+        }
         this.saveGame();
     },
     
@@ -274,86 +298,94 @@ const game = {
             return;
         }
 
-        const costDefinition = getStructureUpgradeCost(structureKey, currentStructureState.level); // getStructureUpgradeCost глобальная
+        const costDefinition = getStructureUpgradeCost(structureKey, currentStructureState.level); 
         let canAfford = true;
         let missingResLog = [];
 
-        for (const itemId in costDefinition) {
-            const requiredQty = costDefinition[itemId];
-            const currentQty = InventoryManager.countItemInInventory(gameState.baseInventory, itemId); 
-            if (currentQty < requiredQty) {
-                canAfford = false;
-                missingResLog.push(`${requiredQty - currentQty} ${ITEM_DEFINITIONS[itemId] ? ITEM_DEFINITIONS[itemId].name : itemId}`);
-            }
-        }
-
-        if (canAfford) {
+        if (typeof InventoryManager !== 'undefined') {
             for (const itemId in costDefinition) {
-                InventoryManager.removeItemFromInventory(gameState.baseInventory, itemId, costDefinition[itemId]); 
+                const requiredQty = costDefinition[itemId];
+                const currentQty = InventoryManager.countItemInInventory(gameState.baseInventory, itemId); 
+                if (currentQty < requiredQty) {
+                    canAfford = false;
+                    missingResLog.push(`${requiredQty - currentQty} ${ITEM_DEFINITIONS[itemId] ? ITEM_DEFINITIONS[itemId].name : itemId}`);
+                }
             }
-            currentStructureState.level++;
-            this.log(`${definition.name} улучшен до уровня ${currentStructureState.level}. Ресурсы взяты со склада.`, "event-positive");
-            UIManager.updateDisplay();
-            UIManager.updateBuildActions();
-            this.saveGame();
-        } else {
-            this.log(`Недостаточно ресурсов на складе для ${definition.name}. Нужно еще: ${missingResLog.join(', ')}.`, "event-negative");
+
+            if (canAfford) {
+                for (const itemId in costDefinition) {
+                    InventoryManager.removeItemFromInventory(gameState.baseInventory, itemId, costDefinition[itemId]); 
+                }
+                currentStructureState.level++;
+                this.log(`${definition.name} улучшен до уровня ${currentStructureState.level}. Ресурсы взяты со склада.`, "event-positive");
+                if (typeof UIManager !== 'undefined') {
+                    UIManager.updateDisplay();
+                    UIManager.updateBuildActions();
+                }
+                this.saveGame();
+            } else {
+                this.log(`Недостаточно ресурсов на складе для ${definition.name}. Нужно еще: ${missingResLog.join(', ')}.`, "event-negative");
+            }
         }
     },
 
     canCraft: function(recipeId) {
-        const recipe = CRAFTING_RECIPES[recipeId];
+        const recipe = (typeof CRAFTING_RECIPES !== 'undefined') ? CRAFTING_RECIPES[recipeId] : null;
         if (!recipe) return false;
 
         const workshopLevel = gameState.structures.workshop ? gameState.structures.workshop.level : 0;
         if (workshopLevel < (recipe.workshopLevelRequired || 0)) {
             return false;
         }
-
-        for (const ing of recipe.ingredients) {
-            if (InventoryManager.countItemInInventory(gameState.baseInventory, ing.itemId) < ing.quantity) {
-                return false;
-            }
-        }
-        if (recipe.toolsRequired && recipe.toolsRequired.length > 0) {
-            for (const toolId of recipe.toolsRequired) {
-                if (InventoryManager.countItemInInventory(gameState.inventory, toolId) === 0) {
+        if (typeof InventoryManager !== 'undefined') {
+            for (const ing of recipe.ingredients) {
+                if (InventoryManager.countItemInInventory(gameState.baseInventory, ing.itemId) < ing.quantity) {
                     return false;
                 }
             }
-        }
+            if (recipe.toolsRequired && recipe.toolsRequired.length > 0) {
+                for (const toolId of recipe.toolsRequired) {
+                    if (InventoryManager.countItemInInventory(gameState.inventory, toolId) === 0) {
+                        return false;
+                    }
+                }
+            }
+        } else { return false; } // Если InventoryManager не определен, крафт невозможен
         return true;
     },
 
     craftItem: function(recipeId) {
         if (!this.canCraft(recipeId)) {
             this.log("Невозможно создать предмет: не хватает ресурсов, инструментов или не тот уровень мастерской.", "event-negative");
-            UIManager.renderCraftingRecipes(); 
+            if (typeof UIManager !== 'undefined') UIManager.renderCraftingRecipes(); 
             return;
         }
 
         const recipe = CRAFTING_RECIPES[recipeId];
-
-        recipe.ingredients.forEach(ing => {
-            InventoryManager.removeItemFromInventory(gameState.baseInventory, ing.itemId, ing.quantity);
-        });
-
-        InventoryManager.addItemToInventory(gameState.inventory, recipe.resultItemId, recipe.resultQuantity);
-        this.log(`Создано: ${ITEM_DEFINITIONS[recipe.resultItemId].name} (x${recipe.resultQuantity})`, "event-positive");
-
-        if (recipe.additionalResults) {
-            recipe.additionalResults.forEach(addRes => {
-                const quantity = Array.isArray(addRes.quantity) ? 
-                                 Math.floor(Math.random() * (addRes.quantity[1] - addRes.quantity[0] + 1)) + addRes.quantity[0] :
-                                 addRes.quantity;
-                if (InventoryManager.addItemToInventory(gameState.inventory, addRes.itemId, quantity)) {
-                    this.log(`Дополнительно получено: ${ITEM_DEFINITIONS[addRes.itemId].name} (x${quantity})`, "event-discovery");
-                }
+        if (typeof InventoryManager !== 'undefined') {
+            recipe.ingredients.forEach(ing => {
+                InventoryManager.removeItemFromInventory(gameState.baseInventory, ing.itemId, ing.quantity);
             });
+
+            InventoryManager.addItemToInventory(gameState.inventory, recipe.resultItemId, recipe.resultQuantity);
+            this.log(`Создано: ${ITEM_DEFINITIONS[recipe.resultItemId].name} (x${recipe.resultQuantity})`, "event-positive");
+
+            if (recipe.additionalResults) {
+                recipe.additionalResults.forEach(addRes => {
+                    const quantity = Array.isArray(addRes.quantity) ? 
+                                     Math.floor(Math.random() * (addRes.quantity[1] - addRes.quantity[0] + 1)) + addRes.quantity[0] :
+                                     addRes.quantity;
+                    if (InventoryManager.addItemToInventory(gameState.inventory, addRes.itemId, quantity)) {
+                        this.log(`Дополнительно получено: ${ITEM_DEFINITIONS[addRes.itemId].name} (x${quantity})`, "event-discovery");
+                    }
+                });
+            }
         }
         
-        UIManager.updateDisplay(); 
-        UIManager.renderCraftingRecipes(); 
+        if (typeof UIManager !== 'undefined') {
+            UIManager.updateDisplay(); 
+            UIManager.renderCraftingRecipes(); 
+        }
         this.saveGame();
     },
 
@@ -364,7 +396,7 @@ const game = {
         gameState.gameOver = true;
         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
             const onclickAttr = button.getAttribute('onclick');
-            if(onclickAttr !== "game.resetGameConfirmation()" && onclickAttr !== "game.closeInventoryModal()") { 
+            if(onclickAttr !== "game.resetGameConfirmation()" && onclickAttr !== "InventoryManager.closeInventoryModal()") { 
                 button.disabled = true;
             }
         });
@@ -399,26 +431,34 @@ const game = {
         domElements.logMessages.innerHTML = ''; 
         
         domElements.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
-        UIManager.applyLogVisibility();
         
-        UIManager.updateDisplay(); 
-        UIManager.updateBuildActions();
-        LocationManager.updateExploreTab(); 
+        if (typeof UIManager !== 'undefined') {
+            UIManager.applyLogVisibility();
+            UIManager.updateDisplay(); 
+            UIManager.updateBuildActions();
+        }
+        if (typeof LocationManager !== 'undefined') LocationManager.updateExploreTab(); 
 
 
         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
-            if(button.getAttribute('onclick') !== "game.resetGameConfirmation()" && button.getAttribute('onclick') !== "game.closeInventoryModal()") {
+            if(button.getAttribute('onclick') !== "game.resetGameConfirmation()" && button.getAttribute('onclick') !== "InventoryManager.closeInventoryModal()") {
                  button.disabled = false;
             }
         });
-        UIManager.updateBuildActions();
-        UIManager.updateExploreTabDisplay(); 
+        
+        if (typeof UIManager !== 'undefined') {
+            UIManager.updateBuildActions();
+            UIManager.updateExploreTabDisplay(); 
+        }
+
 
         const defaultNavLink = domElements.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
-        if (defaultNavLink) {
-            UIManager.openTab('main-tab', defaultNavLink);
-        } else {
-            UIManager.openTab('main-tab', null); 
+        if (typeof UIManager !== 'undefined') {
+            if (defaultNavLink) {
+                UIManager.openTab('main-tab', defaultNavLink);
+            } else {
+                UIManager.openTab('main-tab', null); 
+            }
         }
         domElements.eventActionsContainer.style.display = 'none'; 
 
@@ -437,12 +477,12 @@ window.onload = () => {
         typeof GameStateGetters !== 'undefined' &&
         typeof UIManager !== 'undefined' && 
         typeof InventoryManager !== 'undefined' &&
-        typeof LocationManager !== 'undefined' && // Проверяем новые менеджеры
+        typeof LocationManager !== 'undefined' && 
         typeof EventManager !== 'undefined' 
         ) {
         game.init();
     } else {
-        console.error("Один или несколько файлов определений или менеджеров не загружены или загружены не в том порядке!");
+        console.error("Один или несколько файлов определений или менеджеров не загружены или загружены не в том порядке! Проверьте консоль на наличие ошибок в этих файлах.");
         document.body.innerHTML = "<p style='color:red; font-size:18px; text-align:center; margin-top: 50px;'>Ошибка загрузки игровых данных. Пожалуйста, проверьте консоль (F12) и обновите страницу.</p>";
     }
 };
