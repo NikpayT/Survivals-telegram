@@ -104,7 +104,6 @@ body {
 .status-bar-container {
     margin-bottom: 8px;
     font-size: 0.85em;
-    /* clear: both; */ /* Чтобы p не обтекали */
 }
 .status-bar-container .status-label {
     display: inline-block;
@@ -245,9 +244,9 @@ button:disabled {
 #build-actions.action-grid button {
     min-width: 200px; 
     text-align: left;
-    margin-bottom: 8px; /* Для кнопок в столбик */
-    display: block; /* Чтобы занимали всю ширину, если не грид */
-    width: calc(100% - 10px); /* Минус маржины */
+    margin-bottom: 8px; 
+    display: block; 
+    width: calc(100% - 10px); 
     box-sizing: border-box;
 }
 
@@ -362,7 +361,6 @@ footer button:hover { background-color: #660000; }
 /* Стили для всплывающих подсказок (Tooltips) */
 .tooltip-host {
     position: relative; 
-    /* display: inline-block;  Убрал, т.к. кнопки строительства уже block */
 }
 
 .tooltip-text {
@@ -379,7 +377,7 @@ footer button:hover { background-color: #660000; }
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     position: absolute;
     z-index: 1001; 
-    bottom: 110%; /* Чуть выше от хоста */
+    bottom: 110%; 
     left: 50%;
     transform: translateX(-50%); 
     opacity: 0;
@@ -403,6 +401,65 @@ footer button:hover { background-color: #660000; }
     visibility: visible;
     opacity: 1;
 }
+
+/* Стили для вкладки Разведка */
+#explore-tab h3 { 
+    margin-top: 0;
+}
+#current-location-name {
+    color: #FFC107; 
+}
+#current-location-description {
+    font-size: 0.9em;
+    color: #aaa;
+    margin-top: 10px;
+    border-top: 1px dotted #333;
+    padding-top: 10px;
+}
+
+#discovered-locations-list {
+    margin-bottom: 15px;
+    max-height: 250px; /* Ограничиваем высоту списка */
+    overflow-y: auto; /* Добавляем скролл, если локаций много */
+    border: 1px solid #1a1a1a; /* Легкая рамка */
+    padding: 5px;
+}
+
+.location-entry {
+    background-color: #181818;
+    border: 1px solid #2a2a2a;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer; 
+    transition: background-color 0.2s, border-color 0.2s;
+}
+.location-entry:hover {
+    background-color: #202020;
+    border-color: #444;
+}
+.location-entry.active-location { 
+    border-left: 3px solid #00AEEF;
+    background-color: #1c1c1c;
+}
+
+.location-entry h4 {
+    margin: 0 0 5px 0;
+    color: #eee;
+    font-size: 1.05em;
+}
+.location-entry p {
+    margin: 0;
+    font-size: 0.85em;
+    color: #999;
+}
+.location-entry .location-danger {
+    font-weight: bold;
+}
+.location-entry .location-danger.low { color: #88CC88; }
+.location-entry .location-danger.medium { color: #FFC107; }
+.location-entry .location-danger.high { color: #FF6666; }
+.location-entry .location-danger.very-high { color: #F44336; font-weight: bolder; }
+
 
 /* Стили для сообщений разных типов в логе */
 .event-positive { color: #88CC88; }
