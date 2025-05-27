@@ -55,11 +55,28 @@ class InventoryManager {
     }
 
     // Удаление предмета со склада общины
-    removeItemFromCommunity(itemId, quantity = 1) {
-        if (window.gameState.community && typeof window.gameState.community.removeResourceOrItem === 'function') {
-            return window.gameState.community.removeResourceOrItem(itemId, quantity); // Community.removeResourceOrItem уже логирует и обновляет UI
+    // НОВОЕ: добавлен параметр checkOnly
+    removeItemFromCommunity(itemId, quantity = 1, checkOnly = false) {
+        if (!window.gameState.community || typeof window.gameState.community.removeResourceOrItem !== 'function') {
+            console.warn(`Ошибка: Община не инициализирована или не имеет метода removeResourceOrItem.`);
+            return false;
         }
-        return false;
+        
+        // Для проверки без удаления, используем hasResource/hasItem напрямую
+        if (checkOnly) {
+            const community = window.gameState.community;
+            const itemData = GameItems[itemId];
+            if (!itemData) return false;
+
+            if (community.resources.hasOwnProperty(itemId)) { // Если это ресурс
+                return community.hasResource(itemId, quantity);
+            } else { // Если это обычный предмет
+                return (community.storage[itemId] || 0) >= quantity;
+            }
+        } else {
+            // Обычное удаление с логированием
+            return window.gameState.community.removeResourceOrItem(itemId, quantity); 
+        }
     }
 
     // Метод для отображения инвентаря игрока в UI
@@ -101,48 +118,43 @@ class InventoryManager {
         const communityResources = window.gameState.community.resources;
 
         // Сначала отобразим ресурсы общины
-        const resourceLi = document.createElement('li');
-        resourceLi.classList.add('item-entry');
-        resourceLi.innerHTML = `<span>Еда</span><span class="item-quantity">x${communityResources.food}</span>`;
-        this.communityStorageList.appendChild(resourceLi);
-        const resourceLi2 = document.createElement('li');
-        resourceLi2.classList.add('item-entry');
-        resourceLi2.innerHTML = `<span>Вода</span><span class="item-quantity">x${communityResources.water}</span>`;
-        this.communityStorageList.appendChild(resourceLi2);
-        const resourceLi3 = document.createElement('li');
-        resourceLi3.classList.add('item-entry');
-        resourceLi3.innerHTML = `<span>Материалы</span><span class="item-quantity">x${communityResources.materials}</span>`;
-        this.communityStorageList.appendChild(resourceLi3);
-        const resourceLi4 = document.createElement('li');
-        resourceLi4.classList.add('item-entry');
-        resourceLi4.innerHTML = `<span>Медикаменты</span><span class="item-quantity">x${communityResources.medicine}</span>`;
-        this.communityStorageList.appendChild(resourceLi4);
+        // Создаем массив, чтобы отфильтровать и добавить только те, что есть в наличии
+        const allCommunityItems = [];
 
-        // Затем отобразим обычные предметы
-        if (Object.keys(communityStorage).length === 0 && 
-            communityResources.food === 0 && communityResources.water === 0 && 
-            communityResources.materials === 0 && communityResources.medicine === 0) 
-        {
+        // Добавляем ресурсы
+        for (const resourceType in communityResources) {
+            if (communityResources[resourceType] > 0) {
+                // Используем GameItems для получения имени ресурса, если оно там определено,
+                // иначе просто используем тип
+                const resourceName = GameItems[resourceType] ? GameItems[resourceType].name : resourceType.charAt(0).toUpperCase() + resourceType.slice(1);
+                allCommunityItems.push({ name: resourceName, quantity: communityResources[resourceType] });
+            }
+        }
+
+        // Затем добавляем обычные предметы со склада
+        for (const itemId in communityStorage) {
+            const quantity = communityStorage[itemId];
+            const itemData = GameItems[itemId];
+            if (itemData && quantity > 0) {
+                allCommunityItems.push({ name: itemData.name, quantity: quantity });
+            } else if (!itemData) {
+                console.warn(`InventoryManager: Неизвестный предмет на складе общины: ${itemId}`);
+            }
+        }
+        
+        if (allCommunityItems.length === 0) {
             const li = document.createElement('li');
             li.textContent = 'Склад общины пуст.';
             this.communityStorageList.appendChild(li);
             return;
         }
 
-        for (const itemId in communityStorage) {
-            const quantity = communityStorage[itemId];
-            const itemData = GameItems[itemId];
-            if (itemData) {
-                const li = document.createElement('li');
-                li.classList.add('item-entry');
-                li.innerHTML = `<span>${itemData.name}</span><span class="item-quantity">x${quantity}</span>`;
-                this.communityStorageList.appendChild(li);
-            } else {
-                console.warn(`InventoryManager: Неизвестный предмет на складе общины: ${itemId}`);
-            }
-        }
+        // Выводим все собранные элементы
+        allCommunityItems.forEach(item => {
+            const li = document.createElement('li');
+            li.classList.add('item-entry');
+            li.innerHTML = `<span>${item.name}</span><span class="item-quantity">x${item.quantity}</span>`;
+            this.communityStorageList.appendChild(li);
+        });
     }
 }
-
-// Делаем InventoryManager доступным глобально, чтобы main.js мог его инициализировать
-// window.inventoryManager = new InventoryManager(); // Это будет делаться в main.js
