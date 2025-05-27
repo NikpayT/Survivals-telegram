@@ -1,29 +1,30 @@
 // script.js
 
-const GAME_VERSION = "0.3.2"; // Версия: Прогресс-бары и Тултипы CSS
+const GAME_VERSION = "0.4.0"; // Версия: Базовые локации
 
 const game = {
     state: {
         day: 1,
         survivors: 1,
         gameOver: false,
-        currentEvent: null,
+        currentEvent: null, 
         structures: {}, 
         
         inventory: [], 
         player: {
-            health: 100,
-            maxHealth: 100,
-            hunger: 100, 
-            maxHunger: 100,
-            thirst: 100, 
-            maxThirst: 100,
-            carryWeight: 0,
-            maxCarryWeight: 25, 
+            health: 100, maxHealth: 100,
+            hunger: 100, maxHunger: 100,
+            thirst: 100, maxThirst: 100,
+            carryWeight: 0, maxCarryWeight: 25, 
             condition: "В порядке", 
         },
-        discoveredLocations: {}, 
+        currentLocationId: "base_surroundings", 
+        discoveredLocations: { 
+            "base_surroundings": { discovered: true, name: "Окрестности Базы" } 
+        },
+        locationEvent: null, 
         logVisible: true, 
+        flags: {}, 
     },
 
     get maxSurvivors() {
@@ -62,13 +63,10 @@ const game = {
         totalWaterValue: document.getElementById('total-water-value'),
         playerCondition: document.getElementById('player-condition'),
 
-        healthBarOuter: document.getElementById('health-bar-outer'),
         healthBarInner: document.getElementById('health-bar-inner'),
         healthBarText: document.getElementById('health-bar-text'),
-        hungerBarOuter: document.getElementById('hunger-bar-outer'),
         hungerBarInner: document.getElementById('hunger-bar-inner'),
         hungerBarText: document.getElementById('hunger-bar-text'),
-        thirstBarOuter: document.getElementById('thirst-bar-outer'),
         thirstBarInner: document.getElementById('thirst-bar-inner'),
         thirstBarText: document.getElementById('thirst-bar-text'),
 
@@ -84,9 +82,6 @@ const game = {
         inventoryWeight: document.getElementById('inventory-weight'),
         inventoryMaxWeight: document.getElementById('inventory-max-weight'),
         inventoryFilters: document.querySelector('.inventory-filters'),
-
-        discoveredLocationsContainer: document.getElementById('discovered-locations'), 
-        craftingRecipesContainer: document.getElementById('crafting-recipes'), 
         
         sidebar: document.getElementById('sidebar'),
         mainNav: document.getElementById('main-nav'),
@@ -96,6 +91,14 @@ const game = {
         
         logPanel: document.getElementById('log-panel'),
         toggleLogButton: document.getElementById('toggle-log'),
+
+        currentLocationNameDisplay: document.getElementById('current-location-name'),
+        currentLocationTimeDisplay: document.getElementById('current-location-time'),
+        currentLocationDescriptionDisplay: document.getElementById('current-location-description'),
+        scoutCurrentLocationButton: document.getElementById('scout-current-location-button'),
+        discoverNewLocationButton: document.getElementById('discover-new-location-button'),
+        discoveredLocationsList: document.getElementById('discovered-locations-list'),
+        craftingRecipesContainer: document.getElementById('crafting-recipes'), 
     },
 
     init: function() {
@@ -106,12 +109,15 @@ const game = {
         const [major, minor] = GAME_VERSION.split('.').map(Number);
         const savedVersionKey = `zombieSurvivalGame_v${major}.${minor}`;
 
-        if (!localStorage.getItem(savedVersionKey)) { 
-            this.addInitialItems();
+        if (!localStorage.getItem(savedVersionKey) || Object.keys(this.state.discoveredLocations).length === 0) { 
+            this.state.discoveredLocations = { "base_surroundings": { discovered: true, name: "Окрестности Базы" } };
+            this.state.currentLocationId = "base_surroundings";
+            if (!localStorage.getItem(savedVersionKey)) this.addInitialItems(); 
         }
         
         this.updateDisplay(); 
         this.updateBuildActions();
+        this.updateExploreTab(); 
         
         this.dom.inventoryButton.onclick = () => this.openInventoryModal();
         this.dom.inventoryFilters.querySelectorAll('button').forEach(button => {
@@ -130,8 +136,6 @@ const game = {
         if (defaultNavLink) {
             this.openTab('main-tab', defaultNavLink);
         } else {
-             console.error("Default nav link for main-tab not found during init.");
-             // Fallback if somehow the default link is not found
              this.openTab('main-tab', null);
         }
     },
@@ -163,7 +167,7 @@ const game = {
             tabElement.style.display = "block";
         } else {
             console.error("Tab not found: " + tabName);
-            document.getElementById('main-tab').style.display = "block"; // Fallback to main tab
+            document.getElementById('main-tab').style.display = "block"; 
             const defaultLink = this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
             if (defaultLink) defaultLink.classList.add('active');
             return;
@@ -177,13 +181,21 @@ const game = {
         }
         
         if (tabName === 'main-tab') {
-            if (this.state.currentEvent) {
+            if (this.state.currentEvent) { // Глобальное событие
                 this.dom.eventTextDisplay.textContent = this.state.currentEvent.text;
                 this.dom.eventActionsContainer.style.display = 'block';
-            } else {
+                this.displayEventChoices(); // Перерисовать кнопки глобального события
+            } else if (this.state.locationEvent) { // Локальное событие
+                 this.dom.eventTextDisplay.textContent = this.state.locationEvent.text;
+                 this.dom.eventActionsContainer.style.display = 'block';
+                 this.displayLocationEventChoices(); // Перерисовать кнопки локального события
+            }
+            else {
                 this.dom.eventTextDisplay.textContent = '';
                 this.dom.eventActionsContainer.style.display = 'none';
             }
+        } else if (tabName === 'explore-tab') {
+            this.updateExploreTab(); // При переключении на вкладку разведки, обновить её
         }
     },
     
@@ -282,7 +294,7 @@ const game = {
             this.state.player.health = 0;
             this.gameOver(`Вы погибли от ${source}. Пустошь беспощадна.`);
         }
-        this.updatePlayerStatus(); // Обновит бары и текст
+        this.updatePlayerStatus(); 
     },
 
     addItemToInventory: function(itemId, quantity = 1) {
@@ -433,6 +445,9 @@ const game = {
             const activeFilter = this.dom.inventoryFilters.querySelector('button.active')?.dataset.filter || 'all';
             this.renderInventory(activeFilter);
         }
+        if (document.getElementById('explore-tab').style.display === 'block') {
+            this.updateExploreTabDisplay();
+        }
     },
 
     log: function(message, type = "event-neutral") {
@@ -474,7 +489,9 @@ const game = {
             
             for (const key in this.state) {
                 if (loadedState.hasOwnProperty(key)) {
-                    if (typeof this.state[key] === 'object' && this.state[key] !== null && !Array.isArray(this.state[key])) {
+                    if (key === 'discoveredLocations' && typeof loadedState[key] === 'object' && loadedState[key] !== null) {
+                        this.state[key] = { ...this.state[key], ...loadedState[key] };
+                    } else if (typeof this.state[key] === 'object' && this.state[key] !== null && !Array.isArray(this.state[key])) {
                         this.state[key] = { ...this.state[key], ...loadedState[key] };
                     } else {
                         this.state[key] = loadedState[key];
@@ -482,6 +499,13 @@ const game = {
                 }
             }
             
+            if (!this.state.currentLocationId) this.state.currentLocationId = "base_surroundings";
+            if (!this.state.discoveredLocations || Object.keys(this.state.discoveredLocations).length === 0) {
+                this.state.discoveredLocations = { "base_surroundings": { discovered: true, name: "Окрестности Базы" } };
+            }
+            if (this.state.flags === undefined) this.state.flags = {};
+
+
             const defaultStructureKeys = Object.keys(BASE_STRUCTURE_DEFINITIONS);
             defaultStructureKeys.forEach(key => {
                 if (!this.state.structures[key]) {
@@ -494,8 +518,6 @@ const game = {
             } else {
                 this.state.logVisible = true; 
             }
-            // applyLogVisibility будет вызван в init после loadGame
-
             this.log("Сохраненная игра загружена.", "event-discovery");
         } else {
              this.log("Сохраненная игра не найдена, начинаем новую.", "event-neutral");
@@ -504,7 +526,7 @@ const game = {
 
     nextDay: function() {
         if (this.state.gameOver) return;
-        if (this.state.currentEvent) {
+        if (this.state.currentEvent || this.state.locationEvent) { // Проверяем оба типа событий
             this.log("Завершите текущее событие.", "event-warning");
             return;
         }
@@ -517,9 +539,9 @@ const game = {
         this.state.player.hunger = Math.max(0, this.state.player.hunger);
         this.state.player.thirst = Math.max(0, this.state.player.thirst);
         
-        this.triggerRandomEvent();
+        this.triggerRandomEvent(); // Глобальное событие
         
-        if (!this.state.currentEvent && document.getElementById('main-tab').style.display === 'block') {
+        if (!this.state.currentEvent && !this.state.locationEvent && document.getElementById('main-tab').style.display === 'block') {
              this.dom.eventActionsContainer.style.display = 'none';
              this.dom.eventTextDisplay.textContent = '';
              this.dom.eventActions.innerHTML = '';
@@ -529,89 +551,218 @@ const game = {
         this.updateBuildActions();
         this.saveGame();
     },
-
-    scoutArea: function() { 
-        if (this.state.gameOver || this.state.currentEvent) return;
-        this.log("Вы отправляетесь на разведку окрестностей...", "event-neutral");
-        
-        let encounter = Math.random();
-        let foundSomething = false;
-
-        if (encounter < 0.7) { 
-            const lootRoll = Math.random();
-            let itemFoundId = null;
-            let quantityFound = 0;
-
-            if (lootRoll < 0.3) { itemFoundId = "food_scraps"; quantityFound = Math.floor(Math.random() * 3) + 1; }
-            else if (lootRoll < 0.5) { itemFoundId = "water_dirty"; quantityFound = Math.floor(Math.random() * 2) + 1; }
-            else if (lootRoll < 0.75) { itemFoundId = "scrap_metal"; quantityFound = Math.floor(Math.random() * 4) + 1; }
-            else if (lootRoll < 0.9) { itemFoundId = "wood"; quantityFound = Math.floor(Math.random() * 5) + 2; }
-            else { itemFoundId = "cloth"; quantityFound = Math.floor(Math.random() * 3) + 1; }
-            
-            if (itemFoundId && this.addItemToInventory(itemFoundId, quantityFound)) {
-                 this.log(`Найдено: ${ITEM_DEFINITIONS[itemFoundId].name} (x${quantityFound}).`, "event-positive");
-                 foundSomething = true;
-            }
-
-            if (Math.random() < 0.15) { 
-                if (this.addItemToInventory("components", 1)) {
-                    this.log("Удалось найти редкие компоненты!", "event-discovery");
-                    foundSomething = true;
-                }
-            }
-
-        } else if (encounter < 0.9) { 
-            this.log("Разведка оказалась опасной. Вы едва унесли ноги.", "event-negative");
-            this.takeDamage(Math.floor(Math.random() * 10) + 5, "засада");
-        } else { 
-             this.log("Разведка не принесла результатов.", "event-neutral");
-        }
-        
-        if(!foundSomething && !(encounter < 0.7)) { 
-        } else if (!foundSomething && encounter < 0.7) { 
-             this.log("Что-то нашли, но не смогли унести.", "event-warning");
-        }
-
-        this.nextDay(); 
+    
+    updateExploreTab: function() { 
+        this.updateExploreTabDisplay();
+        this.renderDiscoveredLocations();
     },
 
-    build: function(structureKey) {
-        if (this.state.gameOver || this.state.currentEvent) return;
-        const definition = BASE_STRUCTURE_DEFINITIONS[structureKey];
-        const currentStructureState = this.state.structures[structureKey];
-        if (!definition || !currentStructureState) return;
-        if (currentStructureState.level >= definition.maxLevel) {
-            this.log(`${definition.name} уже максимального уровня.`, "event-neutral");
+    updateExploreTabDisplay: function() { 
+        const currentLocationDef = LOCATION_DEFINITIONS[this.state.currentLocationId];
+        if (currentLocationDef) {
+            this.dom.currentLocationNameDisplay.textContent = currentLocationDef.name;
+            this.dom.currentLocationDescriptionDisplay.textContent = currentLocationDef.description;
+            this.dom.currentLocationTimeDisplay.textContent = currentLocationDef.scoutTime || 1;
+            this.dom.scoutCurrentLocationButton.disabled = this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null;
+        } else {
+            this.dom.currentLocationNameDisplay.textContent = "Неизвестно";
+            this.dom.currentLocationDescriptionDisplay.textContent = "Ошибка: текущая локация не найдена.";
+            this.dom.scoutCurrentLocationButton.disabled = true;
+        }
+        this.dom.discoverNewLocationButton.disabled = this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null;
+    },
+
+    renderDiscoveredLocations: function() {
+        this.dom.discoveredLocationsList.innerHTML = '';
+        let hasDiscoveredOtherThanBase = false;
+        for (const locId in this.state.discoveredLocations) {
+            if (this.state.discoveredLocations[locId].discovered) {
+                const locDef = LOCATION_DEFINITIONS[locId];
+                if (!locDef) continue;
+                if (locId !== "base_surroundings") hasDiscoveredOtherThanBase = true;
+
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'location-entry';
+                if (locId === this.state.currentLocationId) {
+                    entryDiv.classList.add('active-location');
+                }
+                entryDiv.onclick = () => this.setCurrentLocation(locId);
+
+                let dangerText = "Низкая";
+                let dangerClass = "low";
+                if (locDef.dangerLevel === 2) { dangerText = "Средняя"; dangerClass = "medium"; }
+                else if (locDef.dangerLevel === 3) { dangerText = "Высокая"; dangerClass = "high"; }
+                else if (locDef.dangerLevel >= 4) { dangerText = "Очень высокая"; dangerClass = "very-high"; }
+                
+                entryDiv.innerHTML = `
+                    <h4>${locDef.name}</h4>
+                    <p>Тип: ${locDef.type || "Неизвестно"}, Опасность: <span class="location-danger ${dangerClass}">${dangerText}</span></p>
+                `;
+                this.dom.discoveredLocationsList.appendChild(entryDiv);
+            }
+        }
+        if (!hasDiscoveredOtherThanBase && Object.keys(this.state.discoveredLocations).length <= 1) {
+            this.dom.discoveredLocationsList.innerHTML = '<p><em>Используйте "Разведать новые территории", чтобы найти новые места.</em></p>';
+        }
+    },
+
+    setCurrentLocation: function(locationId) {
+        if (LOCATION_DEFINITIONS[locationId] && this.state.discoveredLocations[locationId]?.discovered) {
+            if (this.state.locationEvent || this.state.currentEvent) { // Проверяем оба события
+                this.log("Сначала завершите текущее событие.", "event-warning");
+                return;
+            }
+            this.state.currentLocationId = locationId;
+            this.log(`Вы переместились в локацию: ${LOCATION_DEFINITIONS[locationId].name}.`, "event-neutral");
+            this.updateExploreTab();
+        } else {
+            this.log("Невозможно переместиться в эту локацию.", "event-negative");
+        }
+    },
+
+    discoverNewLocationAction: function() { 
+        if (this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null) return;
+        this.log("Вы отправляетесь на разведку неизведанных территорий...", "event-neutral");
+
+        const currentLocationDef = LOCATION_DEFINITIONS[this.state.currentLocationId];
+        let newLocationFound = false;
+
+        if (currentLocationDef && currentLocationDef.discoverableLocations) {
+            for (const discoverable of currentLocationDef.discoverableLocations) {
+                if (!this.state.discoveredLocations[discoverable.locationId]?.discovered && 
+                    Math.random() < discoverable.chance &&
+                    (typeof discoverable.condition === 'function' ? discoverable.condition() : true)) {
+                    
+                    const newLocDef = LOCATION_DEFINITIONS[discoverable.locationId];
+                    if (newLocDef) {
+                        this.state.discoveredLocations[discoverable.locationId] = { discovered: true, name: newLocDef.name };
+                        this.log(`ОБНАРУЖЕНО! Новая локация: ${newLocDef.name}.`, "event-discovery");
+                        newLocationFound = true;
+                        this.renderDiscoveredLocations(); 
+                        break; 
+                    }
+                }
+            }
+        }
+
+        if (!newLocationFound) {
+            this.log("Разведка не принесла новых открытий на этот раз.", "event-neutral");
+        }
+        this.nextDayForLocationAction(1); // Разведка новых территорий тратит 1 день
+    },
+
+    exploreCurrentLocationAction: function(actionType) { 
+        if (this.state.gameOver || this.state.currentEvent !== null || this.state.locationEvent !== null) return;
+
+        const locDef = LOCATION_DEFINITIONS[this.state.currentLocationId];
+        if (!locDef) {
+            this.log("Ошибка: текущая локация не определена.", "event-negative");
             return;
         }
 
-        const costDefinition = getStructureUpgradeCost(structureKey, currentStructureState.level);
-        let canAfford = true;
-        let missingResLog = [];
-
-        for (const itemId in costDefinition) {
-            const requiredQty = costDefinition[itemId];
-            const currentQty = this.countItemInInventory(itemId);
-            if (currentQty < requiredQty) {
-                canAfford = false;
-                missingResLog.push(`${requiredQty - currentQty} ${ITEM_DEFINITIONS[itemId] ? ITEM_DEFINITIONS[itemId].name : itemId}`);
+        if (actionType === 'search') {
+            this.log(`Вы начинаете обыскивать локацию: ${locDef.name}...`, "event-neutral");
+            let itemsFoundCount = 0;
+            if (locDef.lootTable) {
+                locDef.lootTable.forEach(lootEntry => {
+                    if (Math.random() < lootEntry.chance) {
+                        const quantity = Math.floor(Math.random() * (lootEntry.quantity[1] - lootEntry.quantity[0] + 1)) + lootEntry.quantity[0];
+                        if (this.addItemToInventory(lootEntry.itemId, quantity)) {
+                            this.log(`Найдено: ${ITEM_DEFINITIONS[lootEntry.itemId].name} (x${quantity})`, "event-positive");
+                            itemsFoundCount++;
+                        } else {
+                            this.log(`Нашли ${ITEM_DEFINITIONS[lootEntry.itemId].name} (x${quantity}), но не смогли унести (перевес!).`, "event-warning");
+                        }
+                    }
+                });
             }
-        }
 
-        if (canAfford) {
-            for (const itemId in costDefinition) {
-                this.removeItemFromInventory(itemId, costDefinition[itemId]);
+            if (locDef.specialEvents && locDef.specialEvents.length > 0) {
+                for (const eventDef of locDef.specialEvents) {
+                    const flagId = eventDef.id + "_" + this.state.currentLocationId; // Уникальный флаг для события на локации
+                    if (Math.random() < eventDef.chance &&
+                        (typeof eventDef.condition === 'function' ? eventDef.condition() : true) &&
+                        (!this.state.flags[flagId] || eventDef.repeatable) 
+                       ) {
+                        this.state.locationEvent = { ...eventDef, flagId: flagId }; // Сохраняем flagId для отметки
+                        this.log(`СОБЫТИЕ НА ЛОКАЦИИ: ${eventDef.text}`, "event-discovery");
+                        this.displayLocationEventChoices();
+                        return; 
+                    }
+                }
             }
-            currentStructureState.level++;
-            this.log(`${definition.name} улучшен до уровня ${currentStructureState.level}.`, "event-positive");
-            this.updateDisplay();
-            this.updateBuildActions();
-            this.saveGame();
-        } else {
-            this.log(`Недостаточно ресурсов для ${definition.name}. Нужно еще: ${missingResLog.join(', ')}.`, "event-negative");
+            
+            if (itemsFoundCount === 0 && !this.state.locationEvent) {
+                this.log("Ничего ценного не найдено в этот раз.", "event-neutral");
+            }
+            if (!this.state.locationEvent) {
+                 this.nextDayForLocationAction(locDef.scoutTime || 1);
+            }
         }
     },
     
+    nextDayForLocationAction: function(daysSpent = 1) {
+        this.log(`Исследование локации заняло ${daysSpent} дн.`, "event-neutral");
+        for (let i = 0; i < daysSpent; i++) {
+            if (this.state.gameOver) break;
+            this.state.day++; // Увеличиваем день вручную, т.к. nextDay() имеет проверки на события
+            this.log(`--- Наступил День ${this.state.day} ---`, "event-neutral");
+            this.state.player.hunger -= (15 + this.state.survivors * 3); 
+            this.state.player.thirst -= (20 + this.state.survivors * 4); 
+            this.state.player.hunger = Math.max(0, this.state.player.hunger);
+            this.state.player.thirst = Math.max(0, this.state.player.thirst);
+            this.updateDisplay(); // Обновляем статусы после изменения дня и потребностей
+            this.triggerRandomEvent(); // Проверяем глобальные события после изменения дня
+            if(this.state.gameOver) break; // Если глобальное событие привело к концу игры
+        }
+        this.updateBuildActions(); // Обновляем доступность построек
+        this.saveGame();
+    },
+
+    displayLocationEventChoices: function() {
+        const eventContainer = this.dom.eventActionsContainer; 
+        const eventTextEl = this.dom.eventTextDisplay;
+        const eventButtonsEl = this.dom.eventActions;
+
+        eventButtonsEl.innerHTML = ''; 
+        if (!this.state.locationEvent) {
+            eventContainer.style.display = 'none';
+            this.updateExploreTabDisplay(); // Разблокировать кнопки
+            return;
+        }
+
+        eventTextEl.textContent = this.state.locationEvent.text;
+        eventContainer.style.display = 'block';
+        this.dom.scoutCurrentLocationButton.disabled = true; 
+        this.dom.discoverNewLocationButton.disabled = true;
+
+
+        this.state.locationEvent.choices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.textContent = choice.text;
+            btn.onclick = () => {
+                if (this.state.locationEvent) { 
+                    const currentLocEvent = this.state.locationEvent; // Сохраняем ссылку на текущее событие
+                    const outcome = choice.outcome;
+                    if (outcome.log) this.log(outcome.log, outcome.type || "event-neutral");
+                    if (outcome.addItems) {
+                        outcome.addItems.forEach(item => this.addItemToInventory(item.itemId, item.quantity));
+                    }
+                    if (outcome.setFlag && currentLocEvent.flagId) this.state.flags[currentLocEvent.flagId] = true; // Используем сохраненный flagId
+                    
+                    this.state.locationEvent = null; 
+                    eventButtonsEl.innerHTML = ''; 
+                    eventTextEl.textContent = '';
+                    eventContainer.style.display = 'none'; 
+                    this.updateDisplay(); 
+                    this.updateExploreTabDisplay(); 
+                    this.saveGame();
+                }
+            };
+            eventButtonsEl.appendChild(btn);
+        });
+    },
+
     updateBuildActions: function() {
         this.dom.buildActions.innerHTML = ''; 
         for (const key in this.state.structures) {
@@ -647,18 +798,52 @@ const game = {
             let tooltipContent = definition.description;
             if (!atMaxLevel && costStringForTooltip) {
                  tooltipContent += `<br>Стоимость: ${costStringForTooltip}`; 
-            } else if (atMaxLevel && costStringForTooltip !== "Достигнут максимальный уровень.") { // Если макс уровень, но costStringForTooltip все равно был сформирован (ошибка логики)
-                tooltipContent += `<br>${costStringForTooltip}`;
-            } else if (atMaxLevel) {
-                 // Уже учтено в costStringForTooltip
+            } else if (atMaxLevel) { // Если макс уровень, просто добавляем описание
+                 tooltipContent += `<br>${costStringForTooltip}`;
             }
 
             tooltipSpan.innerHTML = tooltipContent;
             btn.appendChild(tooltipSpan);
             
             btn.onclick = () => this.build(key);
-            btn.disabled = !canAffordAll || atMaxLevel || this.state.currentEvent !== null || this.state.gameOver;
+            btn.disabled = !canAffordAll || atMaxLevel || this.state.currentEvent !== null || this.state.locationEvent !== null || this.state.gameOver;
             this.dom.buildActions.appendChild(btn);
+        }
+    },
+    build: function(structureKey) { // Добавил проверку на locationEvent
+        if (this.state.gameOver || this.state.currentEvent || this.state.locationEvent) return;
+        const definition = BASE_STRUCTURE_DEFINITIONS[structureKey];
+        const currentStructureState = this.state.structures[structureKey];
+        if (!definition || !currentStructureState) return;
+        if (currentStructureState.level >= definition.maxLevel) {
+            this.log(`${definition.name} уже максимального уровня.`, "event-neutral");
+            return;
+        }
+
+        const costDefinition = getStructureUpgradeCost(structureKey, currentStructureState.level);
+        let canAfford = true;
+        let missingResLog = [];
+
+        for (const itemId in costDefinition) {
+            const requiredQty = costDefinition[itemId];
+            const currentQty = this.countItemInInventory(itemId);
+            if (currentQty < requiredQty) {
+                canAfford = false;
+                missingResLog.push(`${requiredQty - currentQty} ${ITEM_DEFINITIONS[itemId] ? ITEM_DEFINITIONS[itemId].name : itemId}`);
+            }
+        }
+
+        if (canAfford) {
+            for (const itemId in costDefinition) {
+                this.removeItemFromInventory(itemId, costDefinition[itemId]);
+            }
+            currentStructureState.level++;
+            this.log(`${definition.name} улучшен до уровня ${currentStructureState.level}.`, "event-positive");
+            this.updateDisplay();
+            this.updateBuildActions();
+            this.saveGame();
+        } else {
+            this.log(`Недостаточно ресурсов для ${definition.name}. Нужно еще: ${missingResLog.join(', ')}.`, "event-negative");
         }
     },
 
@@ -698,7 +883,7 @@ const game = {
         },
         {
             id: "minor_horde_near_base",
-            condition: () => Math.random() < 0.1,
+            condition: () => Math.random() < 0.1 && game.state.day > 2, // Не сразу
             text: "Небольшая группа зомби замечена неподалеку от базы! Они могут напасть.",
             choices: [
                 { text: "Укрепить оборону (-5 дерева, -3 металла)", action: () => {
@@ -732,46 +917,50 @@ const game = {
             ]
         }
     ],
-    triggerRandomEvent: function() {
-        if (this.state.currentEvent || this.state.gameOver) return;
+    triggerRandomEvent: function() { 
+        if (this.state.currentEvent || this.state.locationEvent || this.state.gameOver) return; 
 
         const availableEvents = this.possibleEvents.filter(event => event.condition());
         if (availableEvents.length > 0) {
             this.state.currentEvent = availableEvents[Math.floor(Math.random() * availableEvents.length)];
             this.log(`СОБЫТИЕ: ${this.state.currentEvent.text}`, "event-discovery");
-            this.displayEventChoices();
+            this.displayEventChoices(); 
         } else {
             if (document.getElementById('main-tab').style.display === 'block') { 
                  this.dom.eventActionsContainer.style.display = 'none';
             }
         }
     },
-
-    displayEventChoices: function() {
-        const eventContainer = this.dom.eventActionsContainer;
+    displayEventChoices: function() { 
+        const eventContainer = this.dom.eventActionsContainer; 
         const eventTextEl = this.dom.eventTextDisplay;
         const eventButtonsEl = this.dom.eventActions;
 
         eventButtonsEl.innerHTML = ''; 
         if (!this.state.currentEvent) {
             eventContainer.style.display = 'none';
+             this.updateExploreTabDisplay(); // Разблокировать кнопки на вкладке Разведка
             return;
         }
 
         eventTextEl.textContent = this.state.currentEvent.text;
         eventContainer.style.display = 'block';
 
+        this.dom.scoutCurrentLocationButton.disabled = true;
+        this.dom.discoverNewLocationButton.disabled = true;
+
         this.state.currentEvent.choices.forEach(choice => {
             const btn = document.createElement('button');
             btn.textContent = choice.text;
             btn.onclick = () => {
-                if (this.state.currentEvent) { // Доп. проверка, чтобы избежать двойного срабатывания
+                if (this.state.currentEvent) { 
                     choice.action();
-                    this.state.currentEvent = null; // Сбрасываем событие сразу
+                    this.state.currentEvent = null; 
                     eventButtonsEl.innerHTML = ''; 
                     eventTextEl.textContent = '';
                     eventContainer.style.display = 'none'; 
                     this.updateDisplay(); 
+                    this.updateExploreTabDisplay(); 
                     this.saveGame();
                 }
             };
@@ -784,7 +973,8 @@ const game = {
         this.log(message, "event-negative");
         this.state.gameOver = true;
         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
-            if(!button.closest('footer') && button.onclick !== game.resetGameConfirmation) { 
+            const onclickAttr = button.getAttribute('onclick');
+            if(onclickAttr !== "game.resetGameConfirmation()") { 
                 button.disabled = true;
             }
         });
@@ -804,6 +994,7 @@ const game = {
         this.state.survivors = 1;
         this.state.gameOver = false;
         this.state.currentEvent = null;
+        this.state.locationEvent = null; 
         this.state.inventory = []; 
         this.state.player = { 
             health: 100, maxHealth: 100,
@@ -812,32 +1003,44 @@ const game = {
             carryWeight: 0, maxCarryWeight: 25,
             condition: "В порядке",
         };
-        this.state.discoveredLocations = {};
+        this.state.currentLocationId = "base_surroundings"; 
+        this.state.discoveredLocations = { "base_surroundings": { discovered: true, name: "Окрестности Базы" } }; 
+        this.state.flags = {}; 
         this.state.logVisible = true; 
         
         this.initializeStructures();
         this.addInitialItems(); 
 
         this.dom.logMessages.innerHTML = ''; 
-        // this.init(); // Не вызываем полный init, чтобы не было двойной загрузки и т.д.
         
-        // Восстанавливаем DOM и обработчики, которые могли быть изменены/удалены в init или gameOver
         this.dom.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
         this.applyLogVisibility();
-        this.updateDisplay();
+        // Важно: Сначала обновить ExploreTab, чтобы кнопки стали активными (если не gameOver)
+        this.updateExploreTab(); 
+        this.updateDisplay(); // Затем общий updateDisplay
         this.updateBuildActions();
 
+
         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
-            button.disabled = false;
+            // Кнопка сброса в футере должна оставаться активной
+            if(button.getAttribute('onclick') !== "game.resetGameConfirmation()") {
+                 button.disabled = false;
+            }
         });
+        // После разблокировки, кнопки строительства и разведки могут быть снова заблокированы, если не хватает ресурсов или есть событие
+        this.updateBuildActions();
+        this.updateExploreTabDisplay(); // Перепроверить доступность кнопок разведки
+
         const defaultNavLink = this.dom.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
         if (defaultNavLink) {
             this.openTab('main-tab', defaultNavLink);
+        } else {
+            this.openTab('main-tab', null); // На всякий случай
         }
         this.dom.eventActionsContainer.style.display = 'none'; 
 
         this.log("Новая игра начата.", "event-neutral");
-        this.saveGame(); // Сохраняем чистое состояние новой игры
+        this.saveGame(); 
     }
 };
 
