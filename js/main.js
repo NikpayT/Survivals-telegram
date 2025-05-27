@@ -12,7 +12,7 @@ window.gameState = {
     currentSceneId: 'abandoned_building_start', // ID текущей сцены
     gameDay: 1,      // Текущий игровой день
     gameLog: [],     // Игровой лог для сообщений (будет заполняться UIManager)
-    isGameOver: false, // НОВОЕ: Флаг для отслеживания состояния Game Over
+    isGameOver: false, // Флаг для отслеживания состояния Game Over
     // Дополнительные игровые состояния, если нужны
 };
 
@@ -25,7 +25,7 @@ window.gameState = {
  */
 window.addGameLog = function(message) {
     // Если игра уже закончилась, не добавляем новые логи, чтобы избежать спама
-    if (window.gameState.isGameOver) {
+    if (window.gameState.isGameOver && !message.includes('погибли') && !message.includes('здоровье иссякло') && !message.includes('община погибла')) {
         // Можно добавить консольный лог для отладки
         // console.log(`[GAME OVER LOG BLOCKED] ${message}`);
         return;
@@ -55,7 +55,7 @@ window.loadScene = function(sceneId, triggerOnEnter = true) {
     if (!scene) {
         window.addGameLog(`Ошибка: Сцена с ID "${sceneId}" не найдена! Переход к сцене смерти.`);
         // Загружаем сцену смерти, если запрошенной сцены нет
-        if (!window.gameState.isGameOver) { // Чтобы не вызывать бесконечную рекурсию
+        if (!window.gameState.isGameOver) { 
             window.gameState.isGameOver = true;
             window.loadScene('player_death', false); 
         }
@@ -109,7 +109,7 @@ window.loadScene = function(sceneId, triggerOnEnter = true) {
 
     window.uiManager.updateAllStatus(); // Убеждаемся, что статус всегда актуален
 
-    // НОВОЕ: Проверяем условия Game Over после загрузки сцены
+    // Проверяем условия Game Over после загрузки сцены
     // Если Game Over, устанавливаем флаг и загружаем сцену смерти один раз
     if (checkGameOverConditions() && !window.gameState.isGameOver) {
         window.gameState.isGameOver = true;
@@ -127,26 +127,34 @@ function checkGameOverConditions() {
 
     if (!player || !community) {
         console.warn("checkGameOverConditions: player или community не инициализированы.");
-        return false; // Не можем проверить, если нет данных
+        return false; 
     }
+
+    // Добавим логирование начальных значений для отладки
+    console.log(`[DEBUG] checkGameOverConditions: Player Health: ${player.health}, Community Survivors: ${community.survivors}, Shelter Level: ${community.facilities.shelter_level}`);
+
 
     if (player.health <= 0) {
         window.addGameLog('Ваше здоровье иссякло. Вы не смогли больше бороться. Это конец вашего пути.');
-        return true; // Игра окончена
+        return true; 
     }
     
-    // Если выживших в общине нет (кроме самого игрока) И игрок не погиб
-    // ИЛИ убежище разрушено, и выживших мало
-    if (community.survivors <= 1 && player.health > 0 && community.facilities.shelter_level === 0) {
+    // Если выживших в общине нет (кроме самого игрока) И убежище разрушено
+    // community.survivors <= 1 подразумевает, что выживших 0 или 1 (сам игрок)
+    // shelter_level === 0 подразумевает, что убежище разрушено
+    if (community.survivors <= 1 && community.facilities.shelter_level === 0) { 
         window.addGameLog('Ваше убежище разрушено, а община погибла. Вы остались один, без надежды на восстановление.');
-        return true; // Игра окончена
+        return true; 
     }
     
-    // Если община полностью уничтожена (нет никого, даже игрока не должно быть в этой ветке, так как его здоровье > 0)
-    if (community.survivors <= 0 && player.health > 0 && community.facilities.shelter_level < 1) { // Если нет убежища и нет выживших, кроме игрока
+    // Если община полностью уничтожена (нет никого, даже игрока)
+    // Это условие, по сути, перекрывается первым, если игрок тоже погиб.
+    // Если игрок еще жив, но община (кроме него) погибла и убежища нет.
+    if (community.survivors <= 0 && community.facilities.shelter_level === 0) {
         window.addGameLog('Ваша община полностью истреблена. Вы остались в одиночестве.');
         return true;
     }
+
 
     // Если игра еще не закончилась
     return false;
@@ -187,11 +195,11 @@ window.nextGameDay = function() {
         console.error("UIManager.updateAllStatus не найден или не является функцией.");
     }
 
-    // НОВОЕ: Проверяем условия Game Over после всех ежедневных событий
+    // Проверяем условия Game Over после всех ежедневных событий
     if (checkGameOverConditions() && !window.gameState.isGameOver) {
         window.gameState.isGameOver = true;
         window.loadScene('player_death', false); 
-        return; // Прекращаем выполнение дня, если Game Over
+        return; 
     }
 
     // Загружаем текущую сцену заново, чтобы обновились опции
@@ -202,13 +210,12 @@ window.nextGameDay = function() {
 // Загружаем DOM перед инициализацией скриптов
 document.addEventListener('DOMContentLoaded', () => {
     // Инициализируем UIManager первым делом!
-    // Его методы используются другими менеджерами и функциями
-    if (typeof UIManager !== 'undefined' && typeof window.uiManager !== 'undefined') { // Проверка, что UIManager объект загружен
+    if (typeof UIManager !== 'undefined' && typeof window.uiManager !== 'undefined') { 
         window.uiManager.init(); 
         window.addGameLog('Игра загружена! Инициализация...');
     } else {
         console.error("UIManager не загружен или не доступен. Убедитесь, что uiManager.js подключен до main.js.");
-        return; // Прекращаем выполнение, если UI Manager не доступен
+        return; 
     }
 
     // Обновляем отображение версии игры
@@ -220,23 +227,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Инициализируем игровые объекты
-    // Убедимся, что классы Player и Community определены
     if (typeof Player !== 'undefined') {
         window.gameState.player = new Player();
+        console.log("[DEBUG] Player initialized:", window.gameState.player); // Отладочный лог
     } else {
         console.error("Класс Player не определен. Убедитесь, что player.js подключен.");
         return;
     }
     if (typeof Community !== 'undefined') {
         window.gameState.community = new Community();
+        console.log("[DEBUG] Community initialized:", window.gameState.community); // Отладочный лог
     } else {
         console.error("Класс Community не определен. Убедитесь, что community.js подключен.");
         return;
     }
 
     // Инициализируем менеджеры
-    // Эти менеджеры используют window.addGameLog, который теперь работает через uiManager.
-    // Важно: Порядок инициализации менеджеров может иметь значение, если они зависят друг от друга.
     if (typeof CraftingManager !== 'undefined') {
         window.craftingManager = new CraftingManager();
     } else {
@@ -245,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (typeof FactionManager !== 'undefined') {
         window.factionManager = new FactionManager();
-        window.factionManager.initFactions(); // Инициализируем репутацию фракций
+        window.factionManager.initFactions(); 
     } else {
         console.error("Класс FactionManager не определен. Убедитесь, что factionManager.js подключен.");
     }
@@ -264,7 +270,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Запускаем первую сцену после полной инициализации
-    // Проверяем, что GameScenes доступны
     if (typeof GameScenes !== 'undefined') {
         window.loadScene(window.gameState.currentSceneId);
     } else {
