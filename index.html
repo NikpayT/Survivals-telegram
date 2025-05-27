@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Survival Text RPG</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" href="assets/icons/favicon.ico" type="image/x-icon">
+    {/* Закомментировано по запросу */}
 </head>
 <body>
     <div class="game-container">
@@ -20,31 +20,31 @@
                     <p>Загрузка игры...</p>
                 </div>
                 <div id="options-container" class="options-menu">
-                    </div>
+                </div>
             </div>
 
             <aside class="sidebar">
                 <div class="status-panel player-status-panel">
                     <h2>Ваш Статус</h2>
                     <div id="player-status">
-                        <p><img src="assets/icons/heart.png" alt="Здоровье" class="status-icon"> Здоровье:100/100</p>
-                        <p><img src="assets/icons/stamina.png" alt="Выносливость" class="status-icon"> Выносливость:100/100</p>
-                        <p><img src="assets/icons/hunger.png" alt="Голод" class="status-icon"> Голод:0%</p>
-                        <p><img src="assets/icons/thirst.png" alt="Жажда" class="status-icon"> Жажда:0%</p>
-                        <p><img src="assets/icons/fatigue.png" alt="Усталость" class="status-icon"> Усталость:0%</p>
-                        <p><img src="assets/icons/weapon.png" alt="Оружие" class="status-icon"> Оружие:Нет</p>
+                        <p>Здоровье: 100/100</p>
+                        <p>Выносливость: 100/100</p>
+                        <p>Голод: 0%</p>
+                        <p>Жажда: 0%</p>
+                        <p>Усталость: 0%</p>
+                        <p>Оружие: Нет</p>
                     </div>
                 </div>
 
                 <div class="status-panel community-status-panel">
                     <h2>Статус Общины (День <span id="game-day-display">1</span>)</h2>
                     <div id="community-status">
-                        <p><img src="assets/icons/survivor.png" alt="Выжившие" class="status-icon"> Выживших:5</p>
-                        <p><img src="assets/icons/morale.png" alt="Мораль" class="status-icon"> Мораль:70/100</p>
-                        <p><img src="assets/icons/safety.png" alt="Безопасность" class="status-icon"> Безопасность:50%</p>
-                        <p><img src="assets/icons/food.png" alt="Еда" class="status-icon"> Еда:10</p>
-                        <p><img src="assets/icons/water.png" alt="Вода" class="status-icon"> Вода:10</p>
-                        <p><img src="assets/icons/shelter.png" alt="Убежище" class="status-icon"> Убежище:Уровень 1</p>
+                        <p>Выживших: 5</p>
+                        <p>Мораль: 70/100</p>
+                        <p>Безопасность: 50%</p>
+                        <p>Еда: 10</p>
+                        <p>Вода: 10</p>
+                        <p>Убежище: Уровень 1</p>
                     </div>
                 </div>
 
@@ -72,17 +72,19 @@
         <div class="game-log-container">
             <h2>Лог Событий</h2>
             <div id="game-log" class="game-log">
-                </div>
+            </div>
         </div>
     </div>
 
-    <script src="js/data/gameItems.js"></script>
-    <script src="js/data/craftingRecipes.js"></script>
-    <script src="js/data/factionsData.js"></script>
+    {/* Исправленные пути и имена файлов */}
+    <script src="js/gameData/items.js"></script> {/* Было: js/data/gameItems.js */}
+    <script src="js/gameData/craftingRecipes.js"></script> {/* Было: js/data/craftingRecipes.js */}
+    <script src="js/gameData/factions.js"></script> {/* Было: js/data/factionsData.js */}
 
-    <script src="js/entities/player.js"></script>
-    <script src="js/entities/community.js"></script>
+    <script src="js/gameLogic/player.js"></script> {/* Было: js/entities/player.js */}
+    <script src="js/gameLogic/community.js"></script> {/* Было: js/entities/community.js */}
 
+    {/* Эти пути, скорее всего, были верны, но проверяем по структуре */}
     <script src="js/gameLogic/inventoryManager.js"></script>
     <script src="js/gameLogic/craftingManager.js"></script>
     <script src="js/gameLogic/factionManager.js"></script>
@@ -91,7 +93,7 @@
     
     <script src="js/uiManager.js"></script> 
 
-    <script src="js/scenes/scenes.js"></script>
+    <script src="js/gameData/scenes.js"></script> {/* Было: js/scenes/scenes.js */}
 
     <script src="js/main.js"></script>
 </body>
