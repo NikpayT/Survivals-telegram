@@ -3,9 +3,14 @@
 class Community {
     constructor() {
         this.name = "Наша Община";
-        this.survivors = 5; // Убедимся, что начальное количество выживших > 1
+        this.survivors = 5; // Изначально 5 выживших
         this.morale = 70; // Мораль общины
         this.maxMorale = 100;
+        
+        // НОВАЯ ХАРАКТЕРИСТИКА: Безопасность
+        this.safety = 50; // Начальный уровень безопасности
+        this.maxSafety = 100; // Максимальный уровень безопасности
+
         this.resources = {
             food: 10,   // Еда
             water: 10,  // Вода
@@ -18,7 +23,7 @@ class Community {
             shelter_level: 1, // Уровень убежища, 0 = разрушено, 1 = базовое, и т.д.
             // Дополнительные постройки
         };
-        window.addGameLog('Община инициализирована.');
+        window.addGameLog('Община инициализированa.');
     }
 
     // Добавление ресурсов или предметов на склад общины
@@ -110,7 +115,6 @@ class Community {
         }
         window.addGameLog(`Община потеряла ${count} выживших. Осталось: ${this.survivors}`);
         window.uiManager.updateCommunityStatus();
-        // Условие Game Over будет проверено в main.js после каждого действия
     }
 
     // Изменение морали
@@ -125,21 +129,33 @@ class Community {
         window.uiManager.updateCommunityStatus();
     }
 
+    // НОВОЕ: Изменение безопасности
+    changeSafety(amount) {
+        this.safety += amount;
+        if (this.safety > this.maxSafety) {
+            this.safety = this.maxSafety;
+        } else if (this.safety < 0) {
+            this.safety = 0;
+        }
+        window.addGameLog(`Безопасность общины изменилась на ${amount}. Текущая безопасность: ${this.safety}/${this.maxSafety}`);
+        window.uiManager.updateCommunityStatus();
+    }
+
     // Действия, происходящие в конце дня для общины
     passDay() {
         // Ежедневное потребление еды и воды
-        const dailyFoodConsumption = this.survivors;
+        // Теперь выжившие (помимо игрока) потребляют еду
+        const dailyFoodConsumption = this.survivors; 
         const dailyWaterConsumption = this.survivors;
 
         if (this.resources.food >= dailyFoodConsumption) {
             this.resources.food -= dailyFoodConsumption;
             window.addGameLog(`Община потребила ${dailyFoodConsumption} еды.`);
         } else {
-            // Если не хватает еды, выжившие умирают и/или падает мораль
             const foodDeficit = dailyFoodConsumption - this.resources.food;
-            this.resources.food = 0; // Вся еда съедена
-            this.changeMorale(-5); // Падение морали
-            const deaths = Math.floor(foodDeficit / 2); // Пример: 1 смерть на каждые 2 ед. дефицита
+            this.resources.food = 0;
+            this.changeMorale(-5);
+            const deaths = Math.floor(foodDeficit / 2); 
             if (deaths > 0) {
                 this.removeSurvivors(deaths);
                 window.addGameLog(`Из-за голода ${deaths} выживших погибли!`);
@@ -152,11 +168,10 @@ class Community {
             this.resources.water -= dailyWaterConsumption;
             window.addGameLog(`Община потребила ${dailyWaterConsumption} воды.`);
         } else {
-            // Если не хватает воды, выжившие умирают и/или падает мораль
             const waterDeficit = dailyWaterConsumption - this.resources.water;
-            this.resources.water = 0; // Вся вода выпита
-            this.changeMorale(-7); // Большее падение морали
-            const deaths = Math.floor(waterDeficit / 1); // Пример: 1 смерть на 1 ед. дефицита
+            this.resources.water = 0;
+            this.changeMorale(-7);
+            const deaths = Math.floor(waterDeficit / 1);
             if (deaths > 0) {
                 this.removeSurvivors(deaths);
                 window.addGameLog(`Из-за жажды ${deaths} выживших погибли!`);
@@ -166,15 +181,33 @@ class Community {
         }
 
         // Влияние морали на выживших (уход)
-        if (this.morale < 30 && this.survivors > 1) {
+        if (this.morale < 30 && this.survivors > 0) { // Проверка, что выжившие > 0
             const fleeChance = (30 - this.morale) / 10;
             if (Math.random() < fleeChance) {
-                this.removeSurvivors(1);
-                this.changeMorale(-5);
-                window.addGameLog('Из-за низкой морали один выживший покинул общину.');
+                if (this.survivors > 0) { // Убедимся, что есть кому уходить
+                    this.removeSurvivors(1);
+                    this.changeMorale(-5);
+                    window.addGameLog('Из-за низкой морали один выживший покинул общину.');
+                }
             }
         }
         
+        // Влияние безопасности (может быть негативным или позитивным событием)
+        if (this.safety < 30) {
+            if (Math.random() < 0.1) { // 10% шанс негативного события при низкой безопасности
+                window.addGameLog('Из-за низкой безопасности община подверглась нападению!');
+                this.removeSurvivors(1); // Пример: потеря 1 выжившего
+                this.changeMorale(-10); // Падение морали
+                this.changeSafety(-5); // Падение безопасности
+            }
+        } else if (this.safety > 70) {
+            if (Math.random() < 0.05) { // 5% шанс позитивного события при высокой безопасности
+                window.addGameLog('Благодаря высокой безопасности, ночь прошла спокойно и безопасно.');
+                this.changeMorale(2); // Небольшое повышение морали
+            }
+        }
+
+
         // Обновление состояния UI
         window.uiManager.updateCommunityStatus();
         window.uiManager.updateCommunityStorage();
