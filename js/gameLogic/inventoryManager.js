@@ -3,102 +3,96 @@
 
 const InventoryManager = {
 
+    // Вспомогательная функция для определения типа ресурса склада по itemId
+    _getResourceTypeFromItemId(itemId) {
+        const item = GameItems[itemId];
+        if (!item) return null;
+
+        switch (item.type) {
+            case 'consumable':
+                if (item.id === 'canned_food') return 'food';
+                if (item.id === 'water_bottle') return 'water';
+                if (item.id === 'medkit_basic' || item.id === 'bandages') return 'medical_supplies';
+                break;
+            case 'material':
+                if (item.id === 'scraps_metal') return 'materials_metal';
+                if (item.id === 'scraps_wood') return 'materials_wood';
+                if (item.id === 'fuel_can') return 'fuel';
+                break;
+            case 'ammo':
+                return 'ammunition'; // Все патроны идут в "ammunition"
+            // Добавьте другие типы, если они будут храниться на складе
+        }
+        return null;
+    },
+
     /**
      * Перемещает предмет между инвентарем игрока и складом общины.
      * @param {string} itemId - ID предмета.
      * @param {number} quantity - Количество.
-     * @param {string} from - 'player' или 'community'.
-     * @param {string} to - 'player' или 'community'.
+     * @param {'player' | 'community'} from - Откуда перемещать.
+     * @param {'player' | 'community'} to - Куда перемещать.
      * @returns {boolean} - true, если перемещение успешно, false иначе.
      */
     transferItem(itemId, quantity, from, to) {
-        if (quantity <= 0) return false;
+        if (quantity <= 0) {
+            window.addGameLog('[ПРЕДУПРЕЖДЕНИЕ] Количество для перемещения должно быть больше 0.');
+            return false;
+        }
 
         const item = GameItems[itemId];
         if (!item) {
-            console.warn(`Предмет с ID ${itemId} не найден.`);
+            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Предмет с ID ${itemId} не найден.`);
             return false;
         }
 
-        let source, destination;
-        let sourceRemoveFunc, destinationAddFunc;
+        let sourceHasItem = false;
+        let sourceRemoveFunc;
+        let destinationAddFunc;
 
-        // Определяем источник
+        // Определяем, откуда берем
         if (from === 'player') {
-            source = window.gameState.player.inventory;
+            sourceHasItem = window.gameState.player.hasItem(itemId, quantity);
             sourceRemoveFunc = (id, qty) => window.gameState.player.removeItem(id, qty);
         } else if (from === 'community') {
-            // Для ресурсов общины используем специфичные типы, например 'food', 'water'
-            // Нужно будет сопоставить itemId с resourceType
-            const resourceMap = {
-                'canned_food': 'food',
-                'water_bottle': 'water',
-                'scraps_metal': 'materials_metal',
-                'scraps_wood': 'materials_wood',
-                'medkit_basic': 'medical_supplies',
-                'bandages': 'medical_supplies',
-                'pistol_ammo': 'ammunition',
-                'fuel_can': 'fuel'
-                // Добавьте больше сопоставлений по мере необходимости
-            };
-            const resourceType = resourceMap[itemId];
+            const resourceType = this._getResourceTypeFromItemId(itemId);
             if (!resourceType) {
-                console.warn(`Предмет ${itemId} не может быть передан на склад общины.`);
+                window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Предмет "${item.name}" не может быть взят со склада общины (не соответствует типу ресурса).`);
                 return false;
             }
-            source = window.gameState.community.resources;
+            sourceHasItem = window.gameState.community.hasResource(resourceType, quantity);
             sourceRemoveFunc = (id, qty) => window.gameState.community.removeResource(resourceType, qty);
         } else {
-            console.warn('Неверный источник для перемещения.');
+            window.addGameLog('[ПРЕДУПРЕЖДЕНИЕ] Неверный источник для перемещения.');
             return false;
         }
 
-        // Определяем назначение
+        if (!sourceHasItem) {
+            window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Недостаточно ${item.name} у источника (${from}).`);
+            return false;
+        }
+
+        // Определяем, куда кладем
         if (to === 'player') {
-            destination = window.gameState.player.inventory;
             destinationAddFunc = (id, qty) => window.gameState.player.addItem(id, qty);
         } else if (to === 'community') {
-            const resourceMap = {
-                'canned_food': 'food',
-                'water_bottle': 'water',
-                'scraps_metal': 'materials_metal',
-                'scraps_wood': 'materials_wood',
-                'medkit_basic': 'medical_supplies',
-                'bandages': 'medical_supplies',
-                'pistol_ammo': 'ammunition',
-                'fuel_can': 'fuel'
-            };
-            const resourceType = resourceMap[itemId];
+            const resourceType = this._getResourceTypeFromItemId(itemId);
             if (!resourceType) {
-                console.warn(`Предмет ${itemId} не может быть принят складом общины.`);
+                window.addGameLog(`[ПРЕДУПРЕЖДЕНИЕ] Предмет "${item.name}" не может быть помещен на склад общины (не соответствует типу ресурса).`);
                 return false;
             }
-            destination = window.gameState.community.resources;
             destinationAddFunc = (id, qty) => window.gameState.community.addResource(resourceType, qty);
         } else {
-            console.warn('Неверное назначение для перемещения.');
+            window.addGameLog('[ПРЕДУПРЕЖДЕНИЕ] Неверное назначение для перемещения.');
             return false;
         }
-
-        // Проверяем, есть ли достаточно предметов у источника
-        if (from === 'player' && !window.gameState.player.hasItem(itemId, quantity)) {
-            console.warn(`Недостаточно ${item.name} в инвентаре игрока.`);
-            return false;
-        } else if (from === 'community') {
-            const resourceType = resourceMap[itemId];
-            if (!window.gameState.community.hasResource(resourceType, quantity)) {
-                console.warn(`Недостаточно ${item.name} на складе общины.`);
-                return false;
-            }
-        }
-
 
         // Выполняем перемещение
         if (sourceRemoveFunc(itemId, quantity)) { // Удаляем из источника
             destinationAddFunc(itemId, quantity); // Добавляем в назначение
-            console.log(`Перемещено ${item.name} x${quantity} из ${from} в ${to}.`);
+            window.addGameLog(`Перемещено ${item.name} x${quantity} из ${from} в ${to}.`);
             window.uiManager.updatePlayerInventory(); // Обновляем UI
-            window.uiManager.updateCommunityStatus(); // Обновляем UI
+            window.uiManager.updateCommunityStorage(); // Обновляем UI
             return true;
         }
         return false;
@@ -129,10 +123,20 @@ const InventoryManager = {
      */
     getDetailedCommunityResources() {
         const detailedList = [];
+        // Более читабельные названия для ресурсов склада
+        const resourceDisplayNames = {
+            food: 'Еда',
+            water: 'Вода',
+            materials_metal: 'Металлический лом',
+            materials_wood: 'Деревянные обломки',
+            medical_supplies: 'Медикаменты',
+            ammunition: 'Боеприпасы',
+            fuel: 'Топливо'
+        };
+
         for (const resourceType in window.gameState.community.resources) {
             const quantity = window.gameState.community.resources[resourceType];
-            // Здесь можно добавить более красивые названия ресурсов
-            const displayName = resourceType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); // "materials_metal" -> "Materials Metal"
+            const displayName = resourceDisplayNames[resourceType] || resourceType;
             detailedList.push({
                 type: resourceType,
                 name: displayName,
@@ -140,5 +144,46 @@ const InventoryManager = {
             });
         }
         return detailedList;
+    },
+
+    /**
+     * Проверяет наличие необходимых ресурсов на складе общины.
+     * @param {Array<Object>} resourceCosts - Массив объектов { id: itemId, qty: number }.
+     * @returns {boolean} - true, если все ресурсы есть, false иначе.
+     */
+    checkCommunityResources(resourceCosts) {
+        const community = window.gameState.community;
+        for (const cost of resourceCosts) {
+            const resourceType = this._getResourceTypeFromItemId(cost.id);
+            if (!resourceType || !community.hasResource(resourceType, cost.qty)) {
+                return false;
+            }
+        }
+        return true;
+    },
+
+    /**
+     * Удаляет необходимые ресурсы со склада общины.
+     * @param {Array<Object>} resourceCosts - Массив объектов { id: itemId, qty: number }.
+     * @returns {boolean} - true, если все ресурсы удалены, false иначе.
+     */
+    removeCommunityResources(resourceCosts) {
+        const community = window.gameState.community;
+        // Сначала убедимся, что все ресурсы есть
+        if (!this.checkCommunityResources(resourceCosts)) {
+            window.addGameLog('[ПРЕДУПРЕЖДЕНИЕ] Недостаточно ресурсов на складе общины для выполнения действия.');
+            return false;
+        }
+        // Затем удаляем
+        for (const cost of resourceCosts) {
+            const resourceType = this._getResourceTypeFromItemId(cost.id);
+            if (!community.removeResource(resourceType, cost.qty)) {
+                // Это не должно произойти, если checkCommunityResources был успешным,
+                // но на всякий случай
+                window.addGameLog(`[ОШИБКА] Не удалось удалить ${cost.qty} ${cost.id} со склада.`);
+                return false;
+            }
+        }
+        return true;
     }
 };
