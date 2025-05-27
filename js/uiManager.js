@@ -16,9 +16,18 @@ const UIManager = {
     communityFoodElement: null,
     communityWaterElement: null,
     
-    // Новые свойства для хранения ссылок на кнопки и секции
+    // Свойства для хранения ссылок на кнопки и секции
     navButtons: {}, // Объект для хранения ссылок на навигационные кнопки
     gameSections: {}, // Объект для хранения ссылок на игровые секции
+    
+    // НОВОЕ: Перемещаем navButtonMap сюда, чтобы она была доступна всем методам UIManager
+    navButtonMap: {
+        'nav-explore': 'explore-section',
+        'nav-inventory': 'inventory-section',
+        'nav-crafting': 'crafting-section',
+        'nav-community': 'community-section',
+        'nav-factions': 'factions-section'
+    },
 
     /**
      * Инициализирует все DOM-элементы и обработчики событий.
@@ -47,16 +56,9 @@ const UIManager = {
         this.communityWaterElement = document.getElementById('community-water');
 
         // 4. Инициализация навигационных кнопок и игровых секций
-        const navButtonMap = {
-            'nav-explore': 'explore-section',
-            'nav-inventory': 'inventory-section',
-            'nav-crafting': 'crafting-section',
-            'nav-community': 'community-section',
-            'nav-factions': 'factions-section'
-        };
-
-        for (const navId in navButtonMap) {
-            const sectionId = navButtonMap[navId];
+        // ИСПОЛЬЗУЕМ this.navButtonMap ВМЕСТО ЛОКАЛЬНОЙ ПЕРЕМЕННОЙ
+        for (const navId in this.navButtonMap) { // ИЗМЕНЕНО: this.navButtonMap
+            const sectionId = this.navButtonMap[navId]; // ИЗМЕНЕНО: this.navButtonMap
             const button = document.getElementById(navId);
             const section = document.getElementById(sectionId);
 
@@ -128,7 +130,8 @@ const UIManager = {
         }
 
         // Активируем соответствующую кнопку навигации
-        const navButtonId = Object.keys(navButtonMap).find(key => navButtonMap[key] === sectionId);
+        // ИСПОЛЬЗУЕМ this.navButtonMap ВМЕСТО navButtonMap
+        const navButtonId = Object.keys(this.navButtonMap).find(key => this.navButtonMap[key] === sectionId); // ИЗМЕНЕНО: this.navButtonMap
         if (navButtonId && this.navButtons[navButtonId]) {
             this.navButtons[navButtonId].classList.add('active');
             console.log(`UIManager: Кнопка "${navButtonId}" активирована.`);
@@ -158,7 +161,7 @@ const UIManager = {
             case 'community-section':
                 // Предполагаем, что window.community (экземпляр Community) имеет метод displayCommunityDetails
                 if (window.gameState.community && typeof window.gameState.community.displayCommunityDetails === 'function') {
-                    window.gameState.community.displayCommunityDetails(); // <--- ИСПРАВЛЕНИЕ ЗДЕСЬ
+                    window.gameState.community.displayCommunityDetails();
                 } else {
                     console.warn("UIManager: window.gameState.community или его метод displayCommunityDetails не найден.");
                 }
