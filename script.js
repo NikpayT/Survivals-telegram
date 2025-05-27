@@ -1,8 +1,8 @@
 // script.js
 
-const GAME_VERSION = "0.5.1"; // Версия: Рефакторинг UI и Inventory Manager
+const GAME_VERSION = "0.5.2"; // Версия: Рефакторинг Location и Event Manager
 
-// Используем gameState, domElements, UIManager, InventoryManager, и т.д.
+// Используем gameState, domElements, UIManager, InventoryManager, LocationManager, EventManager
 // Предполагается, что эти файлы загружены РАНЬШЕ script.js в index.html
 
 const game = {
@@ -42,7 +42,7 @@ const game = {
         
         UIManager.updateDisplay(); 
         UIManager.updateBuildActions();
-        LocationManager.updateExploreTab(); // Используем LocationManager (будет создан позже)
+        LocationManager.updateExploreTab(); 
         
         domElements.inventoryButton.onclick = () => InventoryManager.openInventoryModal();
         if(domElements.inventoryFilters) {
@@ -60,29 +60,27 @@ const game = {
 
         domElements.mainNav.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
-                UIManager.openTab(e.target.dataset.tab, e.target); // Используем UIManager
+                UIManager.openTab(e.target.dataset.tab, e.target); 
                 if (window.innerWidth <= 768 && domElements.sidebar.classList.contains('open')) { 
-                    UIManager.toggleSidebar(); // Используем UIManager
+                    UIManager.toggleSidebar(); 
                 }
             });
         });
         
-        domElements.toggleLogButton.addEventListener('click', () => this.toggleLogVisibility()); // Оставим в game, т.к. меняет gameState
-        UIManager.applyLogVisibility(); // Используем UIManager
+        domElements.toggleLogButton.addEventListener('click', () => this.toggleLogVisibility()); 
+        UIManager.applyLogVisibility(); 
 
-        domElements.burgerMenuButton.onclick = () => UIManager.toggleSidebar(); // Используем UIManager
+        domElements.burgerMenuButton.onclick = () => UIManager.toggleSidebar(); 
 
 
         this.log("Игра началась. Пустошь ждет.", "event-neutral");
         const defaultNavLink = domElements.mainNav.querySelector('.nav-link[data-tab="main-tab"]');
         if (defaultNavLink) {
-            UIManager.openTab('main-tab', defaultNavLink); // Используем UIManager
+            UIManager.openTab('main-tab', defaultNavLink); 
         } else {
-             UIManager.openTab('main-tab', null); // Используем UIManager
+             UIManager.openTab('main-tab', null); 
         }
     },
-
-    // toggleSidebar остается в UIManager
 
     initializeStructures: function() {
         gameState.structures = {}; 
@@ -110,10 +108,6 @@ const game = {
         InventoryManager.addItemToInventory(gameState.baseInventory, "cloth", 5);
         InventoryManager.addItemToInventory(gameState.baseInventory, "broken_electronics", 2);
     },
-
-    // openTab перенесен в UIManager
-    // updatePlayerStatus перенесен в UIManager
-    // consumeItem перенесен в InventoryManager
     
     takeDamage: function(amount, source) {
         if (gameState.gameOver) return;
@@ -126,20 +120,6 @@ const game = {
         UIManager.updatePlayerStatus(); 
     },
 
-    // addItemToInventory перенесен в InventoryManager
-    // removeItemFromInventory перенесен в InventoryManager
-    // countItemInInventory перенесен в InventoryManager
-    // openInventoryModal перенесен в InventoryManager
-    // closeInventoryModal перенесен в InventoryManager
-    // filterPlayerInventory перенесен в InventoryManager
-    // renderPlayerInventory перенесен в UIManager
-    // updateInventoryWeightDisplay перенесен в UIManager
-    // transferItem перенесен в InventoryManager
-    // filterBaseInventory перенесен в InventoryManager
-    // renderBaseInventory перенесен в UIManager
-    // updateDisplay перенесен в UIManager
-    // updateOverviewTabStats перенесен в UIManager
-
     log: function(message, type = "event-neutral") {
         const p = document.createElement('p');
         p.innerHTML = `[Д:${gameState.day}] ${message}`; 
@@ -151,13 +131,11 @@ const game = {
         if(gameState.logVisible) domElements.logMessages.scrollTop = 0; 
     },
 
-    toggleLogVisibility: function() { // Эта функция меняет состояние, поэтому остается здесь или в game_logic
+    toggleLogVisibility: function() { 
         gameState.logVisible = !gameState.logVisible;
         UIManager.applyLogVisibility();
         this.saveGame(); 
     },
-
-    // applyLogVisibility перенесен в UIManager
 
     saveGame: function() {
         const [major, minor] = GAME_VERSION.split('.').map(Number);
@@ -273,7 +251,7 @@ const game = {
              this.log(`Выжившие попили. Со склада потрачено ${waterConsumedFromBase} ед. утоления жажды.`, "event-neutral");
         }
         
-        EventManager.triggerRandomEvent(); // Используем EventManager
+        EventManager.triggerRandomEvent(); 
         
         if (!gameState.currentEvent && !gameState.locationEvent && document.getElementById('main-tab').style.display === 'block') {
              domElements.eventActionsContainer.style.display = 'none';
@@ -286,18 +264,6 @@ const game = {
         this.saveGame();
     },
     
-    // consumeResourceFromBase перенесен в InventoryManager
-    // updateExploreTab перенесен в LocationManager
-    // updateExploreTabDisplay перенесен в UIManager
-    // renderDiscoveredLocations перенесен в UIManager
-    // setCurrentLocation перенесен в LocationManager
-    // discoverNewLocationAction перенесен в LocationManager
-    // exploreCurrentLocationAction перенесен в LocationManager
-    // nextDayForLocationAction перенесен в LocationManager
-    // displayLocationEventChoices перенесен в EventManager
-    // finalizeEventUI перенесен в UIManager
-    // updateBuildActions перенесен в UIManager
-
     build: function(structureKey) { 
         if (gameState.gameOver || gameState.currentEvent || gameState.locationEvent) return;
         const definition = (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') ? BASE_STRUCTURE_DEFINITIONS[structureKey] : null;
@@ -308,7 +274,7 @@ const game = {
             return;
         }
 
-        const costDefinition = getStructureUpgradeCost(key, currentStructureState.level); // getStructureUpgradeCost глобальная
+        const costDefinition = getStructureUpgradeCost(structureKey, currentStructureState.level); // getStructureUpgradeCost глобальная
         let canAfford = true;
         let missingResLog = [];
 
@@ -334,11 +300,6 @@ const game = {
             this.log(`Недостаточно ресурсов на складе для ${definition.name}. Нужно еще: ${missingResLog.join(', ')}.`, "event-negative");
         }
     },
-
-    // possibleEvents перенесен в EventManager
-    // triggerRandomEvent перенесен в EventManager
-    // displayEventChoices перенесен в EventManager
-    // renderCraftingRecipes перенесен в UIManager
 
     canCraft: function(recipeId) {
         const recipe = CRAFTING_RECIPES[recipeId];
@@ -442,7 +403,7 @@ const game = {
         
         UIManager.updateDisplay(); 
         UIManager.updateBuildActions();
-        LocationManager.updateExploreTab(); // Используем LocationManager
+        LocationManager.updateExploreTab(); 
 
 
         document.querySelectorAll('#sidebar button, #main-content button').forEach(button => {
@@ -474,10 +435,10 @@ window.onload = () => {
         typeof gameState !== 'undefined' && 
         typeof domElements !== 'undefined' &&
         typeof GameStateGetters !== 'undefined' &&
-        typeof UIManager !== 'undefined' && // Проверяем новые менеджеры
-        typeof InventoryManager !== 'undefined' 
-        // typeof LocationManager !== 'undefined' && // Раскомментировать когда будет создан
-        // typeof EventManager !== 'undefined' // Раскомментировать когда будет создан
+        typeof UIManager !== 'undefined' && 
+        typeof InventoryManager !== 'undefined' &&
+        typeof LocationManager !== 'undefined' && // Проверяем новые менеджеры
+        typeof EventManager !== 'undefined' 
         ) {
         game.init();
     } else {
