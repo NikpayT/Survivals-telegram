@@ -14,22 +14,20 @@ const GameScenes = {
         ],
         onEnter: (player, community) => {
             // Действия при входе в сцену (например, проверка состояния)
-            // console.log('Вошли в разрушенное здание.');
         }
     },
     'approach_backpack': {
         id: 'approach_backpack',
         name: 'Рюкзак',
         type: 'event',
-        description: 'В старом, потрепанном рюкзаке вы находите почти пустую бутылку воды, потрёпанный нож и несколько бинтов.',
+        description: 'В старом, потрепанном рюкзаке вы находите почти пустую бутылку воды, потрёпанный нож и несколько бинтов. Также вы находите старые рваные штаны и грязную куртку (снаряжение).',
         onEnter: (player, community) => {
-            // Добавляем предметы в инвентарь игрока
             player.addItem('water_bottle', 1);
             player.addItem('old_knife', 1);
             player.addItem('bandages', 2);
-            // Изменяем состояние игрока
-            player.adjustThirst(-10); // Немного снижает жажду от воды
-            // Обновляем статус-бар (это будет делать uiManager)
+            player.addItem('ragged_clothes', 1); // Добавим рваную одежду как предмет брони
+            player.adjustThirst(-10);
+            window.addGameLog('Вы нашли: Бутылка воды, Старый нож, Бинты, Рваная одежда.');
         },
         options: [
             { text: 'Осмотреть здание еще раз', nextScene: 'abandoned_building_explored' },
@@ -42,7 +40,7 @@ const GameScenes = {
         type: 'event',
         description: 'В ваших карманах вы находите лишь пыль и старую, помятую монету. Ничего полезного.',
         options: [
-            { text: 'Осмотреться вокруг', nextScene: 'abandoned_building_start' }, // Возвращаемся к начальной сцене
+            { text: 'Осмотреться вокруг', nextScene: 'abandoned_building_start' },
             { text: 'Искать выход', nextScene: 'search_building_exit' }
         ]
     },
@@ -62,7 +60,7 @@ const GameScenes = {
         description: 'Вы продвигаетесь к ближайшему выходу. Дверь завалена обломками, но, кажется, есть проход через узкую щель в стене.',
         options: [
             { text: 'Попробовать пролезть через щель', nextScene: 'outside_area_entrance' },
-            { text: 'Попробовать расчистить завал (требует усилий)', nextScene: 'clear_debris_attempt' } // Новая сцена с проверкой
+            { text: 'Попробовать расчистить завал (требует усилий)', nextScene: 'clear_debris_attempt' }
         ]
     },
     'clear_debris_attempt': {
@@ -71,21 +69,24 @@ const GameScenes = {
         type: 'event',
         description: 'Вы пытаетесь расчистить завал. Это тяжело и отнимает много сил...',
         onEnter: (player) => {
-            player.adjustFatigue(15); // Увеличиваем усталость
-            player.adjustHunger(5); // Увеличиваем голод
-            player.adjustThirst(5); // Увеличиваем жажду
-            // Добавим проверку на успех/неудачу
-            const successChance = player.skills.strength > 10 ? 80 : 40; // Шанс зависит от силы
+            player.adjustFatigue(15);
+            player.adjustHunger(5);
+            player.adjustThirst(5);
+            player.gainSkillExp('strength', 1); // Повышаем навык силы
+
+            const successChance = player.skills.strength * 5; // Шанс зависит от силы
             if (Math.random() * 100 < successChance) {
                 GameScenes.clear_debris_attempt.description += '\nВам удалось немного расчистить проход! Теперь можно выбраться.';
                 GameScenes.clear_debris_attempt.options = [
                     { text: 'Выбраться наружу', nextScene: 'outside_area_entrance' }
                 ];
+                window.addGameLog('Вы успешно расчистили завал.');
             } else {
                 GameScenes.clear_debris_attempt.description += '\nЗавал слишком велик. Вы только устали и ничего не добились.';
                 GameScenes.clear_debris_attempt.options = [
                     { text: 'Искать другой выход', nextScene: 'search_building_exit' }
                 ];
+                window.addGameLog('Не удалось расчистить завал. Вы устали.');
             }
         }
     },
@@ -97,7 +98,8 @@ const GameScenes = {
         options: [
             { text: 'Идти к мосту', nextScene: 'collapsed_bridge' },
             { text: 'Осмотреться на окраине', nextScene: 'explore_city_outskirts' },
-            { text: 'Искать ресурсы поблизости', nextScene: 'scavenge_nearby' }
+            { text: 'Искать ресурсы поблизости', nextScene: 'scavenge_nearby' },
+            { text: 'Попытаться найти безопасное место для ночлега', nextScene: 'find_shelter_area' } // Новая опция
         ],
         onEnter: (player) => {
             player.currentLocation = 'outside_area_entrance';
@@ -120,98 +122,98 @@ const GameScenes = {
         id: 'search_bridge_rubble',
         name: 'Обыск завалов моста',
         type: 'event',
-        description: 'Вы пробираетесь сквозь обломки. Среди арматуры и бетона находите несколько металлических обломков и ржавую банку консервов. Внезапно, вы слышите странные звуки из-за угла... Что это?',
+        description: 'Вы пробираетесь сквозь обломки. Среди арматуры и бетона находите несколько металлических обломков и ржавую банку консервов.',
         onEnter: (player) => {
             player.addItem('scraps_metal', 3);
             player.addItem('canned_food', 1);
-            player.adjustHunger(-15); // Еда немного утоляет голод
-            player.adjustFatigue(10); // Обыск утомляет
+            player.adjustHunger(-15);
+            player.adjustFatigue(10);
+            player.gainSkillExp('scavenging', 1); // Опыт за поиск
+
             // Возможность столкновения с мутантом
             if (Math.random() < 0.3) { // 30% шанс на столкновение
+                window.addGameLog('**ОПАСНОСТЬ! Вы замечаете движущийся силуэт!**');
+                GameScenes.search_bridge_rubble.description += '\n\nИз-за груды мусора выскакивает мерзкий, быстро движущийся мутант! Он бросается на вас!';
                 GameScenes.search_bridge_rubble.options = [
-                    { text: 'Приготовиться к бою', nextScene: 'combat_mutant_bridge' },
-                    { text: 'Попробовать скрыться', nextScene: 'flee_mutant_bridge' }
+                    { text: 'Приготовиться к бою', customAction: () => {
+                        window.combatManager.startCombat(
+                            { name: 'Мелкий мутант', health: 40, damage: 10 },
+                            (result) => {
+                                if (result === 'win') {
+                                    window.loadScene('mutant_defeated_bridge');
+                                } else if (result === 'flee') {
+                                    window.loadScene('flee_successful_bridge');
+                                } else {
+                                    window.loadScene('player_death'); // Если проиграли
+                                }
+                            }
+                        );
+                    }},
+                    { text: 'Попробовать скрыться', customAction: () => {
+                        window.combatManager.attemptFlee(
+                            { name: 'Мелкий мутант', health: 40, damage: 10 }, // Передаем врага для логики урона при неудаче
+                            (result) => {
+                                if (result === 'flee') {
+                                    window.loadScene('flee_successful_bridge');
+                                } else if (result === 'lose') {
+                                    window.loadScene('player_death');
+                                } else { // Если не удалось сбежать и пришлось драться
+                                    window.loadScene('combat_mutant_bridge');
+                                }
+                            }
+                        );
+                    }}
                 ];
-                GameScenes.search_bridge_rubble.description += '\n\n**Опасность! Вы замечаете движущийся силуэт!**';
             } else {
+                window.addGameLog('Обыск прошел без происшествий.');
                 GameScenes.search_bridge_rubble.options = [
                     { text: 'Вернуться на окраину', nextScene: 'outside_area_entrance' }
                 ];
             }
-        }
+        },
+        options: [
+            // Опции будут динамически изменяться в onEnter
+        ]
     },
-    'combat_mutant_bridge': {
-        id: 'combat_mutant_bridge',
-        name: 'Бой с мутантом',
-        type: 'combat',
-        description: 'Из-за груды мусора выскакивает мерзкий, быстро движущийся мутант! Он бросается на вас!',
-        // Здесь должна быть логика боя, пока заглушка
-        onEnter: (player) => {
-            let playerDamage = player.getEffectiveDamage();
-            let mutantHealth = 50; // Пример здоровья мутанта
-            let combatLog = [];
-
-            combatLog.push(`Вы атаковали мутанта! Нанесли ${playerDamage} урона.`);
-            mutantHealth -= playerDamage;
-
-            if (mutantHealth <= 0) {
-                combatLog.push('Мутант повержен!');
-                player.adjustHealth(5); // Небольшое восстановление за победу
-                GameScenes.combat_mutant_bridge.options = [
-                    { text: 'Обыскать мутанта (мало что найдете)', nextScene: 'search_mutant_corpse' },
-                    { text: 'Вернуться на окраину', nextScene: 'outside_area_entrance' }
-                ];
-            } else {
-                let mutantDamage = 15; // Урон от мутанта
-                player.adjustHealth(-mutantDamage);
-                combatLog.push(`Мутант атаковал вас! Получено ${mutantDamage} урона. Ваше здоровье: ${player.health}`);
-
-                if (player.health <= 0) {
-                    combatLog.push('Вы пали в бою. Это конец...');
-                    GameScenes.combat_mutant_bridge.options = [{ text: 'Начать заново', nextScene: 'game_over' }];
-                } else {
-                    combatLog.push('Продолжаете бой...');
-                    GameScenes.combat_mutant_bridge.options = [
-                        { text: 'Снова атаковать', nextScene: 'combat_mutant_bridge' },
-                        { text: 'Попробовать отступить', nextScene: 'flee_mutant_bridge' }
-                    ];
-                }
-            }
-            GameScenes.combat_mutant_bridge.description = `\n${combatLog.join('\n')}\n`;
-        }
-    },
-    'flee_mutant_bridge': {
-        id: 'flee_mutant_bridge',
-        name: 'Попытка бегства',
+    'mutant_defeated_bridge': {
+        id: 'mutant_defeated_bridge',
+        name: 'Мутант повержен',
         type: 'event',
-        description: 'Вы пытаетесь оторваться от мутанта...',
+        description: 'Вы одолели мутанта. Теперь здесь безопасно.',
         onEnter: (player) => {
-            player.adjustFatigue(10);
-            if (Math.random() < 0.6) { // 60% шанс на успех
-                GameScenes.flee_mutant_bridge.description += 'Вам удалось оторваться! Вы тяжело дышите, но целы.';
-                GameScenes.flee_mutant_bridge.options = [
-                    { text: 'Вернуться на окраину', nextScene: 'outside_area_entrance' }
-                ];
-            } else {
-                GameScenes.flee_mutant_bridge.description += 'Мутант настигает вас! Вы не смогли убежать.';
-                player.adjustHealth(-20); // Урон при неудачной попытке
-                GameScenes.flee_mutant_bridge.options = [
-                    { text: 'Приготовиться к бою', nextScene: 'combat_mutant_bridge' }
-                ];
-            }
-        }
-    },
-    'search_mutant_corpse': {
-        id: 'search_mutant_corpse',
-        name: 'Обыск мутанта',
-        type: 'event',
-        description: 'Вы осматриваете останки мутанта. Мерзкое зрелище. Ничего ценного, кроме нескольких кусочков "мяса". Возможно, пригодится...',
-        onEnter: (player) => {
-            player.addItem('mutant_meat', 1); // Предполагаем, что есть такой предмет
+            player.addItem('mutant_meat', 1); // Добавляем мясо мутанта
+            window.addGameLog('Вы обыскали останки мутанта и нашли немного мяса.');
         },
         options: [
             { text: 'Вернуться на окраину', nextScene: 'outside_area_entrance' }
         ]
+    },
+    'flee_successful_bridge': {
+        id: 'flee_successful_bridge',
+        name: 'Успешное бегство',
+        type: 'event',
+        description: 'Вам удалось оторваться от мутанта. Вы тяжело дышите, но целы.',
+        options: [
+            { text: 'Вернуться на окраину', nextScene: 'outside_area_entrance' }
+        ]
+    },
+    'combat_mutant_bridge': { // Сцена для продолжения боя после неудачной попытки сбежать
+        id: 'combat_mutant_bridge',
+        name: 'Продолжение боя',
+        type: 'combat',
+        description: 'Бой продолжается...',
+        onEnter: (player) => {
+            // CombatManager сам будет управлять логикой и отображением опций
+            // Просто убедимся, что он активен и продолжает бой
+            if (window.combatManager.currentEnemy) {
+                window.combatManager.displayCombatOptions();
+            } else {
+                // Если сюда попали без активного боя (например, перезагрузка)
+                window.addGameLog('[ПРЕДУПРЕЖДЕНИЕ] Попытка продолжить бой без активного противника. Возврат на окраину.');
+                window.loadScene('outside_area_entrance');
+            }
+        },
+        options: [] // Опции будут генерироваться CombatManager
     },
     'explore_city_outskirts': {
         id: 'explore_city_outskirts',
@@ -236,19 +238,23 @@ const GameScenes = {
             player.adjustFatigue(10);
             player.adjustHunger(5);
             player.adjustThirst(5);
+            player.gainSkillExp('scavenging', 1);
 
             let foundItems = [];
             if (Math.random() < 0.4) { // 40% шанс найти что-то
-                let randomItem = ['scraps_metal', 'scraps_wood', 'cloth_scraps', 'canned_food', 'water_bottle'][Math.floor(Math.random() * 5)];
-                let quantity = Math.floor(Math.random() * 3) + 1;
+                const possibleItems = ['scraps_metal', 'scraps_wood', 'cloth_scraps', 'canned_food', 'water_bottle'];
+                const randomItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
+                const quantity = Math.floor(Math.random() * 3) + 1;
                 player.addItem(randomItem, quantity);
                 foundItems.push(`${GameItems[randomItem].name} (x${quantity})`);
             }
 
             if (foundItems.length > 0) {
                 GameScenes.scavenge_nearby.description = `Вы нашли: ${foundItems.join(', ')}.`;
+                window.addGameLog(`Обнаружены ресурсы: ${foundItems.join(', ')}.`);
             } else {
                 GameScenes.scavenge_nearby.description = 'К сожалению, ничего ценного найти не удалось, лишь мусор. Зря потратили время.';
+                window.addGameLog('Поиск не дал результатов.');
             }
         },
         options: [
@@ -256,27 +262,112 @@ const GameScenes = {
             { text: 'Вернуться на окраину', nextScene: 'outside_area_entrance' }
         ]
     },
+    'find_shelter_area': {
+        id: 'find_shelter_area',
+        name: 'Поиск места для убежища',
+        type: 'quest',
+        description: 'Вы бродите по окраинам, ища подходящее место для создания постоянного убежища. Вдалеке вы видите здание, похожее на старый склад, которое кажется относительно целым.',
+        options: [
+            { text: 'Идти к старому складу', nextScene: 'old_warehouse_entrance' },
+            { text: 'Продолжить поиски более безопасного места', nextScene: 'outside_area_entrance' } // Возвращаемся
+        ],
+        onEnter: (player) => {
+            player.currentLocation = 'find_shelter_area';
+        }
+    },
+    'old_warehouse_entrance': {
+        id: 'old_warehouse_entrance',
+        name: 'Вход в старый склад',
+        type: 'location',
+        description: 'Вы подошли к старому складу. Его ворота слегка приоткрыты, а внутри царит мрак. Кажется, место заброшено, но в нем может быть что-то ценное... или опасное.',
+        options: [
+            { text: 'Войти внутрь склада', customAction: () => {
+                // Пример: Вход на склад, который станет убежищем
+                window.gameState.community.buildFacility('shelter_level', 1); // Увеличиваем уровень убежища
+                window.gameState.community.addSurvivors(0); // Игрок теперь "в общине"
+                window.addGameLog('Вы нашли подходящее место для убежища!');
+                window.loadScene('warehouse_interior');
+            }},
+            { text: 'Отойти от склада', nextScene: 'find_shelter_area' }
+        ],
+        onEnter: (player, community) => {
+            player.currentLocation = 'old_warehouse_entrance';
+            // Если убежище уже построено, изменить опции
+            if (community.facilities.shelter_level > 0) {
+                GameScenes.old_warehouse_entrance.description = 'Вы у входа в свое убежище - старый склад.';
+                GameScenes.old_warehouse_entrance.options = [
+                    { text: 'Войти в убежище', nextScene: 'warehouse_interior' }
+                ];
+            }
+        }
+    },
+    'warehouse_interior': {
+        id: 'warehouse_interior',
+        name: 'Внутри убежища (Склад)',
+        type: 'community_hub',
+        description: 'Вы внутри старого склада, который теперь является вашим убежищем. Здесь относительно безопасно. Вы можете начать обустраиваться.',
+        options: [
+            { text: 'Осмотреть склад', nextScene: 'warehouse_scavenge' },
+            { text: 'Завершить день (перейти к следующему дню)', customAction: () => {
+                window.nextGameDay();
+                window.loadScene('warehouse_interior', false); // После дня остаемся здесь
+            }},
+            { text: 'Покинуть убежище (вернуться на окраину)', nextScene: 'outside_area_entrance' }
+        ],
+        onEnter: (player) => {
+            player.currentLocation = 'warehouse_interior';
+            window.addGameLog('Добро пожаловать в ваше убежище!');
+        }
+    },
+    'warehouse_scavenge': {
+        id: 'warehouse_scavenge',
+        name: 'Обыск убежища',
+        type: 'event',
+        description: 'Вы тщательно обыскиваете склад в поисках полезных вещей. Старые ящики, паллеты, пыльные углы...',
+        onEnter: (player, community) => {
+            player.adjustFatigue(5);
+            player.gainSkillExp('scavenging', 1);
 
-    // --- Место для будущих локаций и событий ---
+            let found = false;
+            // Шанс найти ресурсы для склада, а не только для игрока
+            if (Math.random() < 0.6) { // 60% шанс найти что-то на склад
+                const resourceTypes = ['materials_metal', 'materials_wood', 'food', 'water'];
+                const randomResType = resourceTypes[Math.floor(Math.random() * resourceTypes.length)];
+                const quantity = Math.floor(Math.random() * 5) + 1; // 1-5 единиц
+                community.addResource(randomResType, quantity);
+                window.addGameLog(`На складе найдено: ${quantity} ед. ${randomResType}.`);
+                found = true;
+            }
+            if (Math.random() < 0.3) { // 30% шанс найти предмет для игрока
+                const playerItems = ['pistol_ammo', 'bandages', 'fuel_can'];
+                const randomPlayerItem = playerItems[Math.floor(Math.random() * playerItems.length)];
+                player.addItem(randomPlayerItem, 1);
+                window.addGameLog(`Вы нашли: ${GameItems[randomPlayerItem].name}.`);
+                found = true;
+            }
+
+            if (!found) {
+                GameScenes.warehouse_scavenge.description = 'После тщательного обыска вы ничего ценного не нашли. Только пыль и паутина.';
+                window.addGameLog('Обыск склада не принес результатов.');
+            } else {
+                GameScenes.warehouse_scavenge.description = 'Вам удалось найти кое-что полезное во время обыска склада.';
+            }
+        },
+        options: [
+            { text: 'Продолжить обыск', nextScene: 'warehouse_scavenge' },
+            { text: 'Вернуться в убежище', nextScene: 'warehouse_interior' }
+        ]
+    },
+
+
+    // --- Сцены завершения игры ---
     'player_death': {
         id: 'player_death',
         name: 'Смерть',
         type: 'game_over',
         description: 'Ваш путь окончен. Вы не смогли выжить в этом суровом мире. Возможно, в следующий раз удача будет на вашей стороне.',
         options: [
-            { text: 'Начать новую игру', nextScene: 'game_start_new' }
+            { text: 'Начать новую игру', customAction: () => location.reload() } // Просто перезагружаем страницу
         ]
-    },
-    'game_start_new': {
-        id: 'game_start_new',
-        name: 'Новая игра',
-        type: 'system',
-        description: 'Начинается новый день в постапокалиптическом мире...',
-        onEnter: (player, community) => {
-            // Перезагрузка страницы или сброс состояния игры
-            location.reload();
-        },
-        options: []
     }
-    // ... другие сцены
 };
