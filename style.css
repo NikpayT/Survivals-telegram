@@ -1,35 +1,35 @@
 /* Базовые стили */
 body {
     font-family: "Lucida Console", Monaco, monospace;
-    background-color: #080808; /* Чуть светлее черного для фона */
+    background-color: #080808;
     color: #CCCCCC;
     margin: 0;
-    padding: 0; /* Убираем padding с body */
+    padding: 0;
     font-size: 14px;
-    line-height: 1.5; /* Уменьшим для компактности */
-    display: flex; /* Для футера внизу */
-    flex-direction: column; /* Для футера внизу */
-    min-height: 100vh; /* Для футера внизу */
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 #game-wrapper {
     display: flex;
-    flex-grow: 1; /* Занимает все доступное место */
+    flex-grow: 1;
     width: 100%;
-    max-width: 1200px; /* Максимальная ширина игры */
-    margin: 0 auto; /* Центрирование */
-    background-color: #000; /* Фон под сайдбаром и мейном */
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #000;
 }
 
 /* Сайдбар (левая панель навигации и статуса) */
 #sidebar {
-    width: 260px; /* Фиксированная ширина сайдбара */
+    width: 260px;
     background-color: #0e0e0e;
     padding: 15px;
     border-right: 1px solid #282828;
     display: flex;
     flex-direction: column;
-    overflow-y: auto; /* Если контента много */
+    overflow-y: auto;
 }
 
 #sidebar-header {
@@ -87,7 +87,7 @@ body {
 }
 #player-status-condensed h4, #quick-stats h4 {
     color: #00AEEF;
-    margin: 0 0 8px 0;
+    margin: 0 0 10px 0; 
     font-size: 0.95em;
     border-bottom: 1px solid #202020;
     padding-bottom: 5px;
@@ -98,16 +98,68 @@ body {
 }
 #player-status-condensed p span, #quick-stats p span {
     color: #E0E0E0;
-    float: right; /* Значения справа */
+    float: right; 
 }
+
+.status-bar-container {
+    margin-bottom: 8px;
+    font-size: 0.85em;
+    /* clear: both; */ /* Чтобы p не обтекали */
+}
+.status-bar-container .status-label {
+    display: inline-block;
+    width: 70px; 
+    color: #aaa;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.progress-bar-outer {
+    background-color: #2a2a2a; 
+    border-radius: 3px;
+    height: 16px; 
+    border: 1px solid #333;
+    position: relative; 
+    display: inline-block; 
+    width: calc(100% - 80px); 
+    vertical-align: middle;
+}
+
+.progress-bar-inner {
+    background-color: #4CAF50; 
+    height: 100%;
+    border-radius: 2px; 
+    width: 100%; 
+    transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out; 
+}
+
+.progress-bar-text {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    line-height: 16px; 
+    font-size: 0.8em; 
+    color: #fff; 
+    font-weight: bold;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.5); 
+    left: 0;
+    top: 0;
+}
+
+#health-bar-inner { background-color: #4CAF50; } 
+#hunger-bar-inner { background-color: #FFC107; } 
+#thirst-bar-inner { background-color: #03A9F4; } 
+
+.progress-bar-inner.critical { background-color: #F44336 !important; } 
+.progress-bar-inner.low { background-color: #FF9800 !important; }
 
 
 /* Основной контент (правая часть) */
 #main-content {
     flex-grow: 1;
     padding: 20px;
-    background-color: #050505; /* Очень темный фон для контента */
-    overflow-y: auto; /* Если контента много */
+    background-color: #050505;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
 }
@@ -136,11 +188,11 @@ body {
 
 
 #tab-content-area {
-    flex-grow: 1; /* Занимает доступное место перед логом */
+    flex-grow: 1;
 }
 
 .tab-content {
-    display: none; /* Скрыты по умолчанию */
+    display: none;
     animation: fadeIn 0.3s ease-in-out;
 }
 @keyframes fadeIn {
@@ -169,7 +221,6 @@ body {
     font-size: 1.1em;
 }
 
-/* Стили для кнопок действий (общие) */
 button {
     background-color: #003366;
     color: #CCDDFF;
@@ -191,12 +242,14 @@ button:disabled {
     cursor: not-allowed;
 }
 
-#build-actions.action-grid button { /* Если хотим кнопки построек в грид */
-    min-width: 200px; /* Примерная ширина кнопки */
+#build-actions.action-grid button {
+    min-width: 200px; 
     text-align: left;
+    margin-bottom: 8px; /* Для кнопок в столбик */
+    display: block; /* Чтобы занимали всю ширину, если не грид */
+    width: calc(100% - 10px); /* Минус маржины */
+    box-sizing: border-box;
 }
-/* Если просто списком, то: */
-/* #build-actions button { display: block; width: calc(100% - 10px); margin-bottom: 8px; text-align: left; } */
 
 
 #event-text-display {
@@ -216,13 +269,13 @@ button:disabled {
 
 /* Лог событий */
 #log-panel-container {
-    margin-top: auto; /* Прижимает лог к низу main-content */
-    padding-top: 15px; /* Отступ сверху, если #tab-content-area короткое */
+    margin-top: auto;
+    padding-top: 15px;
 }
 #log-panel {
     background-color: #0a0a0a;
     border: 1px solid #282828;
-    padding: 0; /* Убираем padding, т.к. он будет у .log-header и #log-messages */
+    padding: 0;
 }
 .log-header {
     display: flex;
@@ -246,18 +299,18 @@ button:disabled {
 }
 
 #log-messages {
-    max-height: 150px; /* Уменьшим стандартную высоту */
+    max-height: 150px;
     overflow-y: auto;
-    padding: 10px; /* Внутренний отступ для сообщений */
+    padding: 10px;
     background-color: #000000;
     font-size: 0.9em;
-    transition: max-height 0.3s ease-in-out; /* Для плавного скрытия/показа */
+    transition: max-height 0.3s ease-in-out;
 }
 #log-messages.hidden {
     max-height: 0;
     padding-top: 0;
     padding-bottom: 0;
-    border-top: none; /* Если есть верхняя граница у log-messages */
+    border-top: none;
     overflow: hidden;
 }
 #log-messages p {
@@ -268,7 +321,7 @@ button:disabled {
 #log-messages p:last-child { border-bottom: none; }
 
 
-/* Модальное окно Инвентаря (остается почти без изменений, возможно, чуть подправить цвета) */
+/* Модальное окно Инвентаря */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
 .modal-content { background-color: #0c0c0c; margin: 5% auto; padding: 20px; border: 1px solid #333; width: 90%; max-width: 700px; color: #ccc; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .modal-content h2 { color: #00AEEF; border-bottom: 1px solid #222; padding-bottom: 10px; margin-top: 0; }
@@ -305,17 +358,60 @@ footer button {
 footer button:hover { background-color: #660000; }
 #game-version { margin: 5px 0 0 0; }
 
-/* Стили для сообщений разных типов в логе (остаются) */
+
+/* Стили для всплывающих подсказок (Tooltips) */
+.tooltip-host {
+    position: relative; 
+    /* display: inline-block;  Убрал, т.к. кнопки строительства уже block */
+}
+
+.tooltip-text {
+    visibility: hidden;
+    width: auto; 
+    min-width: 180px; 
+    max-width: 300px; 
+    background-color: #222; 
+    color: #fff; 
+    text-align: left; 
+    border-radius: 4px;
+    padding: 8px 10px;
+    border: 1px solid #444;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    position: absolute;
+    z-index: 1001; 
+    bottom: 110%; /* Чуть выше от хоста */
+    left: 50%;
+    transform: translateX(-50%); 
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    font-size: 0.85em; 
+    line-height: 1.4;
+}
+
+.tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%; 
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #222 transparent transparent transparent; 
+}
+
+.tooltip-host:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Стили для сообщений разных типов в логе */
 .event-positive { color: #88CC88; }
 .event-negative { color: #FF6666; }
 .event-neutral { color: #AAAAAA; }
 .event-discovery { color: #88AAFF; }
 .event-warning { color: #FFCC00; }
 
-/* Статусы игрока (остаются) */
+/* Статусы игрока (текстовые, если где-то остались) */
 .status-ok { color: #88CC88; }
 .status-needed { color: #FFCC00; }
 .status-critical { color: #FF6666; font-weight: bold; }
-
-/* Добавим фильтры для инвентаря: Оружие, Броня */
-/* (в items.js пока нет таких предметов, но фильтры будут готовы) */
