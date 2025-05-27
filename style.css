@@ -1,8 +1,8 @@
 /* Стилизация в духе m.xaos.mobi */
 body {
-    font-family: "Lucida Console", Monaco, monospace; /* Моноширинный шрифт для "текстового" вида */
-    background-color: #000000; /* Черный фон */
-    color: #CCCCCC; /* Светло-серый текст */
+    font-family: "Lucida Console", Monaco, monospace;
+    background-color: #000000;
+    color: #CCCCCC;
     margin: 0;
     padding: 10px;
     font-size: 14px;
@@ -10,38 +10,64 @@ body {
 }
 
 #game-container {
-    background-color: #111111; /* Очень темный фон для контейнера */
-    border: 1px solid #333333; /* Темно-серая граница */
+    background-color: #111111;
+    border: 1px solid #333333;
     margin: 0 auto;
     padding: 15px;
     width: 100%;
-    max-width: 700px; /* Ограничим ширину для лучшей читаемости */
+    max-width: 750px; /* Немного увеличим для вкладок */
     box-sizing: border-box;
 }
 
-header h1 {
-    color: #FFFFFF; /* Белый заголовок */
-    text-align: center;
-    margin-bottom: 20px;
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     border-bottom: 1px solid #444444;
     padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    color: #FFFFFF;
+    margin: 0; /* Убрали лишние отступы */
     font-size: 1.5em;
 }
 
+.header-button {
+    background-color: #004488;
+    color: #CCDDFF;
+    border: 1px solid #0066CC;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+.header-button:hover {
+    background-color: #0055A0;
+}
+
+
 .panel {
-    background-color: #0a0a0a; /* Чуть светлее основного фона для панелей */
+    background-color: #0a0a0a;
     padding: 10px 15px;
     margin-bottom: 15px;
-    border: 1px solid #282828; /* Границы панелей */
+    border: 1px solid #282828;
 }
 
 .panel h2, .panel h3 {
-    color: #00AEEF; /* Ярко-синий для заголовков секций (акцентный цвет Xaos) */
+    color: #00AEEF;
     margin-top: 0;
     border-bottom: 1px solid #222222;
     padding-bottom: 8px;
     font-size: 1.2em;
 }
+.panel h3 {
+    font-size: 1.1em;
+    color: #0088CC;
+    margin-top: 15px;
+}
+
 
 #stats-panel p {
     margin: 8px 0;
@@ -49,22 +75,22 @@ header h1 {
 
 #stats-panel p span {
     font-weight: bold;
-    color: #E0E0E0; /* Чуть ярче для значений */
+    color: #E0E0E0;
 }
 
 #log-messages {
-    max-height: 200px; /* Увеличим немного */
+    max-height: 200px;
     overflow-y: auto;
     border: 1px solid #222222;
     padding: 10px;
-    background-color: #000000; /* Черный фон для лога */
+    background-color: #000000;
     margin-top: 10px;
 }
 
 #log-messages p {
     margin: 0 0 5px 0;
     padding-bottom: 5px;
-    border-bottom: 1px dotted #333333; /* Пунктирная линия для разделения */
+    border-bottom: 1px dotted #333333;
     font-size: 0.95em;
 }
 #log-messages p:last-child {
@@ -72,44 +98,44 @@ header h1 {
 }
 
 button, .inline-action-button {
-    background-color: #003366; /* Темно-синий фон для кнопок */
-    color: #CCDDFF; /* Светло-синий текст на кнопках */
-    border: 1px solid #0055AA; /* Синяя граница */
+    background-color: #003366;
+    color: #CCDDFF;
+    border: 1px solid #0055AA;
     padding: 8px 12px;
     margin: 5px;
     cursor: pointer;
-    font-family: inherit; /* Наследуем моноширинный шрифт */
+    font-family: inherit;
     font-size: 0.95em;
-    text-decoration: none; /* Убираем подчеркивание если это ссылка */
-    display: inline-block; /* Чтобы margin работал как надо */
+    text-decoration: none;
+    display: inline-block;
 }
 
 button:hover, .inline-action-button:hover {
-    background-color: #004488; /* Чуть светлее при наведении */
+    background-color: #004488;
     border-color: #0077CC;
 }
 
 button:disabled, .inline-action-button:disabled {
-    background-color: #222222; /* Темно-серый для неактивных */
+    background-color: #222222;
     color: #555555;
     border-color: #333333;
     cursor: not-allowed;
 }
 
 .inline-action-button {
-    padding: 4px 8px; /* Меньше отступы для кнопок в строке */
+    padding: 4px 8px;
     margin-left: 10px;
 }
 
 #build-actions button {
-    display: block; /* Кнопки строительства в столбик */
-    width: calc(100% - 10px); /* Занимают почти всю ширину */
+    display: block;
+    width: calc(100% - 10px);
     margin-bottom: 8px;
     text-align: left;
 }
 
 #event-actions button {
-     background-color: #660000; /* Красный для кнопок событий */
+     background-color: #660000;
      border-color: #990000;
      color: #FFCCCC;
 }
@@ -118,20 +144,172 @@ button:disabled, .inline-action-button:disabled {
     border-color: #BB0000;
 }
 
+/* Стили для вкладок */
+.tabs {
+    overflow: hidden;
+    border-bottom: 1px solid #282828;
+    margin-bottom: 10px;
+}
+
+.tab-link {
+    background-color: #1a1a1a;
+    color: #00AEEF;
+    float: left;
+    border: 1px solid #282828;
+    border-bottom: none;
+    outline: none;
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: 0.3s;
+    font-size: 0.9em;
+    margin:0 2px -1px 0; /* Убираем двойные границы и выравниваем по нижней */
+}
+
+.tab-link:hover {
+    background-color: #222;
+}
+
+.tab-link.active {
+    background-color: #0a0a0a; /* Такой же как у панели .panel */
+    border-bottom: 1px solid #0a0a0a; /* Скрываем нижнюю границу активной вкладки */
+    color: #FFFFFF;
+}
+
+.tab-content {
+    display: none;
+    padding: 6px 0; /* Уменьшим padding */
+    /* border-top: none; */ /* Не нужна, т.к. граница у .tabs */
+}
+
+
+/* Стили для модального окна инвентаря */
+.modal {
+    display: none; /* Скрыто по умолчанию */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.7); /* Полупрозрачный фон */
+}
+
+.modal-content {
+    background-color: #0c0c0c;
+    margin: 5% auto; /* Центрирование и отступ сверху */
+    padding: 20px;
+    border: 1px solid #333;
+    width: 80%;
+    max-width: 650px;
+    color: #ccc;
+    position: relative;
+}
+
+.modal-content h2 {
+    color: #00AEEF;
+    border-bottom: 1px solid #222;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.inventory-filters {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #222;
+}
+.inventory-filters button {
+    background-color: #1a1a1a;
+    color: #00AEEF;
+    font-size: 0.85em;
+    padding: 5px 8px;
+    margin: 2px;
+    border: 1px solid #333;
+}
+.inventory-filters button.active {
+    background-color: #004488;
+    color: #fff;
+    border-color: #0066CC;
+}
+
+
+#inventory-items-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.inventory-item {
+    background-color: #181818;
+    border: 1px solid #2a2a2a;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.inventory-item:hover {
+    background-color: #202020;
+    border-color: #444;
+}
+
+.item-info {
+    flex-grow: 1;
+}
+.item-info h4 {
+    margin: 0 0 3px 0;
+    color: #eee;
+    font-size: 1em;
+}
+.item-info p {
+    margin: 0;
+    font-size: 0.85em;
+    color: #999;
+}
+.item-info .item-quantity {
+    color: #00AEEF;
+    font-weight: bold;
+}
+
+.item-actions button {
+    font-size: 0.8em;
+    padding: 4px 6px;
+    margin-left: 5px;
+}
+
 
 /* Стили для сообщений разных типов в логе */
-.event-positive { color: #88CC88; } /* Светло-зеленый */
-.event-negative { color: #FF6666; } /* Светло-красный */
-.event-neutral { color: #AAAAAA; } /* Серый */
-.event-discovery { color: #88AAFF; } /* Светло-голубой (исследования) */
-.event-warning { color: #FFCC00; } /* Желтый для предупреждений */
+.event-positive { color: #88CC88; }
+.event-negative { color: #FF6666; }
+.event-neutral { color: #AAAAAA; }
+.event-discovery { color: #88AAFF; }
+.event-warning { color: #FFCC00; }
 
-#fed-status, #watered-status {
-    margin-left: 5px;
-    font-style: italic;
-}
+#fed-status, #watered-status { margin-left: 5px; font-style: italic; }
 .status-ok { color: #88CC88; }
 .status-needed { color: #FFCC00; }
+.status-critical { color: #FF6666; font-weight: bold; }
+
+#hunger-status, #thirst-status, #health-status, #player-condition {
+    /* Можно добавить специфичные стили если надо */
+}
+
 
 footer {
     text-align: center;
@@ -145,7 +323,7 @@ footer button {
     background-color: #440000;
     border-color: #770000;
     color: #FFAAAA;
-    font-size: 0.9em; /* Поменьше чем основные */
+    font-size: 0.9em;
 }
 footer button:hover {
     background-color: #660000;
