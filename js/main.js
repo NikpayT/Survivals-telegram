@@ -1,7 +1,7 @@
 // js/main.js - Основной файл для инициализации игры и управления глобальным состоянием
 
 // Глобальная переменная для версии игры
-const GAME_VERSION = "0.0.2"; // Устанавливаем текущую версию игры
+const GAME_VERSION = "0.0.1"; // Устанавливаем текущую версию игры
 
 // Глобальный объект для хранения состояния игры
 // Доступен по всему приложению через window.gameState
@@ -12,6 +12,7 @@ window.gameState = {
     currentSceneId: 'abandoned_building_start', // ID текущей сцены
     gameDay: 1,      // Текущий игровой день
     gameLog: [],     // Игровой лог для сообщений (будет заполняться UIManager)
+    isGameOver: false, // НОВОЕ: Флаг для отслеживания состояния Game Over
     // Дополнительные игровые состояния, если нужны
 };
 
@@ -23,6 +24,12 @@ window.gameState = {
  * @param {string} message - Сообщение для добавления.
  */
 window.addGameLog = function(message) {
+    // Если игра уже закончилась, не добавляем новые логи, чтобы избежать спама
+    if (window.gameState.isGameOver) {
+        // Можно добавить консольный лог для отладки
+        // console.log(`[GAME OVER LOG BLOCKED] ${message}`);
+        return;
+    }
     // Проверяем, что uiManager и его метод addGameLog доступны
     if (window.uiManager && typeof window.uiManager.addGameLog === 'function') {
         window.uiManager.addGameLog(message);
@@ -38,10 +45,20 @@ window.addGameLog = function(message) {
  * @param {boolean} triggerOnEnter - Вызывать ли onEnter для сцены. По умолчанию true.
  */
 window.loadScene = function(sceneId, triggerOnEnter = true) {
+    // Если игра уже закончилась, не загружаем новые сцены (кроме сцены смерти)
+    if (window.gameState.isGameOver && sceneId !== 'player_death') {
+        console.warn(`loadScene: Попытка загрузить сцену "${sceneId}" после Game Over. Игнорируется.`);
+        return;
+    }
+
     const scene = GameScenes[sceneId];
     if (!scene) {
         window.addGameLog(`Ошибка: Сцена с ID "${sceneId}" не найдена! Переход к сцене смерти.`);
-        window.loadScene('player_death', false); // Переход к сцене ошибки или game over
+        // Загружаем сцену смерти, если запрошенной сцены нет
+        if (!window.gameState.isGameOver) { // Чтобы не вызывать бесконечную рекурсию
+            window.gameState.isGameOver = true;
+            window.loadScene('player_death', false); 
+        }
         return;
     }
 
@@ -64,6 +81,11 @@ window.loadScene = function(sceneId, triggerOnEnter = true) {
     const displayableOptions = scene.options.map(option => ({
         text: option.text,
         action: () => {
+            // Если игра окончена, кнопки опций не должны работать, кроме тех, что на сцене Game Over
+            if (window.gameState.isGameOver && sceneId !== 'player_death') {
+                return;
+            }
+
             // Если опция ведет к новой сцене, просто загружаем её
             if (option.nextScene) {
                 window.loadScene(option.nextScene);
@@ -85,13 +107,19 @@ window.loadScene = function(sceneId, triggerOnEnter = true) {
     }));
     window.uiManager.displayOptions(displayableOptions);
 
-    // Проверяем условия Game Over после загрузки сцены
-    checkGameOverConditions();
     window.uiManager.updateAllStatus(); // Убеждаемся, что статус всегда актуален
+
+    // НОВОЕ: Проверяем условия Game Over после загрузки сцены
+    // Если Game Over, устанавливаем флаг и загружаем сцену смерти один раз
+    if (checkGameOverConditions() && !window.gameState.isGameOver) {
+        window.gameState.isGameOver = true;
+        window.loadScene('player_death', false); 
+    }
 };
 
 /**
  * Проверяет условия завершения игры (Game Over).
+ * Возвращает true, если игра должна закончиться.
  */
 function checkGameOverConditions() {
     const player = window.gameState.player;
@@ -99,21 +127,28 @@ function checkGameOverConditions() {
 
     if (!player || !community) {
         console.warn("checkGameOverConditions: player или community не инициализированы.");
-        return false;
+        return false; // Не можем проверить, если нет данных
     }
 
     if (player.health <= 0) {
         window.addGameLog('Ваше здоровье иссякло. Вы не смогли больше бороться. Это конец вашего пути.');
-        window.loadScene('player_death', false); // Загружаем сцену смерти без повторного onEnter
-        return true;
+        return true; // Игра окончена
     }
+    
     // Если выживших в общине нет (кроме самого игрока) И игрок не погиб
-    // Добавлено условие, что убежище должно быть разрушено, иначе можно просто умереть от голода/жажды и община будет жива
+    // ИЛИ убежище разрушено, и выживших мало
     if (community.survivors <= 1 && player.health > 0 && community.facilities.shelter_level === 0) {
         window.addGameLog('Ваше убежище разрушено, а община погибла. Вы остались один, без надежды на восстановление.');
-        window.loadScene('player_death', false); // Можно сделать отдельную сцену "Одинокий конец"
+        return true; // Игра окончена
+    }
+    
+    // Если община полностью уничтожена (нет никого, даже игрока не должно быть в этой ветке, так как его здоровье > 0)
+    if (community.survivors <= 0 && player.health > 0 && community.facilities.shelter_level < 1) { // Если нет убежища и нет выживших, кроме игрока
+        window.addGameLog('Ваша община полностью истреблена. Вы остались в одиночестве.');
         return true;
     }
+
+    // Если игра еще не закончилась
     return false;
 }
 
@@ -122,6 +157,12 @@ function checkGameOverConditions() {
  * Вызывается по триггеру (например, кнопка "Отдохнуть" или событие).
  */
 window.nextGameDay = function() {
+    // Если игра уже закончилась, не переходим к следующему дню
+    if (window.gameState.isGameOver) {
+        window.addGameLog('Игра окончена. Нельзя перейти к следующему дню.');
+        return;
+    }
+
     window.gameState.gameDay++;
     window.addGameLog(`Наступил день ${window.gameState.gameDay}.`);
 
@@ -146,12 +187,15 @@ window.nextGameDay = function() {
         console.error("UIManager.updateAllStatus не найден или не является функцией.");
     }
 
-    // Загружаем текущую сцену заново, чтобы обновились опции
-    // (например, если какие-то действия стали доступны/недоступны)
-    window.loadScene(window.gameState.currentSceneId, false); // false, чтобы не вызывать onEnter снова
+    // НОВОЕ: Проверяем условия Game Over после всех ежедневных событий
+    if (checkGameOverConditions() && !window.gameState.isGameOver) {
+        window.gameState.isGameOver = true;
+        window.loadScene('player_death', false); 
+        return; // Прекращаем выполнение дня, если Game Over
+    }
 
-    // Проверяем условия Game Over после всех ежедневных событий
-    checkGameOverConditions();
+    // Загружаем текущую сцену заново, чтобы обновились опции
+    window.loadScene(window.gameState.currentSceneId, false); // false, чтобы не вызывать onEnter снова
 };
 
 
@@ -159,11 +203,11 @@ window.nextGameDay = function() {
 document.addEventListener('DOMContentLoaded', () => {
     // Инициализируем UIManager первым делом!
     // Его методы используются другими менеджерами и функциями
-    if (typeof UIManager !== 'undefined') { // Проверка, что UIManager объект загружен
+    if (typeof UIManager !== 'undefined' && typeof window.uiManager !== 'undefined') { // Проверка, что UIManager объект загружен
         window.uiManager.init(); 
         window.addGameLog('Игра загружена! Инициализация...');
     } else {
-        console.error("UIManager не загружен. Убедитесь, что uiManager.js подключен до main.js.");
+        console.error("UIManager не загружен или не доступен. Убедитесь, что uiManager.js подключен до main.js.");
         return; // Прекращаем выполнение, если UI Manager не доступен
     }
 
