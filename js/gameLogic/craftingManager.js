@@ -35,9 +35,10 @@ class CraftingManager {
 
         // Проверка ресурсов общины
         for (const itemId in recipe.communityIngredients) {
-            // Используем hasResourceOrItem для универсальности
-            if (!community.removeResourceOrItem(itemId, recipe.communityIngredients[itemId], true)) { // true для проверки без удаления
-                return false;
+            // Используем removeResourceOrItem с параметром checkOnly = true для проверки без удаления
+            // Если itemData не существует, removeItemFromCommunity уже выведет предупреждение.
+            if (!window.inventoryManager.removeItemFromCommunity(itemId, recipe.communityIngredients[itemId], true)) {
+                 return false;
             }
         }
         return true;
@@ -71,14 +72,19 @@ class CraftingManager {
             return false;
         }
 
-        if (recipe.output.to === 'player') {
+        // НОВОЕ: Проверка на recipe.output.to
+        const outputDestination = recipe.output.to || 'player'; // По умолчанию в инвентарь игрока
+
+        if (outputDestination === 'player') {
             player.addItem(recipe.output.itemId, recipe.output.quantity);
             window.addGameLog(`Вы создали ${recipe.output.quantity} ${outputItemData.name}.`);
-        } else if (recipe.output.to === 'community') {
+        } else if (outputDestination === 'community') {
             community.addResourceOrItem(recipe.output.itemId, recipe.output.quantity);
             window.addGameLog(`Община создала ${recipe.output.quantity} ${outputItemData.name}.`);
         } else {
-            console.warn(`CraftingManager: Неизвестное место назначения для созданного предмета: ${recipe.output.to}`);
+            // Эта ветка должна быть практически недостижима после добавления значения по умолчанию
+            console.warn(`CraftingManager: Неизвестное место назначения для созданного предмета: ${recipe.output.to}. Предмет добавлен игроку.`);
+            player.addItem(recipe.output.itemId, recipe.output.quantity);
         }
 
         window.uiManager.updateAllStatus(); // Обновляем статус после крафта
@@ -127,7 +133,7 @@ class CraftingManager {
 
             recipeDiv.innerHTML = `
                 <h4>${recipe.name}</h4>
-                <p>Выход: ${outputItemName} x${recipe.output.quantity} (${recipe.output.to === 'player' ? 'в ваш инвентарь' : 'на склад общины'})</p>
+                <p>Выход: ${outputItemName} x${recipe.output.quantity} (${(recipe.output.to || 'player') === 'player' ? 'в ваш инвентарь' : 'на склад общины'})</p>
                 <p>Ингредиенты: ${ingredientsHtml || 'Нет'}</p>
                 <button class="craft-button" ${canCraft ? '' : 'disabled'}>Создать</button>
             `;
