@@ -20,16 +20,15 @@ const ITEM_DEFINITIONS = {
         weight: 0.2,
         stackable: true,
     },
-    // --- НОВЫЙ РЕСУРС ЕДЫ ---
     mutated_fruit: {
         id: "mutated_fruit",
         name: "Мутировавший фрукт",
         description: "Странного вида фрукт, возможно, съедобный. Слегка фонит.",
         type: "food",
-        effect: { hunger: 15, radiation: 5 }, // Добавляет немного радиации (механика пока не введена)
+        effect: { hunger: 15, radiation: 5 }, 
         weight: 0.3,
         stackable: true,
-        locationSpecific: ["small_forest_edge", "irradiated_zone"] // Пример, где чаще встречается
+        locationSpecific: ["small_forest_edge", "irradiated_zone"] 
     },
 
     // --- ВОДА ---
@@ -52,7 +51,7 @@ const ITEM_DEFINITIONS = {
         stackable: true,
     },
 
-    // --- МАТЕРИАЛЫ (старые) ---
+    // --- МАТЕРИАЛЫ ---
     scrap_metal: {
         id: "scrap_metal",
         name: "Металлолом",
@@ -85,7 +84,6 @@ const ITEM_DEFINITIONS = {
         weight: 0.1,
         stackable: true,
     },
-    // --- НОВЫЕ РЕСУРСЫ МАТЕРИАЛОВ ---
     chemicals: {
         id: "chemicals",
         name: "Химикаты",
@@ -108,11 +106,30 @@ const ITEM_DEFINITIONS = {
         id: "wires",
         name: "Провода",
         description: "Моток тонких проводов, выдранных из старой техники.",
-        type: "material", // Можно сделать подтипом компонентов
+        type: "material", 
         weight: 0.05,
         stackable: true,
         locationSpecific: ["urban_ruins", "gas_station_ruins"]
     },
+    broken_electronics: {
+        id: "broken_electronics",
+        name: "Сломанная электроника",
+        description: "Нерабочий электронный прибор. Можно разобрать на компоненты или провода.",
+        type: "material", 
+        weight: 0.8,
+        stackable: true,
+        locationSpecific: ["urban_ruins", "abandoned_road"]
+    },
+    healing_herbs: {
+        id: "healing_herbs",
+        name: "Целебные травы",
+        description: "Пучок высушенных трав с легким лекарственным запахом. Можно использовать для приготовления отваров.",
+        type: "material", 
+        weight: 0.05,
+        stackable: true,
+        locationSpecific: ["small_forest_edge", " overgrown_park"]
+    },
+
 
     // --- МЕДИКАМЕНТЫ ---
     bandages_crude: {
@@ -124,12 +141,22 @@ const ITEM_DEFINITIONS = {
         weight: 0.1,
         stackable: true,
     },
+    // НОВЫЙ ПРЕДМЕТ
+    bandages_clean: {
+        id: "bandages_clean",
+        name: "Чистые бинты",
+        description: "Аккуратно сделанные бинты из чистой ткани с антисептиком. Снижают риск инфекции.",
+        type: "medicine",
+        effect: { healing: 20, infection_chance: 0.01 }, // Лечат лучше, шанс инфекции минимален
+        weight: 0.1,
+        stackable: true,
+    },
     antiseptic: {
         id: "antiseptic",
         name: "Антисептик",
         description: "Для обработки ран и предотвращения инфекций.",
         type: "medicine",
-        effect: { prevent_infection: true },
+        effect: { prevent_infection: true }, // Можно использовать для улучшения бинтов или отдельно
         weight: 0.2,
         stackable: true,
     },
@@ -142,17 +169,7 @@ const ITEM_DEFINITIONS = {
         weight: 0.1,
         stackable: false, 
     },
-    // --- НОВЫЙ РЕСУРС МЕДИЦИНСКИЙ/ТРАВЫ ---
-    healing_herbs: {
-        id: "healing_herbs",
-        name: "Целебные травы",
-        description: "Пучок высушенных трав с легким лекарственным запахом. Можно использовать для приготовления отваров.",
-        type: "material", // Или "medicine_ingredient"
-        weight: 0.05,
-        stackable: true,
-        locationSpecific: ["small_forest_edge", " overgrown_park"]
-    },
-
+    
     // --- ИНСТРУМЕНТЫ ---
     tool_hammer: {
         id: "tool_hammer",
@@ -161,16 +178,6 @@ const ITEM_DEFINITIONS = {
         type: "tool",
         weight: 1.0,
         stackable: false,
-    },
-    // --- НОВЫЙ ИНСТРУМЕНТ/РЕСУРС ---
-    broken_electronics: {
-        id: "broken_electronics",
-        name: "Сломанная электроника",
-        description: "Нерабочий электронный прибор. Можно разобрать на компоненты или провода.",
-        type: "material", // Можно разбирать на "components" и "wires" через крафт
-        weight: 0.8,
-        stackable: true,
-        locationSpecific: ["urban_ruins", "abandoned_road"]
     },
     
     // --- ОСОБЫЕ/КВЕСТОВЫЕ ---
