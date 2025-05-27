@@ -126,7 +126,7 @@
                     <h2>Разведка Местности</h2>
                     <div class="action-group">
                         <h3>Действия на текущей локации: <span id="current-location-name">Окрестности Базы</span></h3>
-                        <button id="scout-current-location-button" onclick="game.exploreCurrentLocationAction('search')">Обыскать (<span id="current-location-time">1</span> д.)</button>
+                        <button id="scout-current-location-button" onclick="LocationManager.exploreCurrentLocationAction('search')">Обыскать (<span id="current-location-time">1</span> д.)</button>
                         <p id="current-location-description">Это ваша база и ближайшие окрестности.</p>
                     </div>
 
@@ -135,7 +135,7 @@
                         <div id="discovered-locations-list">
                             <p><em>Используйте "Разведать новые территории", чтобы найти новые места.</em></p>
                         </div>
-                         <button id="discover-new-location-button" onclick="game.discoverNewLocationAction()">Разведать новые территории (1 д.)</button>
+                         <button id="discover-new-location-button" onclick="LocationManager.discoverNewLocationAction()">Разведать новые территории (1 д.)</button>
                     </div>
                 </div>
 
@@ -164,7 +164,7 @@
 
     <div id="inventory-modal" class="modal"> 
         <div class="modal-content">
-            <span class="close-button" onclick="game.closeInventoryModal()">×</span>
+            <span class="close-button" onclick="InventoryManager.closeInventoryModal()">×</span>
             <h2>Инвентарь Игрока (<span id="inventory-weight">0</span> / <span id="inventory-max-weight">25</span> кг)</h2>
             <div class="inventory-filters player-inventory-filters"> 
                 <button data-filter="all" class="active">Все</button>
@@ -192,6 +192,10 @@
     <script src="recipes.js"></script> 
     <script src="game_state.js"></script> 
     <script src="dom_elements.js"></script> 
+    <script src="ui_manager.js"></script> 
+    <script src="inventory_manager.js"></script> 
+    <script src="location_manager.js"></script> 
+    <script src="event_manager.js"></script> 
     <script src="script.js"></script> 
 </body>
 </html>
