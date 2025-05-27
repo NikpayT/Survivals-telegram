@@ -85,9 +85,18 @@
 
                 <div id="explore-tab" class="tab-content">
                     <h2>Разведка Местности</h2>
-                    <button onclick="game.scoutArea()">Разведать окрестности (1 день)</button>
-                    <div id="discovered-locations">
-                        <p><em>Пока нет известных локаций для исследования.</em></p>
+                    <div class="action-group">
+                        <h3>Действия на текущей локации: <span id="current-location-name">Окрестности Базы</span></h3>
+                        <button id="scout-current-location-button" onclick="game.exploreCurrentLocationAction('search')">Обыскать (<span id="current-location-time">1</span> д.)</button>
+                        <p id="current-location-description">Это ваша база и ближайшие окрестности.</p>
+                    </div>
+
+                    <div class="action-group">
+                        <h3>Известные Локации</h3>
+                        <div id="discovered-locations-list">
+                            <p><em>Используйте "Разведать новые территории", чтобы найти новые места.</em></p>
+                        </div>
+                         <button id="discover-new-location-button" onclick="game.discoverNewLocationAction()">Разведать новые территории (1 д.)</button>
                     </div>
                 </div>
 
@@ -139,6 +148,7 @@
 
     <script src="items.js"></script>
     <script src="buildings.js"></script>
+    <script src="locations.js"></script> <!-- Подключаем новый файл -->
     <script src="script.js"></script>
 </body>
 </html>
