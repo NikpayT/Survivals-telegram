@@ -1,91 +1,107 @@
-// /js/gameLogic/craftingManager.js
-// Управление системой крафта
+// js/gameLogic/craftingManager.js
 
 class CraftingManager {
     constructor() {
-        console.log('CraftingManager инициализирован.');
+        if (window.uiManager && typeof window.uiManager.addGameLog === 'function') {
+            window.uiManager.addGameLog('CraftingManager инициализирован.');
+        } else {
+            console.log('CraftingManager инициализирован (UI Manager недоступен).');
+        }
+        this.craftingRecipesElement = document.getElementById('crafting-recipes');
     }
 
-    /**
-     * Проверяет, может ли игрок скрафтить данный рецепт.
-     * @param {string} recipeId - ID рецепта.
-     * @returns {Object} - { canCraft: boolean, reason?: string }.
-     */
     canCraft(recipeId) {
-        const player = window.gameState.player;
-        const community = window.gameState.community;
-        const recipe = CraftingRecipes.find(r => r.id === recipeId);
-
+        const recipe = CraftingRecipes[recipeId];
         if (!recipe) {
-            return { canCraft: false, reason: 'Рецепт не найден.' };
+            window.uiManager.addGameLog(`Рецепт "${recipeId}" не найден.`);
+            return false;
         }
 
-        // Проверка наличия ресурсов
-        for (const ingredient of recipe.ingredients) {
-            if (!player.hasItem(ingredient.itemId, ingredient.quantity)) {
-                return { canCraft: false, reason: `Недостаточно ингредиента: ${GameItems[ingredient.itemId].name}` };
+        // Проверка ресурсов игрока
+        for (const itemId in recipe.playerIngredients) {
+            if (!window.gameState.player.hasItem(itemId, recipe.playerIngredients[itemId])) {
+                return false;
             }
         }
 
-        // Проверка наличия требуемой станции
-        if (recipe.requiredStation) {
-            const stationBuilt = community.facilities[`${recipe.requiredStation}_built`];
-            if (!stationBuilt) {
-                // Добавляем более читабельное название станции для сообщения
-                let stationName = recipe.requiredStation;
-                switch (recipe.requiredStation) {
-                    case 'workbench': stationName = 'Верстак'; break;
-                    case 'chemistry_station': stationName = 'Химическая станция'; break;
-                    // Добавьте другие станции
-                }
-                return { canCraft: false, reason: `Требуется постройка: ${stationName}` };
+        // Проверка ресурсов общины
+        for (const itemId in recipe.communityIngredients) {
+            if (!window.gameState.community.hasResource(itemId, recipe.communityIngredients[itemId])) {
+                return false;
             }
         }
-
-        // Проверка навыков
-        if (recipe.skillRequired) {
-            for (const skill in recipe.skillRequired) {
-                if (!player.checkSkills({ [skill]: recipe.skillRequired[skill] })) {
-                    return { canCraft: false, reason: `Недостаточен навык "${skill}" (Требуется: ${recipe.skillRequired[skill]}, Ваш: ${player.skills[skill]})` };
-                }
-            }
-        }
-
-        return { canCraft: true };
+        return true;
     }
 
-    /**
-     * Выполняет крафт предмета.
-     * @param {string} recipeId - ID рецепта.
-     * @returns {boolean} - true, если крафт успешен, false иначе.
-     */
-    craftItem(recipeId) {
-        const player = window.gameState.player;
-        const recipe = CraftingRecipes.find(r => r.id === recipeId);
-
-        if (!recipe) {
-            window.addGameLog(`[ОШИБКА КРАФТА] Рецепт "${recipeId}" не найден.`);
+    craft(recipeId) {
+        if (!this.canCraft(recipeId)) {
+            window.uiManager.addGameLog('Не хватает ресурсов для создания этого предмета.');
             return false;
         }
 
-        const check = this.canCraft(recipeId);
-        if (!check.canCraft) {
-            window.addGameLog(`[КРАФТ НЕВОЗМОЖЕН] ${check.reason}`);
-            return false;
+        const recipe = CraftingRecipes[recipeId];
+
+        // Удаляем ресурсы игрока
+        for (const itemId in recipe.playerIngredients) {
+            window.gameState.player.removeItem(itemId, recipe.playerIngredients[itemId]);
         }
 
-        // Удаляем ингредиенты
-        for (const ingredient of recipe.ingredients) {
-            player.removeItem(ingredient.itemId, ingredient.quantity);
+        // Удаляем ресурсы общины
+        for (const itemId in recipe.communityIngredients) {
+            window.gameState.community.removeResource(itemId, recipe.communityIngredients[itemId]);
         }
 
-        // Добавляем результат
-        player.addItem(recipe.output.itemId, recipe.output.quantity);
+        // Добавляем созданный предмет
+        if (recipe.output.to === 'player') {
+            window.gameState.player.addItem(recipe.output.itemId, recipe.output.quantity);
+            window.uiManager.addGameLog(`Вы создали ${recipe.output.quantity} ${GameItems[recipe.output.itemId].name}.`);
+        } else if (recipe.output.to === 'community') {
+            window.gameState.community.addResourceOrItem(recipe.output.itemId, recipe.output.quantity);
+            window.uiManager.addGameLog(`Община создала ${recipe.output.quantity} ${GameItems[recipe.output.itemId].name}.`);
+        }
 
-        // Повышаем навык крафта
-        player.gainSkillExp('crafting', Math.floor(Math.random() * 2) + 1); // +1-2 к навыку крафта
-
-        window.addGameLog(`Вы успешно создали ${recipe.output.quantity} ед. "${GameItems[recipe.output.itemId].name}"!`);
+        window.uiManager.updateAllStatus(); // Обновляем статус после крафта
+        this.displayCraftingRecipes(); // Обновляем список рецептов
         return true;
+    }
+
+    // Метод для отображения рецептов крафта в UI
+    displayCraftingRecipes() {
+        if (!this.craftingRecipesElement) {
+            console.warn("CraftingManager: Элемент для рецептов крафта не найден.");
+            return;
+        }
+        this.craftingRecipesElement.innerHTML = ''; // Очищаем старые рецепты
+
+        for (const recipeId in CraftingRecipes) {
+            const recipe = CraftingRecipes[recipeId];
+            const canCraft = this.canCraft(recipeId);
+            const recipeDiv = document.createElement('div');
+            recipeDiv.classList.add('crafting-recipe');
+            if (!canCraft) {
+                recipeDiv.classList.add('unavailable');
+            }
+
+            let ingredientsHtml = '';
+            for (const itemId in recipe.playerIngredients) {
+                ingredientsHtml += `<span>${GameItems[itemId].name} x${recipe.playerIngredients[itemId]} (ваши)</span>`;
+            }
+            for (const itemId in recipe.communityIngredients) {
+                ingredientsHtml += `<span>${GameItems[itemId].name} x${recipe.communityIngredients[itemId]} (общины)</span>`;
+            }
+
+            recipeDiv.innerHTML = `
+                <h4>${recipe.name}</h4>
+                <p>Выход: ${GameItems[recipe.output.itemId].name} x${recipe.output.quantity} (${recipe.output.to === 'player' ? 'в ваш инвентарь' : 'на склад общины'})</p>
+                <p>Ингредиенты: ${ingredientsHtml}</p>
+                <button class="craft-button" ${canCraft ? '' : 'disabled'}>Создать</button>
+            `;
+
+            const craftButton = recipeDiv.querySelector('.craft-button');
+            if (craftButton) {
+                craftButton.addEventListener('click', () => this.craft(recipeId));
+            }
+            this.craftingRecipesElement.appendChild(recipeDiv);
+        }
     }
 }
