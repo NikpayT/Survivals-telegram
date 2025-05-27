@@ -68,6 +68,24 @@
             <div id="tab-content-area">
                 <div id="main-tab" class="tab-content" style="display: block;">
                     <h2>Обзор и События</h2>
+
+                    <div class="overview-stats-container">
+                        <div class="overview-panel">
+                            <h3>Статус Игрока</h3>
+                            <p>Здоровье: <span id="overview-health">100/100</span></p>
+                            <p>Сытость: <span id="overview-hunger">Норма</span></p>
+                            <p>Жажда: <span id="overview-thirst">Норма</span></p>
+                            <p>Состояние: <span id="overview-condition">В порядке</span></p>
+                        </div>
+                        <div class="overview-panel">
+                            <h3>Статус Базы</h3>
+                            <p>День: <span id="overview-day">1</span></p>
+                            <p>Выжившие: <span id="overview-survivors">1/1</span></p>
+                            <p>Еда на складе (сытость): <span id="overview-base-food">0</span></p>
+                            <p>Вода на складе (жажда): <span id="overview-base-water">0</span></p>
+                        </div>
+                    </div>
+
                     <div class="action-group">
                         <h3>Действия Дня</h3>
                         <button onclick="game.nextDay()">Завершить день</button>
@@ -124,7 +142,7 @@
                 <div id="craft-tab" class="tab-content">
                     <h2>Изготовление Предметов</h2>
                     <p>Мастерская Ур: <span id="workshop-level-display">0</span></p>
-                    <div id="crafting-recipes-list">
+                    <div id="crafting-recipes-list" class="crafting-grid"> 
                         <p><em>Рецепты не найдены или не выполнены условия.</em></p>
                     </div>
                 </div>
@@ -171,7 +189,7 @@
     <script src="items.js"></script>
     <script src="buildings.js"></script>
     <script src="locations.js"></script>
-    <script src="recipes.js"></script> <!-- НОВЫЙ ФАЙЛ РЕЦЕПТОВ -->
+    <script src="recipes.js"></script> 
     <script src="game_state.js"></script> 
     <script src="dom_elements.js"></script> 
     <script src="script.js"></script> 
