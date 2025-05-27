@@ -5,22 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Survival Text RPG</title>
     <link rel="stylesheet" href="css/style.css">
-    {/* Закомментировано по запросу об удалении изображений - OK */}
+    <!-- Изображения и иконки не используются в этой версии игры -->
 </head>
 <body>
-    <div id="game-container"> {/* ИСПРАВЛЕНО: class на id */}
+    <div id="game-container"> {/* ИСПРАВЛЕНО: class на id в соответствии с CSS и комментариями */}
         <header id="game-header">
             <h1>Выживание: Последний Рассвет</h1>
             <p id="game-version">Версия: Загрузка...</p>
         </header>
 
-        <div class="main-content-wrapper"> {/* Дополнительная обертка для flex, если нужно */}
+        <div class="main-content-wrapper"> {/* Обертка для удобства компоновки game-area и sidebar */}
             <main class="game-area"> {/* Основной игровой контент */}
                 <div id="game-text" class="game-text-display">
                     <p>Загрузка игры...</p>
                 </div>
                 <div id="options-container" class="options-menu">
-                    {/* Кнопки опций будут генерироваться здесь */}
+                    <!-- Кнопки опций будут генерироваться здесь -->
                 </div>
             </main>
 
@@ -28,6 +28,7 @@
                 <div class="status-panel player-status-panel">
                     <h2>Ваш Статус</h2>
                     <div id="player-status">
+                        <!-- Статусы игрока без иконок -->
                         <p>Здоровье: 100/100</p>
                         <p>Выносливость: 100/100</p>
                         <p>Голод: 0%</p>
@@ -40,6 +41,7 @@
                 <div class="status-panel community-status-panel">
                     <h2>Статус Общины (День <span id="game-day-display">1</span>)</h2>
                     <div id="community-status">
+                        <!-- Статусы общины без иконок -->
                         <p>Выживших: 5</p>
                         <p>Мораль: 70/100</p>
                         <p>Безопасность: 50%</p>
@@ -68,41 +70,42 @@
                     </div>
                 </div>
             </aside>
-        </div> {/* Закрытие main-content-wrapper */}
+        </div> <!-- Закрытие main-content-wrapper -->
 
 
         <div id="game-log-container" class="game-log-container">
             <h2>Лог Событий</h2>
             <div id="game-log" class="game-log">
-                {/* Записи лога будут добавляться сюда */}
+                <!-- Записи лога будут добавляться сюда -->
             </div>
         </div>
-    </div> {/* Закрытие game-container */}
+    </div> <!-- Закрытие game-container -->
 
-    {/* --- СКРИПТЫ В ПРАВИЛЬНОМ ПОРЯДКЕ --- */}
+    <!-- --- СКРИПТЫ В ПРАВИЛЬНОМ ПОРЯДКЕ ЗАГРУЗКИ --- -->
 
-    {/* 1. Данные Игры (Определения объектов, без логики) */}
+    <!-- 1. Данные Игры (Определения объектов, без исполняемой логики при загрузке) -->
     <script src="js/gameData/items.js"></script>
     <script src="js/gameData/craftingRecipes.js"></script>
     <script src="js/gameData/factions.js"></script>
     <script src="js/gameData/scenes.js"></script>
 
-    {/* 2. Классы Сущностей (Player, Community) */}
+    <!-- 2. Классы Сущностей (Player, Community - определения классов) -->
     <script src="js/gameLogic/player.js"></script>
     <script src="js/gameLogic/community.js"></script>
 
-    {/* 3. UI Manager (Нужен многим другим менеджерам и main.js) */}
+    <!-- 3. UI Manager (Нужен многим другим менеджерам и main.js для логирования и обновления UI) -->
     <script src="js/uiManager.js"></script> 
 
-    {/* 4. Остальные Менеджеры и Игровая Логика */}
+    <!-- 4. Остальные Менеджеры и Игровая Логика -->
     <script src="js/gameLogic/inventoryManager.js"></script>
     <script src="js/gameLogic/craftingManager.js"></script>
     <script src="js/gameLogic/factionManager.js"></script>
     <script src="js/gameLogic/combatManager.js"></script>
     <script src="js/gameLogic/explorationManager.js"></script> 
-    {/* <script src="js/gameLogic/gameLoop.js"></script>  Если используется, раскомментируй */}
+    <!-- Раскомментируй gameLoop.js, если он используется -->
+    <!-- <script src="js/gameLogic/gameLoop.js"></script> -->
     
-    {/* 5. Основной скрипт игры (Инициализация и запуск) */}
+    <!-- 5. Основной скрипт игры (Инициализация всех компонентов и запуск игры) -->
     <script src="js/main.js"></script>
 </body>
 </html>
