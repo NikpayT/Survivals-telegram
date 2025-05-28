@@ -21,6 +21,7 @@ const domElements = {
     maxSurvivors: document.getElementById('max-survivors'),
     totalFoodValue: document.getElementById('total-food-value'),
     totalWaterValue: document.getElementById('total-water-value'),
+    sidebarBaseCapacityUsage: document.getElementById('sidebar-base-capacity-usage'), // НОВЫЙ ЭЛЕМЕНТ
 
     // Основной контент и вкладки
     mainContent: document.getElementById('main-content'),
@@ -38,19 +39,26 @@ const domElements = {
     overviewSurvivors: document.getElementById('overview-survivors'),
     overviewBaseFood: document.getElementById('overview-base-food'),
     overviewBaseWater: document.getElementById('overview-base-water'),
+    overviewBaseCapacityUsage: document.getElementById('overview-base-capacity-usage'), // НОВЫЙ ЭЛЕМЕНТ
     baseStructuresOverviewList: document.getElementById('base-structures-overview-list'),
 
     // Вкладка "База" (Base Tab)
     buildActions: document.getElementById('build-actions'),
-    passDayAtBaseButton: document.getElementById('pass-day-at-base-button'), // НОВАЯ КНОПКА
-    passDayProgressBarContainer: document.getElementById('pass-day-progress-bar-container'), // НОВЫЙ ЭЛЕМЕНТ
-    passDayProgressBarInner: document.getElementById('pass-day-progress-bar-inner'),     // НОВЫЙ ЭЛЕМЕНТ
-    passDayProgressBarText: document.getElementById('pass-day-progress-bar-text'),       // НОВЫЙ ЭЛЕМЕНТ
+    passDayAtBaseButton: document.getElementById('pass-day-at-base-button'),
+    passDayProgressBarContainer: document.getElementById('pass-day-progress-bar-container'),
+    passDayProgressBarInner: document.getElementById('pass-day-progress-bar-inner'),
+    passDayProgressBarText: document.getElementById('pass-day-progress-bar-text'),
 
 
     // Вкладка "Склад Базы" (Storage Tab)
     baseInventoryFilters: document.querySelector('#storage-tab .inventory-filters'),
     baseInventoryList: document.getElementById('base-inventory-list'),
+    storageTabBaseCapacityUsage: document.getElementById('storage-tab-base-capacity-usage'), // НОВЫЙ ЭЛЕМЕНТ
+    // Кнопки сортировки склада
+    sortBaseNameButton: document.getElementById('sort-base-name'),
+    sortBaseTypeButton: document.getElementById('sort-base-type'),
+    sortBaseQuantityButton: document.getElementById('sort-base-quantity'),
+
 
     // Вкладка "Разведка" (Explore Tab)
     currentLocationNameDisplay: document.getElementById('current-location-name'),
@@ -83,6 +91,11 @@ const domElements = {
     inventoryMaxWeight: document.getElementById('inventory-max-weight'),
     inventoryFilters: document.querySelector('#inventory-modal .inventory-filters'),
     inventoryItemsList: document.getElementById('inventory-items-list'),
+    // Кнопки сортировки инвентаря игрока
+    sortPlayerNameButton: document.getElementById('sort-player-name'),
+    sortPlayerTypeButton: document.getElementById('sort-player-type'),
+    sortPlayerWeightButton: document.getElementById('sort-player-weight'),
+
 
     // Модальное окно информации о локации
     locationInfoModal: document.getElementById('location-info-modal'),
@@ -100,17 +113,15 @@ const domElements = {
 // Проверка на null для всех элементов
 for (const key in domElements) {
     if (domElements[key] === null) { 
-        // Исключаем инпуты читов и новые элементы прогресс-бара, т.к. вкладка/элемент может быть не активен при старте
-        if (key !== 'cheatSetDayInput' && key !== 'cheatTriggerEventIdInput' && 
-            key !== 'passDayProgressBarContainer' && key !== 'passDayProgressBarInner' && key !== 'passDayProgressBarText') {
+        // Исключаем инпуты читов и элементы прогресс-бара, т.к. вкладка/элемент может быть не активен при старте
+        const optionalKeys = [
+            'cheatSetDayInput', 'cheatTriggerEventIdInput', 
+            'passDayProgressBarContainer', 'passDayProgressBarInner', 'passDayProgressBarText',
+            'sortBaseNameButton', 'sortBaseTypeButton', 'sortBaseQuantityButton', // Кнопки сортировки могут быть пропущены, если ID неверны
+            'sortPlayerNameButton', 'sortPlayerTypeButton', 'sortPlayerWeightButton' 
+        ];
+        if (!optionalKeys.includes(key)) {
              console.warn(`DOM Element not found for key: ${key}. Check ID in index.html.`);
         }
     }
 }
-// Для инпутов читов и новых элементов прогресс-бара отдельная проверка
-if (!domElements.cheatSetDayInput) console.warn("DOM Element #cheat-set-day-input not found (Cheats Tab).");
-if (!domElements.cheatTriggerEventIdInput) console.warn("DOM Element #cheat-trigger-event-id-input not found (Cheats Tab).");
-if (!domElements.passDayAtBaseButton) console.warn("DOM Element #pass-day-at-base-button not found (Base Tab).");
-if (!domElements.passDayProgressBarContainer) console.warn("DOM Element #pass-day-progress-bar-container not found (Base Tab).");
-if (!domElements.passDayProgressBarInner) console.warn("DOM Element #pass-day-progress-bar-inner not found (Base Tab).");
-if (!domElements.passDayProgressBarText) console.warn("DOM Element #pass-day-progress-bar-text not found (Base Tab).");
