@@ -51,8 +51,8 @@
             </div>
              <div id="quick-stats" class="panel">
                 <h4>Ресурсы Базы (Склад)</h4>
-                <p>Еда (сытость): <span id="total-food-value">0</span></p>
-                <p>Вода (жажда): <span id="total-water-value">0</span></p>
+                <p>Еда (сытость): <span id="total-food-value" title="Детализация еды">0</span></p>
+                <p>Вода (жажда): <span id="total-water-value" title="Детализация воды">0</span></p>
             </div>
         </aside>
 
@@ -78,15 +78,13 @@
                             <h3>Статус Базы</h3>
                             <p>День: <span id="overview-day">1</span></p>
                             <p>Выжившие: <span id="overview-survivors">1/1</span></p>
-                            <p>Еда на складе (сытость): <span id="overview-base-food">0</span></p>
-                            <p>Вода на складе (жажда): <span id="overview-base-water">0</span></p>
+                            <p>Еда на складе (сытость): <span id="overview-base-food" title="Детализация еды на базе">0</span></p>
+                            <p>Вода на складе (жажда): <span id="overview-base-water" title="Детализация воды на базе">0</span></p>
                         </div>
                     </div>
-                    <!-- НОВЫЙ БЛОК: Обзор строений базы -->
                     <div class="action-group">
                         <h3>Обзор Строений Базы</h3>
                         <div id="base-structures-overview-list" class="structures-overview-grid">
-                            <!-- Содержимое будет генерироваться UIManager.renderBaseStructuresOverview() -->
                             <p><em>Информация о строениях загружается...</em></p>
                         </div>
                     </div>
@@ -96,6 +94,19 @@
                 <div id="base-tab" class="tab-content">
                     <h2>Управление Базой</h2>
                     <div id="build-actions" class="action-grid"></div>
+                    <!-- НОВАЯ КНОПКА И БЛОК ДЛЯ ОТДЫХА -->
+                    <div class="action-group">
+                        <h3>Действия на Базе</h3>
+                        <button id="pass-day-at-base-button" class="game-action-button" onclick="game.passDayAtBase()">
+                            Отдыхать на базе <span class="action-time-indicator">⏱️1д.</span>
+                        </button>
+                        <div id="pass-day-progress-bar-container" style="display: none; margin-top: 10px;">
+                            <div class="progress-bar-outer" style="width: 100%;">
+                                <div id="pass-day-progress-bar-inner" class="progress-bar-inner"></div>
+                                <span id="pass-day-progress-bar-text" class="progress-bar-text">Отдых...</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Вкладка Склад -->
@@ -120,7 +131,7 @@
                     <h2>Разведка и События в Пустоши</h2>
                     <div class="action-group">
                         <h3>Действия на текущей локации: <span id="current-location-name">Окрестности Базы</span></h3>
-                        <button id="scout-current-location-button" class="game-action-button" onclick="LocationManager.exploreCurrentLocationAction('search')">Обыскать (<span id="current-location-time">1</span> д.)</button>
+                        <button id="scout-current-location-button" class="game-action-button" onclick="LocationManager.exploreCurrentLocationAction('search')"></button>
                         <p id="current-location-description">Это ваша база и ближайшие окрестности.</p>
                     </div>
                     <div class="action-group">
@@ -128,7 +139,7 @@
                         <div id="discovered-locations-list">
                             <p><em>Используйте "Разведать новые территории", чтобы найти новые места.</em></p>
                         </div>
-                         <button id="discover-new-location-button" class="game-action-button" onclick="LocationManager.discoverNewLocationAction()">Разведать новые территории (1 д.)</button>
+                         <button id="discover-new-location-button" class="game-action-button" onclick="LocationManager.discoverNewLocationAction()"></button>
                     </div>
                     <div id="event-actions-container" class="action-group" style="display: none;">
                         <h3>Текущее Событие в Пустоши</h3>
@@ -181,7 +192,6 @@
                     </div>
                     <p style="color: #ff6666; font-weight: bold;">ВНИМАНИЕ: Использование читов может нарушить игровой баланс и привести к непредвиденному поведению. Используйте на свой страх и риск.</p>
                 </div>
-
             </div>
 
             <div id="log-panel-container">
@@ -236,7 +246,7 @@
     </footer>
 
     <script src="items.js"></script>
-    <script src="buildings.js"></script> <!-- Убедитесь, что getStructureUpgradeCost здесь или глобально -->
+    <script src="buildings.js"></script>
     <script src="locations.js"></script>
     <script src="recipes.js"></script>
     <script src="game_state.js"></script>
