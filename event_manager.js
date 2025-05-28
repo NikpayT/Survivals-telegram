@@ -1,245 +1,267 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Пустошь: Выживание</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <button id="burger-menu-button">☰</button>
+// event_manager.js
 
-    <div id="game-wrapper">
-        <aside id="sidebar">
-            <div id="sidebar-header">
-                <h2>Пустошь</h2>
-                <button id="inventory-button" class="sidebar-button">Инвентарь Игрока</button>
-            </div>
-            <nav id="main-nav">
-                <button class="nav-link active" data-tab="main-tab">Обзор</button>
-                <button class="nav-link" data-tab="base-tab">База</button>
-                <button class="nav-link" data-tab="storage-tab">Склад</button>
-                <button class="nav-link" data-tab="explore-tab">Разведка</button>
-                <button class="nav-link" data-tab="craft-tab">Крафт</button>
-                <!-- НОВАЯ КНОПКА ВКЛАДКИ -->
-                <button id="nav-cheats-tab" class="nav-link" data-tab="cheats-tab">Читы (Dev)</button>
-            </nav>
-            <div id="player-status-condensed" class="panel">
-                <h4>Состояние Игрока</h4>
-                <p>День: <span id="day">1</span></p>
-                <div class="status-bar-container">
-                    <span class="status-label">Здоровье:</span>
-                    <div class="progress-bar-outer" id="health-bar-outer">
-                        <div class="progress-bar-inner" id="health-bar-inner"></div>
-                        <span class="progress-bar-text" id="health-bar-text">100/100</span>
-                    </div>
-                </div>
-                <div class="status-bar-container">
-                    <span class="status-label">Сытость:</span>
-                    <div class="progress-bar-outer" id="hunger-bar-outer">
-                        <div class="progress-bar-inner" id="hunger-bar-inner"></div>
-                        <span class="progress-bar-text" id="hunger-bar-text">Норма</span>
-                    </div>
-                </div>
-                <div class="status-bar-container">
-                     <span class="status-label">Жажда:</span>
-                    <div class="progress-bar-outer" id="thirst-bar-outer">
-                        <div class="progress-bar-inner" id="thirst-bar-inner"></div>
-                        <span class="progress-bar-text" id="thirst-bar-text">Норма</span>
-                    </div>
-                </div>
-                <p style="margin-top: 10px;">Выжившие: <span id="survivors">1</span> / <span id="max-survivors">1</span></p>
-            </div>
-             <div id="quick-stats" class="panel">
-                <h4>Ресурсы Базы (Склад)</h4>
-                <p>Еда (сытость): <span id="total-food-value">0</span></p>
-                <p>Вода (жажда): <span id="total-water-value">0</span></p>
-            </div>
-        </aside>
+// Предполагается, что gameState, domElements, UIManager, InventoryManager, LocationManager, GameStateGetters
+// и game (для game.log, game.gameOver, game.takeDamage) доступны глобально.
 
-        <main id="main-content">
-            <header id="main-header">
-                <h1>Выживание в Пустоши</h1>
-                <div id="player-condition-display">Состояние игрока: <span id="player-condition">В порядке</span></div>
-            </header>
+const EventManager = {
+    possibleEvents: [ // Глобальные события, происходящие на базе или в мире
+         {
+            id: "found_survivor",
+            condition: () => typeof GameStateGetters !== 'undefined' && gameState.survivors < GameStateGetters.getMaxSurvivors() && Math.random() < 0.08 && gameState.day > 1,
+            text: "Вы слышите стук в ворота. Одинокий путник просит убежища.",
+            choices: [
+                {
+                    text: "Принять (+1 выживший)",
+                    action: function() {
+                        if (typeof GameStateGetters !== 'undefined' && gameState.survivors < GameStateGetters.getMaxSurvivors()) {
+                            gameState.survivors++;
+                            if (typeof game !== 'undefined' && game.log) game.log("Новый выживший присоединился к вам.", "event-positive");
+                        } else {
+                            if (typeof game !== 'undefined' && game.log) game.log("На базе нет места для нового выжившего.", "event-neutral");
+                        }
+                    }
+                },
+                {
+                    text: "Отказать",
+                    action: function() { if (typeof game !== 'undefined' && game.log) game.log("Вы отказали путнику. Он ушел в неизвестность.", "event-neutral"); }
+                }
+            ]
+        },
+        {
+            id: "trader_visit",
+            condition: () => Math.random() < 0.07 && gameState.day > 2,
+            text: "К базе подошел торговец. Предлагает 3 'Стимулятора' за 15 'Металлолома' (с вашего личного инвентаря).",
+            choices: [
+                {
+                    text: "Обменять (Метал.-15, Стим.+3)",
+                    action: function() { 
+                        if (typeof InventoryManager !== 'undefined' && InventoryManager.countItemInInventory(gameState.inventory, "scrap_metal") >= 15) {
+                            InventoryManager.removeItemFromInventory(gameState.inventory, "scrap_metal", 15);
+                            InventoryManager.addItemToInventory(gameState.inventory, "stimpack_fallout", 3); // Убедись, что "stimpack_fallout" есть в items.js
+                            if (typeof game !== 'undefined' && game.log) game.log("Сделка совершена. Вы получили стимуляторы.", "event-positive");
+                        } else {
+                            if (typeof game !== 'undefined' && game.log) game.log("У вас недостаточно металлолома для обмена.", "event-negative");
+                        }
+                    }
+                },
+                {
+                    text: "Отказаться",
+                    action: function() { 
+                        if (typeof game !== 'undefined' && game.log) game.log("Торговец ушел, ворча себе под нос.", "event-neutral");
+                    }
+                }
+            ]
+        },
+        {
+            id: "minor_horde_near_base",
+            condition: () => Math.random() < 0.1 && gameState.day > 3,
+            text: "Небольшая группа зомби замечена неподалеку от базы! Они могут напасть.",
+            choices: [
+                {
+                    text: "Укрепить оборону (-5 дерева, -3 металла со склада)",
+                    action: function() {
+                        if (typeof InventoryManager !== 'undefined' && InventoryManager.countItemInInventory(gameState.baseInventory, "wood") >=5 && InventoryManager.countItemInInventory(gameState.baseInventory, "scrap_metal") >=3){
+                            InventoryManager.removeItemFromInventory(gameState.baseInventory, "wood", 5);
+                            InventoryManager.removeItemFromInventory(gameState.baseInventory, "scrap_metal", 3);
+                            if (typeof game !== 'undefined' && game.log) game.log("Оборона усилена. Зомби не решились атаковать.", "event-positive");
+                        } else {
+                             if (typeof game !== 'undefined' && game.log) game.log("Не хватило материалов на складе для укрепления! Зомби прорвались!", "event-negative");
+                             if(!gameState.gameOver && typeof game !== 'undefined' && game.takeDamage) game.takeDamage(10 + Math.floor(gameState.day / 2), "атака зомби на базу");
+                             
+                             let diedInHordeAttack = 0;
+                             for (let i = 0; i < gameState.survivors; i++) {
+                                 if (Math.random() < 0.15) { 
+                                     diedInHordeAttack++;
+                                 }
+                             }
+                             if (diedInHordeAttack > 0 && !gameState.gameOver) {
+                                 const actualDeaths = Math.min(diedInHordeAttack, gameState.survivors);
+                                 if (actualDeaths > 0) { // Доп. проверка, что есть кого убивать
+                                     gameState.survivors -= actualDeaths;
+                                     if (typeof game !== 'undefined' && game.log) game.log(`${actualDeaths} выживших погибло во время атаки зомби...`, "event-negative");
+                                     if(gameState.survivors <= 0 && !gameState.gameOver && typeof game !== 'undefined') game.gameOver("Все выжившие погибли при атаке на базу.");
+                                 }
+                             }
+                        }
+                    }
+                },
+                {
+                    text: "Рискнуть и ничего не делать",
+                    action: function() {
+                         if (Math.random() < 0.6) {
+                            if (typeof game !== 'undefined' && game.log) game.log("Зомби прошли мимо, не заметив базу.", "event-neutral");
+                         } else {
+                            if (typeof game !== 'undefined' && game.log) game.log("Зомби атаковали неподготовленную базу!", "event-negative");
+                            if(!gameState.gameOver && typeof game !== 'undefined' && game.takeDamage) game.takeDamage(15 + gameState.day, "внезапная атака на базу");
 
-            <div id="tab-content-area">
-                <!-- Вкладка Обзор -->
-                <div id="main-tab" class="tab-content" style="display: block;">
-                    <h2>Обзор Базы и Игрока</h2>
-                    <div class="overview-stats-container">
-                        <div class="overview-panel">
-                            <h3>Статус Игрока</h3>
-                            <p>Здоровье: <span id="overview-health">100/100</span></p>
-                            <p>Сытость: <span id="overview-hunger">Норма</span></p>
-                            <p>Жажда: <span id="overview-thirst">Норма</span></p>
-                            <p>Состояние: <span id="overview-condition">В порядке</span></p>
-                        </div>
-                        <div class="overview-panel">
-                            <h3>Статус Базы</h3>
-                            <p>День: <span id="overview-day">1</span></p>
-                            <p>Выжившие: <span id="overview-survivors">1/1</span></p>
-                            <p>Еда на складе (сытость): <span id="overview-base-food">0</span></p>
-                            <p>Вода на складе (жажда): <span id="overview-base-water">0</span></p>
-                        </div>
-                    </div>
-                </div>
+                            let diedInSuddenAttack = 0;
+                            for (let i = 0; i < gameState.survivors; i++) {
+                                if (Math.random() < 0.25) { 
+                                    diedInSuddenAttack++;
+                                }
+                            }
+                            if (diedInSuddenAttack > 0 && !gameState.gameOver) {
+                                const actualDeaths = Math.min(diedInSuddenAttack, gameState.survivors);
+                                if (actualDeaths > 0) { // Доп. проверка
+                                    gameState.survivors -= actualDeaths;
+                                    if (typeof game !== 'undefined' && game.log) game.log(`Потери среди выживших в результате внезапной атаки: ${actualDeaths}.`, "event-negative");
+                                    if(gameState.survivors <= 0 && !gameState.gameOver && typeof game !== 'undefined') game.gameOver("Все выжившие погибли при внезапной атаке.");
+                                }
+                            }
+                         }
+                    }
+                }
+            ]
+        }
+    ],
 
-                <!-- Вкладка База -->
-                <div id="base-tab" class="tab-content">
-                    <h2>Управление Базой</h2>
-                    <div id="build-actions" class="action-grid"></div>
-                </div>
+    triggerRandomEvent: function() {
+        if (gameState.currentEvent || gameState.locationEvent || gameState.gameOver) return;
 
-                <!-- Вкладка Склад -->
-                <div id="storage-tab" class="tab-content">
-                    <h2>Склад Базы</h2>
-                    <div class="inventory-filters base-storage-filters">
-                        <button data-filter="all" class="active">Все</button>
-                        <button data-filter="food">Еда</button>
-                        <button data-filter="water_source">Вода</button>
-                        <button data-filter="medicine">Медикаменты</button>
-                        <button data-filter="material">Материалы</button>
-                        <button data-filter="tool">Инструменты</button>
-                        <button data-filter="weapon">Оружие</button>
-                        <button data-filter="armor">Броня</button>
-                        <button data-filter="quest_item">Особое</button>
-                    </div>
-                    <div id="base-inventory-list" class="inventory-list-shared-style"></div>
-                </div>
+        const availableEvents = this.possibleEvents.filter(event => {
+            try {
+                return typeof event.condition === 'function' ? event.condition() : true;
+            } catch (e) {
+                console.error(`Error in event condition for ${event.id}:`, e);
+                return false;
+            }
+        });
 
-                <!-- Вкладка Разведка -->
-                <div id="explore-tab" class="tab-content">
-                    <h2>Разведка и События в Пустоши</h2>
-                    <div class="action-group">
-                        <h3>Действия на текущей локации: <span id="current-location-name">Окрестности Базы</span></h3>
-                        <button id="scout-current-location-button" class="game-action-button" onclick="LocationManager.exploreCurrentLocationAction('search')">Обыскать (<span id="current-location-time">1</span> д.)</button>
-                        <p id="current-location-description">Это ваша база и ближайшие окрестности.</p>
-                    </div>
-                    <div class="action-group">
-                        <h3>Известные Локации</h3>
-                        <div id="discovered-locations-list">
-                            <p><em>Используйте "Разведать новые территории", чтобы найти новые места.</em></p>
-                        </div>
-                         <button id="discover-new-location-button" class="game-action-button" onclick="LocationManager.discoverNewLocationAction()">Разведать новые территории (1 д.)</button>
-                    </div>
-                    <div id="event-actions-container" class="action-group" style="display: none;">
-                        <h3>Текущее Событие в Пустоши</h3>
-                        <div id="event-text-display"></div>
-                        <div id="event-actions"></div>
-                    </div>
-                </div>
+        if (availableEvents.length > 0) {
+            gameState.currentEvent = { ...availableEvents[Math.floor(Math.random() * availableEvents.length)] };
+            if (typeof game !== 'undefined' && game.log) game.log(`СОБЫТИЕ: ${gameState.currentEvent.text}`, "event-discovery");
+            this.displayEventChoices();
+        } else {
+            const exploreTabActive = document.getElementById('explore-tab')?.style.display === 'block';
+            if (exploreTabActive && domElements.eventActionsContainer && !gameState.locationEvent) { // Убедимся, что domElements существует
+                 domElements.eventActionsContainer.style.display = 'none';
+            }
+        }
+    },
 
-                <!-- Вкладка Крафт -->
-                <div id="craft-tab" class="tab-content">
-                    <h2>Изготовление Предметов</h2>
-                    <p>Мастерская Ур: <span id="workshop-level-display">0</span></p>
-                    <div id="crafting-recipes-list" class="crafting-grid">
-                        <p><em>Рецепты не найдены или не выполнены условия.</em></p>
-                    </div>
-                </div>
+    displayEventChoices: function() {
+        if (!domElements.eventActionsContainer || !domElements.eventTextDisplay || !domElements.eventActions) {
+            console.error("EventManager: DOM elements for events not found!");
+            return;
+        }
 
-                <!-- НОВАЯ ВКЛАДКА ЧИТЫ -->
-                <div id="cheats-tab" class="tab-content">
-                    <h2>Панель Читов (DEV)</h2>
-                    <div class="action-group">
-                        <h3>Ресурсы и Предметы</h3>
-                        <button onclick="Cheats.addCommonResources()">+100 Базовых Ресурсов на Склад</button>
-                        <button onclick="Cheats.addAllItemsToPlayer(1)">Дать по 1 шт. каждого предмета Игроку</button>
-                        <button onclick="Cheats.addAllItemsToBase(10)">Дать по 10 шт. каждого предмета на Склад</button>
-                        <button onclick="Cheats.clearPlayerInventory()">Очистить Инвентарь Игрока</button>
-                        <button onclick="Cheats.clearBaseInventory()">Очистить Склад Базы</button>
-                    </div>
-                    <div class="action-group">
-                        <h3>Статус Игрока и Базы</h3>
-                        <button onclick="Cheats.healPlayerFull()">Игрок: Полное Здоровье/Сытость/Жажда</button>
-                        <button onclick="Cheats.setPlayerStat('health', 10)">Игрок: Здоровье = 10</button>
-                        <button onclick="Cheats.addSurvivor()">+1 Выживший (если есть место)</button>
-                        <button onclick="Cheats.setDay(1)">Установить День 1</button>
-                        <input type="number" id="cheat-set-day-input" value="1" min="1" style="width: 60px; margin-right: 5px;">
-                        <button onclick="Cheats.setDay(document.getElementById('cheat-set-day-input').value)">Установить День (число)</button>
-                    </div>
-                    <div class="action-group">
-                        <h3>Прогресс и Открытия</h3>
-                        <button onclick="Cheats.maxAllStructures()">Все постройки: Макс. Уровень</button>
-                        <button onclick="Cheats.discoverAllLocations()">Открыть Все Локации</button>
-                        <button onclick="Cheats.resetAllExploration()">Сбросить прогресс обыска локаций</button>
-                        <button onclick="Cheats.resetEventFlags()">Сбросить Все Флаги Событий</button>
-                    </div>
-                     <div class="action-group">
-                        <h3>События</h3>
-                        <input type="text" id="cheat-trigger-event-id-input" placeholder="ID события" style="margin-right: 5px;">
-                        <button onclick="Cheats.triggerSpecificEvent(document.getElementById('cheat-trigger-event-id-input').value)">Запустить Событие по ID</button>
-                        <button onclick="Cheats.clearCurrentEvents()">Сбросить текущие активные события</button>
-                    </div>
-                    <p style="color: #ff6666; font-weight: bold;">ВНИМАНИЕ: Использование читов может нарушить игровой баланс и привести к непредвиденному поведению. Используйте на свой страх и риск.</p>
-                </div>
+        domElements.eventActions.innerHTML = '';
+        if (!gameState.currentEvent) {
+            domElements.eventActionsContainer.style.display = 'none';
+            return;
+        }
 
-            </div>
+        domElements.eventTextDisplay.textContent = gameState.currentEvent.text;
+        domElements.eventActionsContainer.style.display = 'block';
 
-            <div id="log-panel-container">
-                 <div id="log-panel" class="panel">
-                    <div class="log-header">
-                        <h2>Журнал Событий</h2>
-                        <button id="toggle-log" title="Скрыть/Показать лог">-</button>
-                    </div>
-                    <div id="log-messages">
-                        <p>Добро пожаловать в Пустошь.</p>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+        if (domElements.scoutCurrentLocationButton) domElements.scoutCurrentLocationButton.disabled = true;
+        if (domElements.discoverNewLocationButton) domElements.discoverNewLocationButton.disabled = true;
+        const passDayBaseButton = document.getElementById('pass-day-base-button');
+        if (passDayBaseButton) passDayBaseButton.disabled = true;
 
-    <div id="inventory-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" onclick="InventoryManager.closeInventoryModal()">×</span>
-            <h2>Инвентарь Игрока (<span id="inventory-weight">0</span> / <span id="inventory-max-weight">25</span> кг)</h2>
-            <div class="inventory-filters player-inventory-filters">
-                <button data-filter="all" class="active">Все</button>
-                <button data-filter="food">Еда</button>
-                <button data-filter="water_source">Вода</button>
-                <button data-filter="medicine">Медикаменты</button>
-                <button data-filter="material">Материалы</button>
-                <button data-filter="tool">Инструменты</button>
-                <button data-filter="weapon">Оружие</button>
-                <button data-filter="armor">Броня</button>
-                <button data-filter="quest_item">Особое</button>
-            </div>
-            <div id="inventory-items-list" class="inventory-list-shared-style"></div>
-        </div>
-    </div>
 
-    <div id="location-info-modal" class="modal" style="display: none;">
-        <div class="modal-content location-modal-content">
-            <span id="location-info-close-button" class="close-button" onclick="UIManager.closeLocationInfoModal()">×</span>
-            <h2 id="location-info-name">Название Локации</h2>
-            <p id="location-info-description">Описание локации здесь...</p>
-            <p><strong>Уровень опасности:</strong> <span id="location-info-danger">Средний</span></p>
-            <div id="location-info-preview-loot" class="location-info-section"></div>
-            <div class="modal-actions">
-                <button id="location-info-travel-button" class="game-action-button">Перейти сюда</button>
-            </div>
-        </div>
-    </div>
+        gameState.currentEvent.choices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.textContent = choice.text;
+            let choiceIsAvailable = true;
+            if (typeof choice.condition === 'function') {
+                try {
+                    choiceIsAvailable = choice.condition();
+                } catch (e) {
+                    console.error(`Error in event choice condition for event ${gameState.currentEvent.id}, choice "${choice.text}":`, e);
+                    choiceIsAvailable = false;
+                }
+            }
+            btn.disabled = !choiceIsAvailable;
 
-    <footer>
-        <button onclick="game.resetGameConfirmation()">Начать игру заново</button>
-        <p id="game-version">Версия: 0.0.0</p>
-    </footer>
+            if (typeof choice.action === 'function') {
+                btn.onclick = () => {
+                    if (gameState.currentEvent && choiceIsAvailable) {
+                        try {
+                            choice.action();
+                        } catch (e) {
+                            console.error(`Error executing action for event ${gameState.currentEvent.id}, choice "${choice.text}":`, e);
+                            if (typeof game !== 'undefined' && game.log) game.log("Произошла ошибка при выполнении действия события.", "event-negative");
+                        }
+                        gameState.currentEvent = null;
+                        if (typeof UIManager !== 'undefined') UIManager.finalizeEventUI();
+                    }
+                };
+            } else {
+                 console.error(`Некорректное определение choice.action в глобальном событии: ${gameState.currentEvent.id}`, choice);
+                 btn.disabled = true;
+            }
+            domElements.eventActions.appendChild(btn);
+        });
+    },
 
-    <script src="items.js"></script>
-    <script src="buildings.js"></script>
-    <script src="locations.js"></script>
-    <script src="recipes.js"></script>
-    <script src="game_state.js"></script>
-    <script src="dom_elements.js"></script>
-    <!-- НОВЫЙ ФАЙЛ ДЛЯ ЧИТОВ (перед script.js) -->
-    <script src="cheats_manager.js"></script>
-    <script src="ui_manager.js"></script>
-    <script src="inventory_manager.js"></script>
-    <script src="location_manager.js"></script>
-    <script src="event_manager.js"></script>
-    <script src="script.js"></script>
-</body>
-</html>
+    displayLocationEventChoices: function() {
+        if (!domElements.eventActionsContainer || !domElements.eventTextDisplay || !domElements.eventActions) {
+            console.error("EventManager: DOM elements for events not found!");
+            return;
+        }
+
+        domElements.eventActions.innerHTML = '';
+        if (!gameState.locationEvent) {
+            domElements.eventActionsContainer.style.display = 'none';
+            return;
+        }
+
+        domElements.eventTextDisplay.textContent = gameState.locationEvent.text;
+        domElements.eventActionsContainer.style.display = 'block';
+
+        if (domElements.scoutCurrentLocationButton) domElements.scoutCurrentLocationButton.disabled = true;
+        if (domElements.discoverNewLocationButton) domElements.discoverNewLocationButton.disabled = true;
+        const passDayBaseButton = document.getElementById('pass-day-base-button');
+        if (passDayBaseButton) passDayBaseButton.disabled = true;
+
+        gameState.locationEvent.choices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.textContent = choice.text;
+            let choiceIsAvailable = true;
+            if (typeof choice.condition === 'function') {
+                 try {
+                    choiceIsAvailable = choice.condition();
+                } catch (e) {
+                    console.error(`Error in location event choice condition for event ${gameState.locationEvent.id}, choice "${choice.text}":`, e);
+                    choiceIsAvailable = false;
+                }
+            }
+            btn.disabled = !choiceIsAvailable;
+
+            const handleChoice = () => {
+                if (gameState.locationEvent && choiceIsAvailable) { // Перепроверяем, что событие все еще активно и выбор доступен
+                    const currentLocEvent = { ...gameState.locationEvent };
+                    gameState.locationEvent = null; 
+
+                    try {
+                        if (typeof choice.action === 'function') {
+                            choice.action();
+                        } else if (choice.outcome) {
+                            const outcome = choice.outcome;
+                            if (outcome.log && typeof game !== 'undefined' && game.log) game.log(outcome.log, outcome.type || "event-neutral");
+                            if (outcome.addItems && typeof InventoryManager !== 'undefined') {
+                                outcome.addItems.forEach(item => {
+                                    // Убедимся, что quantity определено корректно
+                                    let qty = item.quantity;
+                                    if (Array.isArray(qty)) { // Если диапазон [min, max]
+                                        qty = Math.floor(Math.random() * (qty[1] - qty[0] + 1)) + qty[0];
+                                    }
+                                    InventoryManager.addItemToInventory(gameState.inventory, item.itemId, qty);
+                                });
+                            }
+                            if (outcome.setFlag && currentLocEvent.flagId) gameState.flags[currentLocEvent.flagId] = true;
+                        }
+                    } catch (e) {
+                         console.error(`Error executing action/outcome for location event ${currentLocEvent.id}, choice "${choice.text}":`, e);
+                         if (typeof game !== 'undefined' && game.log) game.log("Произошла ошибка при выполнении действия события локации.", "event-negative");
+                    }
+                    
+                    if (typeof UIManager !== 'undefined') UIManager.finalizeEventUI();
+                }
+            };
+            btn.onclick = handleChoice;
+            domElements.eventActions.appendChild(btn);
+        });
+    }
+};
