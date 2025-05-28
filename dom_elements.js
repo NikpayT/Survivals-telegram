@@ -38,11 +38,15 @@ const domElements = {
     overviewSurvivors: document.getElementById('overview-survivors'),
     overviewBaseFood: document.getElementById('overview-base-food'),
     overviewBaseWater: document.getElementById('overview-base-water'),
-    // НОВЫЙ ЭЛЕМЕНТ для обзора строений
     baseStructuresOverviewList: document.getElementById('base-structures-overview-list'),
 
     // Вкладка "База" (Base Tab)
     buildActions: document.getElementById('build-actions'),
+    passDayAtBaseButton: document.getElementById('pass-day-at-base-button'), // НОВАЯ КНОПКА
+    passDayProgressBarContainer: document.getElementById('pass-day-progress-bar-container'), // НОВЫЙ ЭЛЕМЕНТ
+    passDayProgressBarInner: document.getElementById('pass-day-progress-bar-inner'),     // НОВЫЙ ЭЛЕМЕНТ
+    passDayProgressBarText: document.getElementById('pass-day-progress-bar-text'),       // НОВЫЙ ЭЛЕМЕНТ
+
 
     // Вкладка "Склад Базы" (Storage Tab)
     baseInventoryFilters: document.querySelector('#storage-tab .inventory-filters'),
@@ -50,26 +54,22 @@ const domElements = {
 
     // Вкладка "Разведка" (Explore Tab)
     currentLocationNameDisplay: document.getElementById('current-location-name'),
-    currentLocationTimeDisplay: document.getElementById('current-location-time'), // Для отображения времени обыска локации
+    currentLocationTimeDisplay: document.getElementById('current-location-time'), 
     currentLocationDescriptionDisplay: document.getElementById('current-location-description'),
     scoutCurrentLocationButton: document.getElementById('scout-current-location-button'),
     discoveredLocationsList: document.getElementById('discovered-locations-list'),
     discoverNewLocationButton: document.getElementById('discover-new-location-button'),
-    // Элементы для событий (теперь на вкладке Разведка)
     eventActionsContainer: document.getElementById('event-actions-container'),
     eventTextDisplay: document.getElementById('event-text-display'),
     eventActions: document.getElementById('event-actions'),
-
 
     // Вкладка "Крафт" (Craft Tab)
     workshopLevelDisplay: document.getElementById('workshop-level-display'),
     craftingRecipesList: document.getElementById('crafting-recipes-list'),
 
     // Вкладка "Читы" (Cheats Tab)
-    // Элементы для читов, если нужны прямые ссылки, например, для инпутов:
     cheatSetDayInput: document.getElementById('cheat-set-day-input'),
     cheatTriggerEventIdInput: document.getElementById('cheat-trigger-event-id-input'),
-
 
     // Панель лога
     logPanelContainer: document.getElementById('log-panel-container'),
@@ -93,18 +93,24 @@ const domElements = {
     locationInfoTravelButton: document.getElementById('location-info-travel-button'),
     locationInfoCloseButton: document.getElementById('location-info-close-button'),
 
-
     // Футер
     gameVersionDisplay: document.getElementById('game-version')
 };
 
 // Проверка на null для всех элементов
 for (const key in domElements) {
-    if (domElements[key] === null && key !== 'cheatSetDayInput' && key !== 'cheatTriggerEventIdInput') { // Исключаем инпуты читов, т.к. вкладка может быть не активна при старте
-        // Более мягкое предупреждение или только для критичных элементов
-        // console.warn(`DOM Element not found for key: ${key}. Check ID in index.html.`);
+    if (domElements[key] === null) { 
+        // Исключаем инпуты читов и новые элементы прогресс-бара, т.к. вкладка/элемент может быть не активен при старте
+        if (key !== 'cheatSetDayInput' && key !== 'cheatTriggerEventIdInput' && 
+            key !== 'passDayProgressBarContainer' && key !== 'passDayProgressBarInner' && key !== 'passDayProgressBarText') {
+             console.warn(`DOM Element not found for key: ${key}. Check ID in index.html.`);
+        }
     }
 }
-// Для инпутов читов отдельная проверка, если они важны для инициализации
+// Для инпутов читов и новых элементов прогресс-бара отдельная проверка
 if (!domElements.cheatSetDayInput) console.warn("DOM Element #cheat-set-day-input not found (Cheats Tab).");
 if (!domElements.cheatTriggerEventIdInput) console.warn("DOM Element #cheat-trigger-event-id-input not found (Cheats Tab).");
+if (!domElements.passDayAtBaseButton) console.warn("DOM Element #pass-day-at-base-button not found (Base Tab).");
+if (!domElements.passDayProgressBarContainer) console.warn("DOM Element #pass-day-progress-bar-container not found (Base Tab).");
+if (!domElements.passDayProgressBarInner) console.warn("DOM Element #pass-day-progress-bar-inner not found (Base Tab).");
+if (!domElements.passDayProgressBarText) console.warn("DOM Element #pass-day-progress-bar-text not found (Base Tab).");
