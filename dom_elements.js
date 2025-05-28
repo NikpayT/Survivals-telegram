@@ -21,7 +21,7 @@ const domElements = {
     maxSurvivors: document.getElementById('max-survivors'),
     totalFoodValue: document.getElementById('total-food-value'),
     totalWaterValue: document.getElementById('total-water-value'),
-    sidebarBaseCapacityUsage: document.getElementById('sidebar-base-capacity-usage'), // НОВЫЙ ЭЛЕМЕНТ
+    sidebarBaseCapacityUsage: document.getElementById('sidebar-base-capacity-usage'),
 
     // Основной контент и вкладки
     mainContent: document.getElementById('main-content'),
@@ -39,7 +39,7 @@ const domElements = {
     overviewSurvivors: document.getElementById('overview-survivors'),
     overviewBaseFood: document.getElementById('overview-base-food'),
     overviewBaseWater: document.getElementById('overview-base-water'),
-    overviewBaseCapacityUsage: document.getElementById('overview-base-capacity-usage'), // НОВЫЙ ЭЛЕМЕНТ
+    overviewBaseCapacityUsage: document.getElementById('overview-base-capacity-usage'),
     baseStructuresOverviewList: document.getElementById('base-structures-overview-list'),
 
     // Вкладка "База" (Base Tab)
@@ -49,16 +49,13 @@ const domElements = {
     passDayProgressBarInner: document.getElementById('pass-day-progress-bar-inner'),
     passDayProgressBarText: document.getElementById('pass-day-progress-bar-text'),
 
-
     // Вкладка "Склад Базы" (Storage Tab)
     baseInventoryFilters: document.querySelector('#storage-tab .inventory-filters'),
     baseInventoryList: document.getElementById('base-inventory-list'),
-    storageTabBaseCapacityUsage: document.getElementById('storage-tab-base-capacity-usage'), // НОВЫЙ ЭЛЕМЕНТ
-    // Кнопки сортировки склада
+    storageTabBaseCapacityUsage: document.getElementById('storage-tab-base-capacity-usage'),
     sortBaseNameButton: document.getElementById('sort-base-name'),
     sortBaseTypeButton: document.getElementById('sort-base-type'),
     sortBaseQuantityButton: document.getElementById('sort-base-quantity'),
-
 
     // Вкладка "Разведка" (Explore Tab)
     currentLocationNameDisplay: document.getElementById('current-location-name'),
@@ -91,11 +88,9 @@ const domElements = {
     inventoryMaxWeight: document.getElementById('inventory-max-weight'),
     inventoryFilters: document.querySelector('#inventory-modal .inventory-filters'),
     inventoryItemsList: document.getElementById('inventory-items-list'),
-    // Кнопки сортировки инвентаря игрока
     sortPlayerNameButton: document.getElementById('sort-player-name'),
     sortPlayerTypeButton: document.getElementById('sort-player-type'),
     sortPlayerWeightButton: document.getElementById('sort-player-weight'),
-
 
     // Модальное окно информации о локации
     locationInfoModal: document.getElementById('location-info-modal'),
@@ -106,6 +101,14 @@ const domElements = {
     locationInfoTravelButton: document.getElementById('location-info-travel-button'),
     locationInfoCloseButton: document.getElementById('location-info-close-button'),
 
+    // НОВЫЕ ЭЛЕМЕНТЫ: Модальное окно сезонного события
+    seasonalEventModal: document.getElementById('seasonal-event-modal'),
+    seasonalEventTitle: document.getElementById('seasonal-event-title'),
+    seasonalEventImageContainer: document.getElementById('seasonal-event-image-container'),
+    seasonalEventText: document.getElementById('seasonal-event-text'),
+    seasonalEventChoices: document.getElementById('seasonal-event-choices'),
+    seasonalEventReturnBaseButton: document.getElementById('seasonal-event-return-base-button'),
+
     // Футер
     gameVersionDisplay: document.getElementById('game-version')
 };
@@ -113,12 +116,12 @@ const domElements = {
 // Проверка на null для всех элементов
 for (const key in domElements) {
     if (domElements[key] === null) { 
-        // Исключаем инпуты читов и элементы прогресс-бара, т.к. вкладка/элемент может быть не активен при старте
         const optionalKeys = [
             'cheatSetDayInput', 'cheatTriggerEventIdInput', 
             'passDayProgressBarContainer', 'passDayProgressBarInner', 'passDayProgressBarText',
-            'sortBaseNameButton', 'sortBaseTypeButton', 'sortBaseQuantityButton', // Кнопки сортировки могут быть пропущены, если ID неверны
-            'sortPlayerNameButton', 'sortPlayerTypeButton', 'sortPlayerWeightButton' 
+            'sortBaseNameButton', 'sortBaseTypeButton', 'sortBaseQuantityButton',
+            'sortPlayerNameButton', 'sortPlayerTypeButton', 'sortPlayerWeightButton',
+            'currentLocationTimeDisplay' // Этот элемент больше не используется напрямую
         ];
         if (!optionalKeys.includes(key)) {
              console.warn(`DOM Element not found for key: ${key}. Check ID in index.html.`);
