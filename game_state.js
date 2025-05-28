@@ -11,7 +11,7 @@ const initialGameState = {
     structures: {}, 
     inventory: [], 
     baseInventory: [],
-    baseMaxCapacity: 100, // НОВОЕ: Максимальная вместимость склада (например, по слотам или общему кол-ву)
+    baseMaxCapacity: 100, 
     
     player: {
         health: 100, maxHealth: 100,
@@ -32,6 +32,15 @@ const initialGameState = {
     locationEvent: null,
     logVisible: true,
     flags: {},
+    // НОВОЕ ПОЛЕ для состояния сезонных событий
+    seasonalEvents: {
+        // Пример для новогоднего события
+        // newYear: {
+        //     isActive: false,
+        //     currentStage: null, // ID текущего этапа
+        //     flags: {} // Флаги, специфичные для текущего прохождения события (например, найдена ли елка)
+        // }
+    }
 };
 
 let gameState = JSON.parse(JSON.stringify(initialGameState));
@@ -156,18 +165,13 @@ const GameStateGetters = {
         return breakdownString.trim().replace(/\n/g, '\r\n');
     },
 
-    // НОВЫЙ ГЕТТЕР для заполненности склада
     getBaseInventoryUsage: function() {
         if (!gameState.baseInventory) {
             return { current: 0, max: gameState.baseMaxCapacity || 0, percentage: 0 };
         }
-        // Считаем текущее использование как количество уникальных слотов
         const currentUsage = gameState.baseInventory.length;
-        // Или как общее количество всех предметов:
-        // const currentUsage = gameState.baseInventory.reduce((sum, item) => sum + item.quantity, 0);
-        
-        const maxCapacity = gameState.baseMaxCapacity || 100; // Значение по умолчанию, если не установлено
+        const maxCapacity = gameState.baseMaxCapacity || 100; 
         const percentage = maxCapacity > 0 ? (currentUsage / maxCapacity) * 100 : 0;
-        return { current: currentUsage, max: maxCapacity, percentage: Math.min(100, percentage) }; // Ограничиваем процент 100
+        return { current: currentUsage, max: maxCapacity, percentage: Math.min(100, percentage) };
     }
 };
