@@ -1,59 +1,35 @@
 // dom_elements.js
 
+// Ссылки на часто используемые DOM-элементы
 const domElements = {
-    gameVersionDisplay: document.getElementById('game-version'),
+    // Сайдбар и статус игрока
+    sidebar: document.getElementById('sidebar'),
+    burgerMenuButton: document.getElementById('burger-menu-button'),
+    inventoryButton: document.getElementById('inventory-button'),
+    mainNav: document.getElementById('main-nav'),
     day: document.getElementById('day'),
-    survivors: document.getElementById('survivors'),
-    maxSurvivors: document.getElementById('max-survivors'),
-    
-    totalFoodValue: document.getElementById('total-food-value'), 
-    totalWaterValue: document.getElementById('total-water-value'), 
-    playerCondition: document.getElementById('player-condition'),
-
+    healthBarOuter: document.getElementById('health-bar-outer'),
     healthBarInner: document.getElementById('health-bar-inner'),
     healthBarText: document.getElementById('health-bar-text'),
+    hungerBarOuter: document.getElementById('hunger-bar-outer'),
     hungerBarInner: document.getElementById('hunger-bar-inner'),
-    hungerBarText: document.getElementById('hunger-bar-text'), // Была пропущена запятая здесь
+    hungerBarText: document.getElementById('hunger-bar-text'),
+    thirstBarOuter: document.getElementById('thirst-bar-outer'),
     thirstBarInner: document.getElementById('thirst-bar-inner'),
     thirstBarText: document.getElementById('thirst-bar-text'),
+    survivors: document.getElementById('survivors'),
+    maxSurvivors: document.getElementById('max-survivors'),
+    totalFoodValue: document.getElementById('total-food-value'),
+    totalWaterValue: document.getElementById('total-water-value'),
 
-    logMessages: document.getElementById('log-messages'),
-    buildActions: document.getElementById('build-actions'), 
-    eventActionsContainer: document.getElementById('event-actions-container'), 
-    eventTextDisplay: document.getElementById('event-text-display'),
-    eventActions: document.getElementById('event-actions'), 
-    
-    inventoryButton: document.getElementById('inventory-button'), 
-    inventoryModal: document.getElementById('inventory-modal'),
-    inventoryItemsList: document.getElementById('inventory-items-list'),
-    inventoryWeight: document.getElementById('inventory-weight'),
-    inventoryMaxWeight: document.getElementById('inventory-max-weight'),
-    inventoryFilters: document.querySelector('.player-inventory-filters'), 
-    
-    sidebar: document.getElementById('sidebar'),
-    mainNav: document.getElementById('main-nav'),
+    // Основной контент и вкладки
     mainContent: document.getElementById('main-content'),
     mainHeader: document.getElementById('main-header'),
+    playerConditionDisplay: document.getElementById('player-condition-display'),
+    playerCondition: document.getElementById('player-condition'),
     tabContentArea: document.getElementById('tab-content-area'),
-    
-    logPanel: document.getElementById('log-panel'),
-    toggleLogButton: document.getElementById('toggle-log'),
 
-    currentLocationNameDisplay: document.getElementById('current-location-name'),
-    currentLocationTimeDisplay: document.getElementById('current-location-time'),
-    currentLocationDescriptionDisplay: document.getElementById('current-location-description'),
-    scoutCurrentLocationButton: document.getElementById('scout-current-location-button'),
-    discoverNewLocationButton: document.getElementById('discover-new-location-button'),
-    discoveredLocationsList: document.getElementById('discovered-locations-list'),
-    
-    workshopLevelDisplay: document.getElementById('workshop-level-display'),
-    craftingRecipesList: document.getElementById('crafting-recipes-list'),
-    
-    baseInventoryList: document.getElementById('base-inventory-list'), 
-    baseInventoryFilters: document.querySelector('.base-storage-filters'), 
-
-    burgerMenuButton: document.getElementById('burger-menu-button'),
-
+    // Вкладка "Обзор и События" (Main Tab)
     overviewHealth: document.getElementById('overview-health'),
     overviewHunger: document.getElementById('overview-hunger'),
     overviewThirst: document.getElementById('overview-thirst'),
@@ -61,5 +37,62 @@ const domElements = {
     overviewDay: document.getElementById('overview-day'),
     overviewSurvivors: document.getElementById('overview-survivors'),
     overviewBaseFood: document.getElementById('overview-base-food'),
-    overviewBaseWater: document.getElementById('overview-base-water')
+    overviewBaseWater: document.getElementById('overview-base-water'),
+    eventActionsContainer: document.getElementById('event-actions-container'),
+    eventTextDisplay: document.getElementById('event-text-display'),
+    eventActions: document.getElementById('event-actions'),
+
+    // Вкладка "База" (Base Tab)
+    buildActions: document.getElementById('build-actions'),
+
+    // Вкладка "Склад Базы" (Storage Tab)
+    baseInventoryFilters: document.querySelector('#storage-tab .inventory-filters'), // Уточненный селектор
+    baseInventoryList: document.getElementById('base-inventory-list'),
+
+    // Вкладка "Разведка" (Explore Tab)
+    currentLocationNameDisplay: document.getElementById('current-location-name'),
+    currentLocationTimeDisplay: document.getElementById('current-location-time'),
+    currentLocationDescriptionDisplay: document.getElementById('current-location-description'),
+    scoutCurrentLocationButton: document.getElementById('scout-current-location-button'),
+    discoveredLocationsList: document.getElementById('discovered-locations-list'),
+    discoverNewLocationButton: document.getElementById('discover-new-location-button'),
+
+    // Вкладка "Крафт" (Craft Tab)
+    workshopLevelDisplay: document.getElementById('workshop-level-display'),
+    craftingRecipesList: document.getElementById('crafting-recipes-list'),
+
+    // Панель лога
+    logPanelContainer: document.getElementById('log-panel-container'),
+    logPanel: document.getElementById('log-panel'),
+    toggleLogButton: document.getElementById('toggle-log'),
+    logMessages: document.getElementById('log-messages'),
+
+    // Модальное окно инвентаря игрока
+    inventoryModal: document.getElementById('inventory-modal'),
+    inventoryWeight: document.getElementById('inventory-weight'),
+    inventoryMaxWeight: document.getElementById('inventory-max-weight'),
+    inventoryFilters: document.querySelector('#inventory-modal .inventory-filters'), // Уточненный селектор
+    inventoryItemsList: document.getElementById('inventory-items-list'),
+    // closeInventoryModalButton: Управляется через onclick в InventoryManager.closeInventoryModal()
+
+    // Модальное окно информации о локации (НОВЫЕ ЭЛЕМЕНТЫ)
+    locationInfoModal: document.getElementById('location-info-modal'),
+    locationInfoName: document.getElementById('location-info-name'),
+    locationInfoDescription: document.getElementById('location-info-description'),
+    locationInfoPreviewLoot: document.getElementById('location-info-preview-loot'),
+    locationInfoDanger: document.getElementById('location-info-danger'),
+    locationInfoTravelButton: document.getElementById('location-info-travel-button'),
+    locationInfoCloseButton: document.getElementById('location-info-close-button'),
+
+
+    // Футер
+    gameVersionDisplay: document.getElementById('game-version')
+    // resetGameButton: Управляется через onclick="game.resetGameConfirmation()"
 };
+
+// Проверка на null для всех элементов (полезно для отладки, если ID изменятся)
+for (const key in domElements) {
+    if (domElements[key] === null) {
+        console.warn(`DOM Element not found for key: ${key}. Check ID in index.html.`);
+    }
+}
