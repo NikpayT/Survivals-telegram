@@ -17,15 +17,21 @@ const UIManager = {
         this.updatePlayerStatus();
         this.updateInventoryWeightDisplay();
 
-        if (domElements.totalFoodValue) domElements.totalFoodValue.textContent = GameStateGetters.countBaseFoodItems();
-        if (domElements.totalWaterValue) domElements.totalWaterValue.textContent = GameStateGetters.countBaseWaterItems();
-
+        if (domElements.totalFoodValue) {
+            domElements.totalFoodValue.textContent = GameStateGetters.countBaseFoodItems();
+            domElements.totalFoodValue.title = GameStateGetters.getBaseFoodBreakdown(); 
+        }
+        if (domElements.totalWaterValue) {
+            domElements.totalWaterValue.textContent = GameStateGetters.countBaseWaterItems();
+            domElements.totalWaterValue.title = GameStateGetters.getBaseWaterBreakdown(); 
+        }
+        
         const activeTabLink = domElements.mainNav?.querySelector('.nav-link.active');
         if (activeTabLink) {
             const activeTabName = activeTabLink.dataset.tab;
             this.updateForTab(activeTabName);
         } else {
-             this.updateForTab('main-tab'); // По умолчанию, если вдруг нет активной
+             this.updateForTab('main-tab'); 
         }
         
         if (typeof InventoryManager !== 'undefined') {
@@ -114,8 +120,15 @@ const UIManager = {
         if(domElements.overviewCondition) domElements.overviewCondition.textContent = gameState.player.condition;
         if(domElements.overviewDay) domElements.overviewDay.textContent = gameState.day;
         if(domElements.overviewSurvivors) domElements.overviewSurvivors.textContent = `${gameState.survivors}/${GameStateGetters.getMaxSurvivors()}`;
-        if(domElements.overviewBaseFood) domElements.overviewBaseFood.textContent = GameStateGetters.countBaseFoodItems();
-        if(domElements.overviewBaseWater) domElements.overviewBaseWater.textContent = GameStateGetters.countBaseWaterItems();
+        
+        if(domElements.overviewBaseFood) {
+            domElements.overviewBaseFood.textContent = GameStateGetters.countBaseFoodItems();
+            domElements.overviewBaseFood.title = GameStateGetters.getBaseFoodBreakdown(); 
+        }
+        if(domElements.overviewBaseWater) {
+            domElements.overviewBaseWater.textContent = GameStateGetters.countBaseWaterItems();
+            domElements.overviewBaseWater.title = GameStateGetters.getBaseWaterBreakdown(); 
+        }
         
         this.renderBaseStructuresOverview(); 
     },
@@ -152,7 +165,7 @@ const UIManager = {
         if (tabName === 'main-tab') {
             this.updateOverviewTabStats();
         } else if (tabName === 'base-tab') {
-            this.updateBuildActions();
+            this.updateBuildActions(); // Также обновит состояние кнопки "пропустить день"
         } else if (tabName === 'explore-tab') {
             if (typeof LocationManager !== 'undefined') LocationManager.updateExploreTab();
             if (domElements.eventActionsContainer && domElements.eventTextDisplay && domElements.eventActions) {
@@ -166,8 +179,8 @@ const UIManager = {
                     EventManager.displayLocationEventChoices();
                 } else {
                     domElements.eventActionsContainer.style.display = 'none';
-                    domElements.eventTextDisplay.textContent = '';
-                    domElements.eventActions.innerHTML = '';
+                    if (domElements.eventTextDisplay) domElements.eventTextDisplay.textContent = ''; // Проверка на null
+                    if (domElements.eventActions) domElements.eventActions.innerHTML = ''; // Проверка на null
                 }
             }
         } else if (tabName === 'storage-tab' && typeof InventoryManager !== 'undefined') {
@@ -198,7 +211,8 @@ const UIManager = {
     updateExploreTabDisplay: function() {
         if (!domElements || typeof gameState === 'undefined' || typeof LOCATION_DEFINITIONS === 'undefined' ||
             !domElements.currentLocationNameDisplay || !domElements.currentLocationDescriptionDisplay ||
-            !domElements.currentLocationTimeDisplay || !domElements.scoutCurrentLocationButton || !domElements.discoverNewLocationButton) {
+            /* !domElements.currentLocationTimeDisplay || */ // Удаляем, так как время теперь в кнопке
+            !domElements.scoutCurrentLocationButton || !domElements.discoverNewLocationButton) {
             console.warn("UIManager.updateExploreTabDisplay: Missing critical DOM elements for explore tab.");
             return;
         }
@@ -210,12 +224,11 @@ const UIManager = {
             domElements.currentLocationNameDisplay.textContent = currentLocationDef.name;
             domElements.currentLocationDescriptionDisplay.textContent = `${currentLocationDef.description || ""} (Попыток обыска: ${currentLocationState.searchAttemptsLeft === undefined ? 'N/A' : currentLocationState.searchAttemptsLeft})`;
             
-            let scoutButtonHTML = `Обыскать`; // Используем HTML, чтобы вставить span
+            let scoutButtonHTML = `Обыскать`; 
             const scoutTime = currentLocationDef.scoutTime || 1;
             if (scoutTime > 0) {
                 scoutButtonHTML += ` <span class="action-time-indicator">⏱️${scoutTime}д.</span>`;
             }
-            // domElements.currentLocationTimeDisplay.textContent = scoutTime; // Уже не нужен, если время в кнопке
             
             const canSearch = (currentLocationState.searchAttemptsLeft || 0) > 0;
             const scoutDisabled = !canSearch || gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null;
@@ -227,14 +240,14 @@ const UIManager = {
             domElements.currentLocationNameDisplay.textContent = "Неизвестно";
             domElements.currentLocationDescriptionDisplay.textContent = "Ошибка: текущая локация не найдена.";
             domElements.scoutCurrentLocationButton.disabled = true;
-            domElements.scoutCurrentLocationButton.innerHTML = "Обыскать"; // Используем innerHTML
+            domElements.scoutCurrentLocationButton.innerHTML = "Обыскать"; 
             domElements.scoutCurrentLocationButton.classList.remove('action-available');
         }
         
-        const discoverTime = 1; // Фиксированное время для разведки новых территорий
+        const discoverTime = 1; 
         const discoverDisabled = gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null;
         domElements.discoverNewLocationButton.disabled = discoverDisabled;
-        domElements.discoverNewLocationButton.innerHTML = `Разведать новые территории <span class="action-time-indicator">⏱️${discoverTime}д.</span>`; // Используем innerHTML
+        domElements.discoverNewLocationButton.innerHTML = `Разведать новые территории <span class="action-time-indicator">⏱️${discoverTime}д.</span>`;
         domElements.discoverNewLocationButton.classList.toggle('action-available', !discoverDisabled);
     },
 
@@ -311,12 +324,15 @@ const UIManager = {
         domElements.baseStructuresOverviewList.innerHTML = '';
         let hasStructures = false;
 
-        for (const key in gameState.structures) { // Итерируем по структурам в gameState для сохранения порядка
-            if (!BASE_STRUCTURE_DEFINITIONS[key]) continue; // Пропускаем, если нет определения
-            hasStructures = true;
-            const structureDef = BASE_STRUCTURE_DEFINITIONS[key];
-            const currentStructureState = gameState.structures[key];
+        for (const key in BASE_STRUCTURE_DEFINITIONS) { // Итерация по определениям для сохранения порядка
+            if (!BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) continue;
 
+            const structureDef = BASE_STRUCTURE_DEFINITIONS[key];
+            const currentStructureState = gameState.structures[key] || { level: structureDef.initialLevel || 0 };
+             if (!gameState.structures[key]) gameState.structures[key] = currentStructureState; // Убедимся, что структура есть в gameState
+
+
+            hasStructures = true;
             const itemDiv = document.createElement('div');
             itemDiv.className = 'structure-overview-item';
 
@@ -330,17 +346,16 @@ const UIManager = {
                 } catch (e) { console.error(`Error getting effect for ${key} at level ${currentStructureState.level}:`, e); }
             } else if (currentStructureState.level === 0 && (structureDef.initialLevel === undefined || structureDef.initialLevel === 0)) {
                  effectText = "Не построено";
-            } else if (structureDef.effectDescription) { // Fallback на текстовое описание, если есть
+            } else if (structureDef.effectDescription) { 
                 effectText = structureDef.effectDescription.replace("{level}", currentStructureState.level);
             }
-
 
             let upgradeCostHTML = `<p class="max-level">Достигнут максимальный уровень.</p>`;
             if (currentStructureState.level < structureDef.maxLevel) {
                 const costDef = getStructureUpgradeCost(key, currentStructureState.level);
                 if (costDef && Object.keys(costDef).length > 0) {
                     upgradeCostHTML = '<strong>Стоимость улучшения:</strong><ul>';
-                    let canAffordAllForThis = true; // Локальный флаг для этой постройки
+                    let canAffordAllForThis = true;
                     for (const itemId in costDef) {
                         const required = costDef[itemId];
                         const has = InventoryManager.countItemInInventory(gameState.baseInventory, itemId);
@@ -366,7 +381,7 @@ const UIManager = {
         }
 
         if (!hasStructures && domElements.baseStructuresOverviewList) {
-            domElements.baseStructuresOverviewList.innerHTML = '<p><em>На базе еще нет построенных или определенных строений.</em></p>';
+            domElements.baseStructuresOverviewList.innerHTML = '<p><em>Определения построек не загружены или их нет.</em></p>';
         }
     },
 
@@ -376,24 +391,30 @@ const UIManager = {
             return;
         }
         domElements.buildActions.innerHTML = '';
-        let structuresAvailable = false;
-        for (const key in BASE_STRUCTURE_DEFINITIONS) { // Итерируем по определениям, чтобы сохранить порядок из buildings.js
-            const definition = BASE_STRUCTURE_DEFINITIONS[key];
-            const currentStructureState = gameState.structures[key] || { level: definition.initialLevel || 0 }; // Если нет в gameState, берем начальный
-            if (!gameState.structures[key]) gameState.structures[key] = currentStructureState; // Добавляем в gameState если отсутствует
+        let structuresAvailableForBuild = false; // Флаг для проверки, есть ли что строить
+        for (const key in BASE_STRUCTURE_DEFINITIONS) { 
+            if (!BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) continue;
 
-            structuresAvailable = true;
+            const definition = BASE_STRUCTURE_DEFINITIONS[key];
+            // Убедимся, что структура есть в gameState, если нет - инициализируем
+            if (!gameState.structures[key]) {
+                gameState.structures[key] = { level: definition.initialLevel || 0 };
+            }
+            const currentStructureState = gameState.structures[key];
+            structuresAvailableForBuild = true;
+
+
             const btn = document.createElement('button');
             btn.classList.add('tooltip-host', 'game-action-button');
             let costStringForTooltip = "";
             let canAffordAll = true;
             let atMaxLevel = currentStructureState.level >= definition.maxLevel;
-            let buttonText = `${definition.name} [${currentStructureState.level}]`;
+            
+            let buttonHTML = `${definition.name} [${currentStructureState.level}]`; 
 
-            // Предполагаем, что постройка не занимает время, если buildTime не определено
-            // const buildTime = (typeof definition.buildTime === 'function') ? definition.buildTime(currentStructureState.level + 1) : 0;
+            // const buildTime = (typeof definition.buildTime === 'function') ? definition.buildTime(currentStructureState.level + 1) : (definition.buildTimePerLevel || 0) ; 
             // if (buildTime > 0 && !atMaxLevel) {
-            //     buttonText += ` <span class="action-time-indicator">⏱️${buildTime}д.</span>`;
+            //     buttonHTML += ` <span class="action-time-indicator">⏱️${buildTime}д.</span>`;
             // }
 
             if (!atMaxLevel) {
@@ -410,7 +431,7 @@ const UIManager = {
                 costStringForTooltip = "Достигнут максимальный уровень.";
             }
             
-            btn.innerHTML = buttonText;
+            btn.innerHTML = buttonHTML;
             const tooltipSpan = document.createElement('span');
             tooltipSpan.classList.add('tooltip-text');
             tooltipSpan.innerHTML = `${definition.description}<br>${atMaxLevel ? costStringForTooltip : `Стоимость улучшения: ${costStringForTooltip}`}`;
@@ -423,8 +444,17 @@ const UIManager = {
             
             domElements.buildActions.appendChild(btn);
         }
-        if (!structuresAvailable && domElements.buildActions) {
-            domElements.buildActions.innerHTML = '<p><em>Определения построек не загружены.</em></p>';
+
+        // Обновление состояния кнопки "Пропустить день на базе"
+        if (domElements.passDayAtBaseButton) {
+            const passDayDisabled = gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver || game.isPassingDay;
+            domElements.passDayAtBaseButton.disabled = passDayDisabled;
+            domElements.passDayAtBaseButton.classList.toggle('action-available', !passDayDisabled);
+        }
+
+
+        if (!structuresAvailableForBuild && domElements.buildActions) {
+            domElements.buildActions.innerHTML = '<p><em>Нет доступных для строительства объектов или определения не загружены.</em></p>';
         }
     },
 
@@ -468,15 +498,15 @@ const UIManager = {
                 additionalResultsHTML += '</ul>';
             }
             
-            let buttonText = `Создать`;
-            // const craftTime = recipe.craftTime || 0; // Предполагаем, что у рецепта может быть craftTime
+            let buttonHTML = `Создать`; 
+            // const craftTime = recipe.craftTime || 0; 
             // if (craftTime > 0) {
-            //    buttonText += ` <span class="action-time-indicator">⏱️${craftTime}д.</span>`;
+            //    buttonHTML += ` <span class="action-time-indicator">⏱️${craftTime}д.</span>`;
             // }
 
             const craftButton = document.createElement('button');
             craftButton.classList.add('game-action-button'); 
-            craftButton.innerHTML = buttonText; 
+            craftButton.innerHTML = buttonHTML; 
             craftButton.onclick = () => game.craftItem(recipeId);
             const isActionAvailable = canCraftThis && !gameState.gameOver && !gameState.currentEvent && !gameState.locationEvent;
             craftButton.disabled = !isActionAvailable;
