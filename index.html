@@ -21,6 +21,8 @@
                 <button class="nav-link" data-tab="storage-tab">Склад</button>
                 <button class="nav-link" data-tab="explore-tab">Разведка</button>
                 <button class="nav-link" data-tab="craft-tab">Крафт</button>
+                <!-- НОВАЯ КНОПКА ВКЛАДКИ -->
+                <button id="nav-cheats-tab" class="nav-link" data-tab="cheats-tab">Читы (Dev)</button>
             </nav>
             <div id="player-status-condensed" class="panel">
                 <h4>Состояние Игрока</h4>
@@ -64,7 +66,7 @@
             <div id="tab-content-area">
                 <!-- Вкладка Обзор -->
                 <div id="main-tab" class="tab-content" style="display: block;">
-                    <h2>Обзор Базы и Игрока</h2> <!-- Изменено название для ясности -->
+                    <h2>Обзор Базы и Игрока</h2>
                     <div class="overview-stats-container">
                         <div class="overview-panel">
                             <h3>Статус Игрока</h3>
@@ -81,19 +83,12 @@
                             <p>Вода на складе (жажда): <span id="overview-base-water">0</span></p>
                         </div>
                     </div>
-                    <!-- Кнопка "Завершить день" УДАЛЕНА отсюда -->
-                    <!-- Блок событий ПЕРЕМЕЩЕН во вкладку "Разведка" -->
                 </div>
 
                 <!-- Вкладка База -->
                 <div id="base-tab" class="tab-content">
                     <h2>Управление Базой</h2>
                     <div id="build-actions" class="action-grid"></div>
-                     <!-- Возможно, здесь стоит добавить кнопку "Отдыхать / Пропустить день", если нет других действий -->
-                     <!-- <div class="action-group">
-                        <h3>Действия на Базе</h3>
-                        <button id="pass-day-base-button" class="game-action-button" onclick="game.passDayOnBase()">Провести день на базе (Отдых)</button>
-                    </div> -->
                 </div>
 
                 <!-- Вкладка Склад -->
@@ -115,7 +110,7 @@
 
                 <!-- Вкладка Разведка -->
                 <div id="explore-tab" class="tab-content">
-                    <h2>Разведка и События в Пустоши</h2> <!-- Изменено название -->
+                    <h2>Разведка и События в Пустоши</h2>
                     <div class="action-group">
                         <h3>Действия на текущей локации: <span id="current-location-name">Окрестности Базы</span></h3>
                         <button id="scout-current-location-button" class="game-action-button" onclick="LocationManager.exploreCurrentLocationAction('search')">Обыскать (<span id="current-location-time">1</span> д.)</button>
@@ -128,10 +123,8 @@
                         </div>
                          <button id="discover-new-location-button" class="game-action-button" onclick="LocationManager.discoverNewLocationAction()">Разведать новые территории (1 д.)</button>
                     </div>
-
-                    <!-- Блок событий ПЕРЕМЕЩЕН СЮДА из вкладки "Обзор" -->
                     <div id="event-actions-container" class="action-group" style="display: none;">
-                        <h3>Текущее Событие в Пустоши</h3> <!-- Изменено название -->
+                        <h3>Текущее Событие в Пустоши</h3>
                         <div id="event-text-display"></div>
                         <div id="event-actions"></div>
                     </div>
@@ -145,9 +138,45 @@
                         <p><em>Рецепты не найдены или не выполнены условия.</em></p>
                     </div>
                 </div>
+
+                <!-- НОВАЯ ВКЛАДКА ЧИТЫ -->
+                <div id="cheats-tab" class="tab-content">
+                    <h2>Панель Читов (DEV)</h2>
+                    <div class="action-group">
+                        <h3>Ресурсы и Предметы</h3>
+                        <button onclick="Cheats.addCommonResources()">+100 Базовых Ресурсов на Склад</button>
+                        <button onclick="Cheats.addAllItemsToPlayer(1)">Дать по 1 шт. каждого предмета Игроку</button>
+                        <button onclick="Cheats.addAllItemsToBase(10)">Дать по 10 шт. каждого предмета на Склад</button>
+                        <button onclick="Cheats.clearPlayerInventory()">Очистить Инвентарь Игрока</button>
+                        <button onclick="Cheats.clearBaseInventory()">Очистить Склад Базы</button>
+                    </div>
+                    <div class="action-group">
+                        <h3>Статус Игрока и Базы</h3>
+                        <button onclick="Cheats.healPlayerFull()">Игрок: Полное Здоровье/Сытость/Жажда</button>
+                        <button onclick="Cheats.setPlayerStat('health', 10)">Игрок: Здоровье = 10</button>
+                        <button onclick="Cheats.addSurvivor()">+1 Выживший (если есть место)</button>
+                        <button onclick="Cheats.setDay(1)">Установить День 1</button>
+                        <input type="number" id="cheat-set-day-input" value="1" min="1" style="width: 60px; margin-right: 5px;">
+                        <button onclick="Cheats.setDay(document.getElementById('cheat-set-day-input').value)">Установить День (число)</button>
+                    </div>
+                    <div class="action-group">
+                        <h3>Прогресс и Открытия</h3>
+                        <button onclick="Cheats.maxAllStructures()">Все постройки: Макс. Уровень</button>
+                        <button onclick="Cheats.discoverAllLocations()">Открыть Все Локации</button>
+                        <button onclick="Cheats.resetAllExploration()">Сбросить прогресс обыска локаций</button>
+                        <button onclick="Cheats.resetEventFlags()">Сбросить Все Флаги Событий</button>
+                    </div>
+                     <div class="action-group">
+                        <h3>События</h3>
+                        <input type="text" id="cheat-trigger-event-id-input" placeholder="ID события" style="margin-right: 5px;">
+                        <button onclick="Cheats.triggerSpecificEvent(document.getElementById('cheat-trigger-event-id-input').value)">Запустить Событие по ID</button>
+                        <button onclick="Cheats.clearCurrentEvents()">Сбросить текущие активные события</button>
+                    </div>
+                    <p style="color: #ff6666; font-weight: bold;">ВНИМАНИЕ: Использование читов может нарушить игровой баланс и привести к непредвиденному поведению. Используйте на свой страх и риск.</p>
+                </div>
+
             </div>
 
-            <!-- Панель лога -->
             <div id="log-panel-container">
                  <div id="log-panel" class="panel">
                     <div class="log-header">
@@ -162,7 +191,6 @@
         </main>
     </div>
 
-    <!-- Модальное окно инвентаря игрока -->
     <div id="inventory-modal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="InventoryManager.closeInventoryModal()">×</span>
@@ -182,44 +210,36 @@
         </div>
     </div>
 
-    <!-- Модальное окно информации о локации -->
     <div id="location-info-modal" class="modal" style="display: none;">
         <div class="modal-content location-modal-content">
             <span id="location-info-close-button" class="close-button" onclick="UIManager.closeLocationInfoModal()">×</span>
             <h2 id="location-info-name">Название Локации</h2>
             <p id="location-info-description">Описание локации здесь...</p>
             <p><strong>Уровень опасности:</strong> <span id="location-info-danger">Средний</span></p>
-            <div id="location-info-preview-loot" class="location-info-section">
-            </div>
+            <div id="location-info-preview-loot" class="location-info-section"></div>
             <div class="modal-actions">
                 <button id="location-info-travel-button" class="game-action-button">Перейти сюда</button>
             </div>
         </div>
     </div>
 
-
     <footer>
         <button onclick="game.resetGameConfirmation()">Начать игру заново</button>
         <p id="game-version">Версия: 0.0.0</p>
     </footer>
 
-    <!-- Файлы определений -->
     <script src="items.js"></script>
     <script src="buildings.js"></script>
     <script src="locations.js"></script>
     <script src="recipes.js"></script>
-
-    <!-- Файлы состояния и DOM -->
     <script src="game_state.js"></script>
     <script src="dom_elements.js"></script>
-
-    <!-- Файлы менеджеров (ПОРЯДОК ВАЖЕН!) -->
+    <!-- НОВЫЙ ФАЙЛ ДЛЯ ЧИТОВ (перед script.js) -->
+    <script src="cheats_manager.js"></script>
     <script src="ui_manager.js"></script>
     <script src="inventory_manager.js"></script>
     <script src="location_manager.js"></script>
     <script src="event_manager.js"></script>
-
-    <!-- Основной файл игры (ПОСЛЕДНИМ) -->
     <script src="script.js"></script>
 </body>
 </html>
