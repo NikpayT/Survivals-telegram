@@ -2,7 +2,6 @@
 
 const GAME_VERSION = "0.5.3"; 
 
-// Вспомогательная функция для глубокого слияния объектов состояния
 function deepMergeStates(target, source) {
     for (const key in source) {
         if (source.hasOwnProperty(key)) {
@@ -18,7 +17,7 @@ function deepMergeStates(target, source) {
     }
     for (const key in target) { 
         if (target.hasOwnProperty(key) && !source.hasOwnProperty(key)) {
-            // Поле из initialGameState остается, так как мы начинаем с его копии
+            // Поле из initialGameState остается
         }
     }
     return target;
@@ -68,8 +67,12 @@ const game = {
         }
         if (!gameState.baseInventory) gameState.baseInventory = [];
         if (!gameState.inventory) gameState.inventory = [];
-        if (!gameState.structures || Object.keys(gameState.structures).length === 0) { // Проверяем и если пусто, инициализируем
+        if (!gameState.structures || Object.keys(gameState.structures).length === 0) {
             this.initializeStructures();
+        }
+        // Инициализация seasonalEvents, если отсутствует в gameState
+        if (!gameState.seasonalEvents) {
+            gameState.seasonalEvents = JSON.parse(JSON.stringify(initialGameState.seasonalEvents || {}));
         }
 
 
@@ -93,6 +96,7 @@ const game = {
             else UIManager.openTab('main-tab', null); 
         }
 
+        // Навешивание событий
         if (domElements.inventoryButton && typeof InventoryManager !== 'undefined') {
             domElements.inventoryButton.onclick = () => InventoryManager.openInventoryModal();
         }
@@ -126,13 +130,18 @@ const game = {
         if (domElements.locationInfoCloseButton && typeof UIManager !== 'undefined') { 
             domElements.locationInfoCloseButton.onclick = () => UIManager.closeLocationInfoModal();
         }
+        // Для кнопки возврата из сезонного события
+        if (domElements.seasonalEventReturnBaseButton && typeof NewYearEvent !== 'undefined') { // Проверяем NewYearEvent
+            domElements.seasonalEventReturnBaseButton.onclick = () => NewYearEvent.endEvent(false); // Прервать событие
+        }
+
     },
 
     initializeStructures: function() {
         gameState.structures = {}; 
         if (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') {
             for (const key in BASE_STRUCTURE_DEFINITIONS) {
-                if (BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) { // Добавлена проверка
+                if (BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) {
                     const def = BASE_STRUCTURE_DEFINITIONS[key];
                     gameState.structures[key] = {
                         level: def.initialLevel || 0,
@@ -211,8 +220,8 @@ const game = {
                 if (!gameState.inventory) gameState.inventory = [];
                 if (!gameState.flags) gameState.flags = {};
                 if (gameState.logVisible === undefined) gameState.logVisible = true;
+                if (!gameState.seasonalEvents) gameState.seasonalEvents = JSON.parse(JSON.stringify(initialGameState.seasonalEvents || {})); // Для совместимости со старыми сейвами
 
-                // const initialStructuresCopy = JSON.parse(JSON.stringify(initialGameState.structures)); // Уже не нужно, т.к. начинаем с initialGameState
                 gameState.structures = gameState.structures || {};
                 if (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') {
                     for (const key in BASE_STRUCTURE_DEFINITIONS) { 
@@ -232,7 +241,7 @@ const game = {
                         }
                     }
                 } else {
-                    this.initializeStructures(); // Если определений нет, используем пустые структуры из initial
+                    this.initializeStructures();
                 }
 
                 if (!gameState.currentLocationId || (typeof LOCATION_DEFINITIONS !== 'undefined' && !LOCATION_DEFINITIONS[gameState.currentLocationId])) {
@@ -340,10 +349,15 @@ const game = {
         }
         if (gameState.gameOver) return;
         
-        this.log(`[Сводка Дня ${previousDay}]: Потрачено еды: ${this.daySummary.foodConsumed}, воды: ${this.daySummary.waterConsumed}.`, "event-neutral");
-        this.resetDaySummary(); // Сбрасываем итоги для СЛЕДУЮЩЕГО дня уже здесь
+        this.log(`[Сводка Дня ${previousDay}]: Потреблено еды: ${this.daySummary.foodConsumed}, воды: ${this.daySummary.waterConsumed}.`, "event-neutral");
+        this.resetDaySummary(); 
 
-        if (typeof EventManager !== 'undefined') EventManager.triggerRandomEvent(); 
+        if (typeof EventManager !== 'undefined' && !gameState.seasonalEvents?.newYear?.isActive) { // Не триггерим обычные события, если активно сезонное
+             EventManager.triggerRandomEvent(); 
+        }
+        if (typeof NewYearEvent !== 'undefined' && !gameState.seasonalEvents?.newYear?.isActive) { // Проверяем триггер сезонного, если оно неактивно
+            NewYearEvent.updateEventStateOnDayChange(); // Этот метод вызовет checkForTrigger
+        }
         
         if (document.getElementById('explore-tab')?.style.display === 'block' && 
             !gameState.currentEvent && !gameState.locationEvent && domElements.eventActionsContainer) {
@@ -355,17 +369,15 @@ const game = {
 
     passDayAtBase: async function() {
         if (gameState.gameOver || this.isPassingDay) return;
-        if (gameState.currentEvent || gameState.locationEvent) { 
-            this.log("Завершите текущее событие, прежде чем отдыхать.", "event-warning");
+        if (gameState.currentEvent || gameState.locationEvent || gameState.seasonalEvents?.newYear?.isActive) { 
+            this.log("Завершите текущее событие или сезонное приключение, прежде чем отдыхать.", "event-warning");
             return;
         }
         this.isPassingDay = true;
         if(domElements.passDayAtBaseButton) domElements.passDayAtBaseButton.disabled = true;
         if(domElements.scoutCurrentLocationButton) domElements.scoutCurrentLocationButton.disabled = true;
         if(domElements.discoverNewLocationButton) domElements.discoverNewLocationButton.disabled = true;
-        // Блокировка других кнопок действий (строительство, крафт)
         document.querySelectorAll('#build-actions button, #crafting-recipes-list button').forEach(btn => btn.disabled = true);
-
 
         if (domElements.passDayProgressBarContainer && domElements.passDayProgressBarInner && domElements.passDayProgressBarText) {
             domElements.passDayProgressBarContainer.style.display = 'block';
@@ -383,17 +395,15 @@ const game = {
 
         if (domElements.passDayProgressBarContainer) domElements.passDayProgressBarContainer.style.display = 'none';
         
-        this.isPassingDay = false; // Сбрасываем флаг ДО обновления UI, чтобы кнопки разблокировались
+        this.isPassingDay = false; 
         if (typeof UIManager !== 'undefined') {
             UIManager.updateDisplay(); 
         }
         this.saveGame();
-        
-        // UIManager.updateDisplay() должен обновить состояние кнопок через updateForTab
     },
 
     build: function(structureKey) { 
-        if (gameState.gameOver || this.isPassingDay || gameState.currentEvent || gameState.locationEvent) return;
+        if (gameState.gameOver || this.isPassingDay || gameState.currentEvent || gameState.locationEvent || gameState.seasonalEvents?.newYear?.isActive) return;
         const definition = (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') ? BASE_STRUCTURE_DEFINITIONS[structureKey] : null;
         const currentStructureState = gameState.structures[structureKey];
         if (!definition || !currentStructureState) {
@@ -440,7 +450,7 @@ const game = {
     canCraft: function(recipeId) {
         const recipe = (typeof CRAFTING_RECIPES !== 'undefined') ? CRAFTING_RECIPES[recipeId] : null;
         if (!recipe) return false;
-        if (gameState.gameOver || this.isPassingDay || gameState.currentEvent || gameState.locationEvent) return false; // Проверка
+        if (gameState.gameOver || this.isPassingDay || gameState.currentEvent || gameState.locationEvent || gameState.seasonalEvents?.newYear?.isActive) return false;
 
         const workshopLevel = gameState.structures.workshop ? gameState.structures.workshop.level : 0;
         if (workshopLevel < (recipe.workshopLevelRequired || 0)) {
@@ -464,9 +474,9 @@ const game = {
     },
 
     craftItem: function(recipeId) {
-        if (gameState.gameOver || this.isPassingDay || gameState.currentEvent || gameState.locationEvent) return; // Проверка
+        if (gameState.gameOver || this.isPassingDay || gameState.currentEvent || gameState.locationEvent || gameState.seasonalEvents?.newYear?.isActive) return; 
 
-        if (!this.canCraft(recipeId)) { // canCraft уже проверит все условия
+        if (!this.canCraft(recipeId)) { 
             this.log("Невозможно создать предмет: не хватает ресурсов, инструментов или не тот уровень мастерской, либо действие заблокировано.", "event-negative");
             if (typeof UIManager !== 'undefined') UIManager.renderCraftingRecipes(); 
             return;
@@ -503,11 +513,17 @@ const game = {
         if(gameState.gameOver) return; 
         this.log(message, "event-negative");
         gameState.gameOver = true;
+        // Блокируем все кнопки действий
         document.querySelectorAll('.game-action-button').forEach(button => {
              button.disabled = true;
              button.classList.remove('action-available'); 
         });
+        // Скрываем контейнеры событий
         if(domElements.eventActionsContainer) domElements.eventActionsContainer.style.display = 'none'; 
+        if(domElements.seasonalEventModal) domElements.seasonalEventModal.style.display = 'none'; // Скрываем и сезонное, если было
+         // Отключаем возможность пропуска дня
+        this.isPassingDay = true; // Используем флаг, чтобы предотвратить запуск
+        if(domElements.passDayAtBaseButton) domElements.passDayAtBaseButton.disabled = true;
     },
     
     resetGameConfirmation: function() {
@@ -517,7 +533,9 @@ const game = {
     },
 
     resetGameInternals: function(logMessage = true) {
+        const oldGameState = JSON.parse(JSON.stringify(gameState)); // Сохраняем для возможного анализа
         gameState = JSON.parse(JSON.stringify(initialGameState)); 
+        
         const baseLocDefDefault = (typeof LOCATION_DEFINITIONS !== 'undefined' && LOCATION_DEFINITIONS["base_surroundings"]) ? LOCATION_DEFINITIONS["base_surroundings"] : {name: "Окрестности Базы", initialSearchAttempts: 5, entryLoot: []};
         gameState.discoveredLocations = { 
             "base_surroundings": { 
@@ -537,12 +555,16 @@ const game = {
         if(domElements.gameVersionDisplay) domElements.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
         
         if (typeof UIManager !== 'undefined') {
-            UIManager.applyLogVisibility();
-            UIManager.updateDisplay(); // Это должно обновить состояние всех кнопок
+            UIManager.closeLocationInfoModal(); // Закрываем все модалки
+            UIManager.closeSeasonalEventModal(); 
+            InventoryManager.closeInventoryModal();
+            UIManager.applyLogVisibility(); // Сначала видимость лога
+            UIManager.updateDisplay();    // Затем обновляем все остальное (чтобы кнопки корректно обновились)
         }
 
+        // Кнопки должны разблокироваться через UIManager.updateDisplay -> updateForTab
         // document.querySelectorAll('.game-action-button').forEach(button => {
-        //     button.disabled = false; // UIManager.updateDisplay() должен это сделать
+        //     button.disabled = false; 
         // });
 
         const defaultNavLink = domElements.mainNav?.querySelector('.nav-link[data-tab="main-tab"]');
@@ -575,7 +597,8 @@ window.onload = () => {
         typeof InventoryManager !== 'undefined' &&
         typeof LocationManager !== 'undefined' && 
         typeof EventManager !== 'undefined' &&
-        (typeof Cheats !== 'undefined' || console.warn("Cheats module not loaded, but optional."))
+        (typeof Cheats !== 'undefined' || console.warn("Cheats module not loaded (optional).")) &&
+        (typeof NewYearEvent !== 'undefined' || console.warn("NewYearEvent module not loaded (optional)."))
         ) {
         game.init();
     } else {
@@ -583,7 +606,18 @@ window.onload = () => {
         let errorMsg = "Ошибка загрузки игровых данных. Пожалуйста, проверьте консоль (F12) и обновите страницу. Возможные проблемы:\n";
         if (typeof ITEM_DEFINITIONS === 'undefined') errorMsg += "- ITEM_DEFINITIONS (items.js)\n";
         if (typeof BASE_STRUCTURE_DEFINITIONS === 'undefined') errorMsg += "- BASE_STRUCTURE_DEFINITIONS (buildings.js)\n";
-        // ... (добавить остальные проверки по аналогии) ...
+        if (typeof LOCATION_DEFINITIONS === 'undefined') errorMsg += "- LOCATION_DEFINITIONS (locations.js)\n";
+        if (typeof CRAFTING_RECIPES === 'undefined') errorMsg += "- CRAFTING_RECIPES (recipes.js)\n";
+        if (typeof gameState === 'undefined') errorMsg += "- gameState (game_state.js)\n";
+        if (typeof domElements === 'undefined') errorMsg += "- domElements (dom_elements.js)\n";
+        if (typeof GameStateGetters === 'undefined') errorMsg += "- GameStateGetters (game_state.js)\n";
+        if (typeof UIManager === 'undefined') errorMsg += "- UIManager (ui_manager.js)\n";
+        if (typeof InventoryManager === 'undefined') errorMsg += "- InventoryManager (inventory_manager.js)\n";
+        if (typeof LocationManager === 'undefined') errorMsg += "- LocationManager (location_manager.js)\n";
+        if (typeof EventManager === 'undefined') errorMsg += "- EventManager (event_manager.js)\n";
+        if (typeof Cheats === 'undefined') errorMsg += "- Cheats (cheats_manager.js) - опционально\n";
+        if (typeof NewYearEvent === 'undefined') errorMsg += "- NewYearEvent (seasonal_event_new_year.js) - опционально\n";
+        
         document.body.innerHTML = `<p style='color:red; font-size:18px; text-align:center; margin-top: 50px;'>${errorMsg.replace(/\n/g, "<br>")}</p>`;
     }
 };
