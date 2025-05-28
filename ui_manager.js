@@ -17,7 +17,6 @@ const UIManager = {
         this.updatePlayerStatus();
         this.updateInventoryWeightDisplay();
 
-        // Обновление информации о ресурсах и вместимости склада в сайдбаре
         if (domElements.totalFoodValue) {
             domElements.totalFoodValue.textContent = GameStateGetters.countBaseFoodItems();
             domElements.totalFoodValue.title = GameStateGetters.getBaseFoodBreakdown(); 
@@ -26,10 +25,10 @@ const UIManager = {
             domElements.totalWaterValue.textContent = GameStateGetters.countBaseWaterItems();
             domElements.totalWaterValue.title = GameStateGetters.getBaseWaterBreakdown(); 
         }
-        if (domElements.sidebarBaseCapacityUsage) {
+        if (domElements.sidebarBaseCapacityUsage) { // Обновление для сайдбара
             const usage = GameStateGetters.getBaseInventoryUsage();
             domElements.sidebarBaseCapacityUsage.textContent = `${usage.current}/${usage.max}`;
-            domElements.sidebarBaseCapacityUsage.title = `Заполнено: ${usage.percentage.toFixed(0)}%`;
+            domElements.sidebarBaseCapacityUsage.title = `Заполнено слотов: ${usage.percentage.toFixed(0)}%`;
         }
         
         const activeTabLink = domElements.mainNav?.querySelector('.nav-link.active');
@@ -37,7 +36,9 @@ const UIManager = {
             const activeTabName = activeTabLink.dataset.tab;
             this.updateForTab(activeTabName);
         } else {
-             this.updateForTab('main-tab'); 
+            // Если нет активной вкладки, пытаемся открыть 'main-tab'
+            const mainTabNavLink = domElements.mainNav?.querySelector('.nav-link[data-tab="main-tab"]');
+            this.openTab('main-tab', mainTabNavLink); 
         }
         
         if (typeof InventoryManager !== 'undefined') {
@@ -128,7 +129,7 @@ const UIManager = {
             domElements.overviewBaseWater.textContent = GameStateGetters.countBaseWaterItems();
             domElements.overviewBaseWater.title = GameStateGetters.getBaseWaterBreakdown(); 
         }
-        if(domElements.overviewBaseCapacityUsage) { // Обновление заполненности склада на вкладке Обзор
+        if(domElements.overviewBaseCapacityUsage) { 
             const usage = GameStateGetters.getBaseInventoryUsage();
             domElements.overviewBaseCapacityUsage.textContent = `${usage.current}/${usage.max}`;
             domElements.overviewBaseCapacityUsage.title = `Заполнено слотов: ${usage.percentage.toFixed(0)}%`;
@@ -137,7 +138,10 @@ const UIManager = {
     },
 
     openTab: function(tabName, clickedLinkElement) {
-        if (!domElements || !domElements.mainNav || !domElements.tabContentArea) return;
+        if (!domElements || !domElements.mainNav || !domElements.tabContentArea) {
+             console.error("UIManager.openTab: Critical DOM elements (mainNav or tabContentArea) not found.");
+             return;
+        }
         domElements.tabContentArea.querySelectorAll('.tab-content').forEach(tc => tc.style.display = "none");
         domElements.mainNav.querySelectorAll('.nav-link').forEach(tl => tl.classList.remove("active"));
         const tabElement = document.getElementById(tabName);
@@ -187,8 +191,8 @@ const UIManager = {
                 }
             }
         } else if (tabName === 'storage-tab' && typeof InventoryManager !== 'undefined') {
-            InventoryManager.filterBaseInventory('all'); // Рендерит инвентарь
-            if (domElements.storageTabBaseCapacityUsage && typeof GameStateGetters !== 'undefined') { // Обновление заполненности на вкладке Склад
+            InventoryManager.filterBaseInventory('all'); 
+            if (domElements.storageTabBaseCapacityUsage && typeof GameStateGetters !== 'undefined') { 
                 const usage = GameStateGetters.getBaseInventoryUsage();
                 domElements.storageTabBaseCapacityUsage.textContent = `${usage.current}/${usage.max}`;
                 domElements.storageTabBaseCapacityUsage.title = `Заполнено слотов: ${usage.percentage.toFixed(0)}%`;
@@ -196,7 +200,7 @@ const UIManager = {
         } else if (tabName === 'craft-tab') {
             this.renderCraftingRecipes();
         } else if (tabName === 'cheats-tab') {
-            // Специфичного обновления для вкладки читов при открытии пока нет
+            // No specific update needed on tab open for cheats, buttons handle their own logic.
         }
     },
 
@@ -238,7 +242,7 @@ const UIManager = {
             }
             
             const canSearch = (currentLocationState.searchAttemptsLeft || 0) > 0;
-            const scoutDisabled = !canSearch || gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null;
+            const scoutDisabled = !canSearch || gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null || game.isPassingDay;
             domElements.scoutCurrentLocationButton.disabled = scoutDisabled;
             domElements.scoutCurrentLocationButton.innerHTML = canSearch ? scoutButtonHTML : "Локация обыскана";
             domElements.scoutCurrentLocationButton.classList.toggle('action-available', canSearch && !scoutDisabled);
@@ -252,7 +256,7 @@ const UIManager = {
         }
         
         const discoverTime = 1; 
-        const discoverDisabled = gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null;
+        const discoverDisabled = gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null || game.isPassingDay;
         domElements.discoverNewLocationButton.disabled = discoverDisabled;
         domElements.discoverNewLocationButton.innerHTML = `Разведать новые территории <span class="action-time-indicator">⏱️${discoverTime}д.</span>`;
         domElements.discoverNewLocationButton.classList.toggle('action-available', !discoverDisabled);
@@ -263,6 +267,7 @@ const UIManager = {
         domElements.discoveredLocationsList.innerHTML = '';
         let hasDiscoveredOtherThanBase = false;
         for (const locId in gameState.discoveredLocations) {
+            if( !gameState.discoveredLocations.hasOwnProperty(locId) ) continue;
             if (gameState.discoveredLocations[locId].discovered) {
                 const locDef = LOCATION_DEFINITIONS[locId];
                 if (!locDef) { console.warn(`UIManager.rDL: Def for ${locId} not found.`); continue; }
@@ -309,7 +314,7 @@ const UIManager = {
         domElements.locationInfoTravelButton.onclick = () => {
             if (typeof LocationManager !== 'undefined') LocationManager.moveToLocation(locationId);
         };
-        const travelDisabled = gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver;
+        const travelDisabled = gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver || game.isPassingDay;
         domElements.locationInfoTravelButton.disabled = travelDisabled;
         domElements.locationInfoTravelButton.classList.toggle('action-available', !travelDisabled);
 
@@ -442,14 +447,14 @@ const UIManager = {
             btn.appendChild(tooltipSpan);
             
             btn.onclick = () => game.build(key);
-            const isActionAvailable = canAffordAll && !atMaxLevel && !gameState.currentEvent && !gameState.locationEvent && !gameState.gameOver;
+            const isActionAvailable = canAffordAll && !atMaxLevel && !gameState.currentEvent && !gameState.locationEvent && !gameState.gameOver && !game.isPassingDay;
             btn.disabled = !isActionAvailable;
             btn.classList.toggle('action-available', isActionAvailable);
             
             domElements.buildActions.appendChild(btn);
         }
 
-        if (domElements.passDayAtBaseButton) { // Обновление кнопки "Пропустить день"
+        if (domElements.passDayAtBaseButton) { 
             const passDayDisabled = gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver || game.isPassingDay;
             domElements.passDayAtBaseButton.disabled = passDayDisabled;
             domElements.passDayAtBaseButton.classList.toggle('action-available', !passDayDisabled);
@@ -468,6 +473,7 @@ const UIManager = {
         if (domElements.workshopLevelDisplay) domElements.workshopLevelDisplay.textContent = workshopLevel;
         domElements.craftingRecipesList.innerHTML = ''; let recipesAvailableToDisplay = 0;
         for (const recipeId in CRAFTING_RECIPES) {
+            if (!CRAFTING_RECIPES.hasOwnProperty(recipeId)) continue;
             const recipe = CRAFTING_RECIPES[recipeId];
             if (workshopLevel < (recipe.workshopLevelRequired || 0)) continue;
             recipesAvailableToDisplay++;
@@ -510,7 +516,7 @@ const UIManager = {
             craftButton.classList.add('game-action-button'); 
             craftButton.innerHTML = buttonHTML; 
             craftButton.onclick = () => game.craftItem(recipeId);
-            const isActionAvailable = canCraftThis && !gameState.gameOver && !gameState.currentEvent && !gameState.locationEvent;
+            const isActionAvailable = canCraftThis && !gameState.gameOver && !gameState.currentEvent && !gameState.locationEvent && !game.isPassingDay;
             craftButton.disabled = !isActionAvailable;
             craftButton.classList.toggle('action-available', isActionAvailable);
 
