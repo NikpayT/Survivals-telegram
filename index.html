@@ -53,6 +53,8 @@
                 <h4>Ресурсы Базы (Склад)</h4>
                 <p>Еда (сытость): <span id="total-food-value" title="Детализация еды">0</span></p>
                 <p>Вода (жажда): <span id="total-water-value" title="Детализация воды">0</span></p>
+                <!-- НОВЫЙ ЭЛЕМЕНТ: Заполненность склада в сайдбаре -->
+                <p>Склад: <span id="sidebar-base-capacity-usage">0/0</span></p>
             </div>
         </aside>
 
@@ -80,6 +82,8 @@
                             <p>Выжившие: <span id="overview-survivors">1/1</span></p>
                             <p>Еда на складе (сытость): <span id="overview-base-food" title="Детализация еды на базе">0</span></p>
                             <p>Вода на складе (жажда): <span id="overview-base-water" title="Детализация воды на базе">0</span></p>
+                            <!-- НОВЫЙ ЭЛЕМЕНТ: Заполненность склада на вкладке Обзор -->
+                            <p>Заполненность склада: <span id="overview-base-capacity-usage">0/0</span></p>
                         </div>
                     </div>
                     <div class="action-group">
@@ -94,7 +98,6 @@
                 <div id="base-tab" class="tab-content">
                     <h2>Управление Базой</h2>
                     <div id="build-actions" class="action-grid"></div>
-                    <!-- НОВАЯ КНОПКА И БЛОК ДЛЯ ОТДЫХА -->
                     <div class="action-group">
                         <h3>Действия на Базе</h3>
                         <button id="pass-day-at-base-button" class="game-action-button" onclick="game.passDayAtBase()">
@@ -112,21 +115,30 @@
                 <!-- Вкладка Склад -->
                 <div id="storage-tab" class="tab-content">
                     <h2>Склад Базы</h2>
-                    <div class="inventory-filters base-storage-filters">
-                        <button data-filter="all" class="active">Все</button>
-                        <button data-filter="food">Еда</button>
-                        <button data-filter="water_source">Вода</button>
-                        <button data-filter="medicine">Медикаменты</button>
-                        <button data-filter="material">Материалы</button>
-                        <button data-filter="tool">Инструменты</button>
-                        <button data-filter="weapon">Оружие</button>
-                        <button data-filter="armor">Броня</button>
-                        <button data-filter="quest_item">Особое</button>
+                    <div class="inventory-controls"> <!-- Общий контейнер для фильтров и сортировки -->
+                        <div class="inventory-filters base-storage-filters">
+                            <button data-filter="all" class="active">Все</button>
+                            <button data-filter="food">Еда</button>
+                            <button data-filter="water_source">Вода</button>
+                            <button data-filter="medicine">Медикаменты</button>
+                            <button data-filter="material">Материалы</button>
+                            <button data-filter="tool">Инструменты</button>
+                            <button data-filter="weapon">Оружие</button>
+                            <button data-filter="armor">Броня</button>
+                            <button data-filter="quest_item">Особое</button>
+                        </div>
+                        <div class="inventory-sort-options">
+                            Сортировать по:
+                            <button id="sort-base-name" onclick="InventoryManager.sortInventory(gameState.baseInventory, 'name')">Имени</button>
+                            <button id="sort-base-type" onclick="InventoryManager.sortInventory(gameState.baseInventory, 'type')">Типу</button>
+                            <button id="sort-base-quantity" onclick="InventoryManager.sortInventory(gameState.baseInventory, 'quantity')">Кол-ву</button>
+                        </div>
                     </div>
+                    <p>Заполненность склада: <span id="storage-tab-base-capacity-usage">0/0</span></p> <!-- ЕЩЕ ОДИН ЭЛЕМЕНТ для заполненности -->
                     <div id="base-inventory-list" class="inventory-list-shared-style"></div>
                 </div>
 
-                <!-- Вкладка Разведка -->
+                <!-- Вкладка Разведка (без изменений в HTML структуре для этих пунктов) -->
                 <div id="explore-tab" class="tab-content">
                     <h2>Разведка и События в Пустоши</h2>
                     <div class="action-group">
@@ -148,7 +160,7 @@
                     </div>
                 </div>
 
-                <!-- Вкладка Крафт -->
+                <!-- Вкладка Крафт (без изменений в HTML структуре для этих пунктов) -->
                 <div id="craft-tab" class="tab-content">
                     <h2>Изготовление Предметов</h2>
                     <p>Мастерская Ур: <span id="workshop-level-display">0</span></p>
@@ -157,7 +169,7 @@
                     </div>
                 </div>
 
-                <!-- Вкладка Читы -->
+                <!-- Вкладка Читы (без изменений в HTML структуре для этих пунктов) -->
                 <div id="cheats-tab" class="tab-content">
                     <h2>Панель Читов (DEV)</h2>
                     <div class="action-group">
@@ -208,25 +220,35 @@
         </main>
     </div>
 
+    <!-- Модальное окно инвентаря игрока -->
     <div id="inventory-modal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="InventoryManager.closeInventoryModal()">×</span>
             <h2>Инвентарь Игрока (<span id="inventory-weight">0</span> / <span id="inventory-max-weight">25</span> кг)</h2>
-            <div class="inventory-filters player-inventory-filters">
-                <button data-filter="all" class="active">Все</button>
-                <button data-filter="food">Еда</button>
-                <button data-filter="water_source">Вода</button>
-                <button data-filter="medicine">Медикаменты</button>
-                <button data-filter="material">Материалы</button>
-                <button data-filter="tool">Инструменты</button>
-                <button data-filter="weapon">Оружие</button>
-                <button data-filter="armor">Броня</button>
-                <button data-filter="quest_item">Особое</button>
+            <div class="inventory-controls"> <!-- Общий контейнер для фильтров и сортировки -->
+                <div class="inventory-filters player-inventory-filters">
+                    <button data-filter="all" class="active">Все</button>
+                    <button data-filter="food">Еда</button>
+                    <button data-filter="water_source">Вода</button>
+                    <button data-filter="medicine">Медикаменты</button>
+                    <button data-filter="material">Материалы</button>
+                    <button data-filter="tool">Инструменты</button>
+                    <button data-filter="weapon">Оружие</button>
+                    <button data-filter="armor">Броня</button>
+                    <button data-filter="quest_item">Особое</button>
+                </div>
+                <div class="inventory-sort-options">
+                    Сортировать по:
+                    <button id="sort-player-name" onclick="InventoryManager.sortInventory(gameState.inventory, 'name')">Имени</button>
+                    <button id="sort-player-type" onclick="InventoryManager.sortInventory(gameState.inventory, 'type')">Типу</button>
+                    <button id="sort-player-weight" onclick="InventoryManager.sortInventory(gameState.inventory, 'weight')">Весу</button>
+                </div>
             </div>
             <div id="inventory-items-list" class="inventory-list-shared-style"></div>
         </div>
     </div>
 
+    <!-- Модальное окно информации о локации (без изменений для этих пунктов) -->
     <div id="location-info-modal" class="modal" style="display: none;">
         <div class="modal-content location-modal-content">
             <span id="location-info-close-button" class="close-button" onclick="UIManager.closeLocationInfoModal()">×</span>
