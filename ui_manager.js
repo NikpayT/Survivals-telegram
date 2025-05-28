@@ -25,7 +25,7 @@ const UIManager = {
             domElements.totalWaterValue.textContent = GameStateGetters.countBaseWaterItems();
             domElements.totalWaterValue.title = GameStateGetters.getBaseWaterBreakdown(); 
         }
-        if (domElements.sidebarBaseCapacityUsage) { // Обновление для сайдбара
+        if (domElements.sidebarBaseCapacityUsage && typeof GameStateGetters !== 'undefined') { 
             const usage = GameStateGetters.getBaseInventoryUsage();
             domElements.sidebarBaseCapacityUsage.textContent = `${usage.current}/${usage.max}`;
             domElements.sidebarBaseCapacityUsage.title = `Заполнено слотов: ${usage.percentage.toFixed(0)}%`;
@@ -36,7 +36,6 @@ const UIManager = {
             const activeTabName = activeTabLink.dataset.tab;
             this.updateForTab(activeTabName);
         } else {
-            // Если нет активной вкладки, пытаемся открыть 'main-tab'
             const mainTabNavLink = domElements.mainNav?.querySelector('.nav-link[data-tab="main-tab"]');
             this.openTab('main-tab', mainTabNavLink); 
         }
@@ -129,7 +128,7 @@ const UIManager = {
             domElements.overviewBaseWater.textContent = GameStateGetters.countBaseWaterItems();
             domElements.overviewBaseWater.title = GameStateGetters.getBaseWaterBreakdown(); 
         }
-        if(domElements.overviewBaseCapacityUsage) { 
+        if(domElements.overviewBaseCapacityUsage && typeof GameStateGetters !== 'undefined') { 
             const usage = GameStateGetters.getBaseInventoryUsage();
             domElements.overviewBaseCapacityUsage.textContent = `${usage.current}/${usage.max}`;
             domElements.overviewBaseCapacityUsage.title = `Заполнено слотов: ${usage.percentage.toFixed(0)}%`;
@@ -290,7 +289,7 @@ const UIManager = {
     },
 
     showLocationInfoModal: function(locationId) {
-        if (!domElements.locationInfoModal || !LOCATION_DEFINITIONS || !LOCATION_DEFINITIONS[locationId] ||
+        if (!domElements.locationInfoModal || typeof LOCATION_DEFINITIONS === 'undefined' || !LOCATION_DEFINITIONS[locationId] ||
             !domElements.locationInfoName || !domElements.locationInfoDescription ||
             !domElements.locationInfoPreviewLoot || !domElements.locationInfoDanger ||
             !domElements.locationInfoTravelButton) {
@@ -407,7 +406,7 @@ const UIManager = {
             if (!BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) continue;
 
             const definition = BASE_STRUCTURE_DEFINITIONS[key];
-            if (!gameState.structures[key]) {
+            if (!gameState.structures[key]) { // Инициализируем структуру в gameState, если ее нет
                 gameState.structures[key] = { level: definition.initialLevel || 0 };
             }
             const currentStructureState = gameState.structures[key];
