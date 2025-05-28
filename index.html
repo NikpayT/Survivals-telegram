@@ -53,7 +53,6 @@
                 <h4>Ресурсы Базы (Склад)</h4>
                 <p>Еда (сытость): <span id="total-food-value" title="Детализация еды">0</span></p>
                 <p>Вода (жажда): <span id="total-water-value" title="Детализация воды">0</span></p>
-                <!-- НОВЫЙ ЭЛЕМЕНТ: Заполненность склада в сайдбаре -->
                 <p>Склад: <span id="sidebar-base-capacity-usage">0/0</span></p>
             </div>
         </aside>
@@ -82,7 +81,6 @@
                             <p>Выжившие: <span id="overview-survivors">1/1</span></p>
                             <p>Еда на складе (сытость): <span id="overview-base-food" title="Детализация еды на базе">0</span></p>
                             <p>Вода на складе (жажда): <span id="overview-base-water" title="Детализация воды на базе">0</span></p>
-                            <!-- НОВЫЙ ЭЛЕМЕНТ: Заполненность склада на вкладке Обзор -->
                             <p>Заполненность склада: <span id="overview-base-capacity-usage">0/0</span></p>
                         </div>
                     </div>
@@ -115,7 +113,7 @@
                 <!-- Вкладка Склад -->
                 <div id="storage-tab" class="tab-content">
                     <h2>Склад Базы</h2>
-                    <div class="inventory-controls"> <!-- Общий контейнер для фильтров и сортировки -->
+                    <div class="inventory-controls">
                         <div class="inventory-filters base-storage-filters">
                             <button data-filter="all" class="active">Все</button>
                             <button data-filter="food">Еда</button>
@@ -134,11 +132,11 @@
                             <button id="sort-base-quantity" onclick="InventoryManager.sortInventory(gameState.baseInventory, 'quantity')">Кол-ву</button>
                         </div>
                     </div>
-                    <p>Заполненность склада: <span id="storage-tab-base-capacity-usage">0/0</span></p> <!-- ЕЩЕ ОДИН ЭЛЕМЕНТ для заполненности -->
+                    <p>Заполненность склада: <span id="storage-tab-base-capacity-usage">0/0</span></p>
                     <div id="base-inventory-list" class="inventory-list-shared-style"></div>
                 </div>
 
-                <!-- Вкладка Разведка (без изменений в HTML структуре для этих пунктов) -->
+                <!-- Вкладка Разведка -->
                 <div id="explore-tab" class="tab-content">
                     <h2>Разведка и События в Пустоши</h2>
                     <div class="action-group">
@@ -160,7 +158,7 @@
                     </div>
                 </div>
 
-                <!-- Вкладка Крафт (без изменений в HTML структуре для этих пунктов) -->
+                <!-- Вкладка Крафт -->
                 <div id="craft-tab" class="tab-content">
                     <h2>Изготовление Предметов</h2>
                     <p>Мастерская Ур: <span id="workshop-level-display">0</span></p>
@@ -169,7 +167,7 @@
                     </div>
                 </div>
 
-                <!-- Вкладка Читы (без изменений в HTML структуре для этих пунктов) -->
+                <!-- Вкладка Читы -->
                 <div id="cheats-tab" class="tab-content">
                     <h2>Панель Читов (DEV)</h2>
                     <div class="action-group">
@@ -225,7 +223,7 @@
         <div class="modal-content">
             <span class="close-button" onclick="InventoryManager.closeInventoryModal()">×</span>
             <h2>Инвентарь Игрока (<span id="inventory-weight">0</span> / <span id="inventory-max-weight">25</span> кг)</h2>
-            <div class="inventory-controls"> <!-- Общий контейнер для фильтров и сортировки -->
+            <div class="inventory-controls">
                 <div class="inventory-filters player-inventory-filters">
                     <button data-filter="all" class="active">Все</button>
                     <button data-filter="food">Еда</button>
@@ -248,7 +246,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно информации о локации (без изменений для этих пунктов) -->
+    <!-- Модальное окно информации о локации -->
     <div id="location-info-modal" class="modal" style="display: none;">
         <div class="modal-content location-modal-content">
             <span id="location-info-close-button" class="close-button" onclick="UIManager.closeLocationInfoModal()">×</span>
@@ -262,6 +260,26 @@
         </div>
     </div>
 
+    <!-- НОВОЕ: Модальное окно для сезонного события "Новый Год" -->
+    <div id="seasonal-event-modal" class="modal" style="display: none;">
+        <div class="modal-content seasonal-event-new-year"> <!-- Добавляем класс для особого стиля -->
+            <h2 id="seasonal-event-title">❄️ Подготовка к Новому Году ❄️</h2>
+            <div id="seasonal-event-image-container">
+                <!-- Сюда можно будет вставить тематическую картинку или оставить пустым -->
+            </div>
+            <div id="seasonal-event-text" class="seasonal-event-story-text">
+                Загрузка текста события...
+            </div>
+            <div id="seasonal-event-choices" class="seasonal-event-choices-container">
+                <!-- Кнопки выбора будут генерироваться здесь -->
+            </div>
+            <div class="seasonal-event-footer">
+                <button id="seasonal-event-return-base-button" class="game-action-button">Вернуться на базу (прервать)</button>
+            </div>
+        </div>
+    </div>
+
+
     <footer>
         <button onclick="game.resetGameConfirmation()">Начать игру заново</button>
         <p id="game-version">Версия: 0.0.0</p>
@@ -274,6 +292,8 @@
     <script src="game_state.js"></script>
     <script src="dom_elements.js"></script>
     <script src="cheats_manager.js"></script>
+    <!-- НОВЫЙ ФАЙЛ СОБЫТИЯ -->
+    <script src="seasonal_event_new_year.js"></script>
     <script src="ui_manager.js"></script>
     <script src="inventory_manager.js"></script>
     <script src="location_manager.js"></script>
