@@ -21,7 +21,6 @@
                 <button class="nav-link" data-tab="storage-tab">Склад</button>
                 <button class="nav-link" data-tab="explore-tab">Разведка</button>
                 <button class="nav-link" data-tab="craft-tab">Крафт</button>
-                <!-- НОВАЯ КНОПКА ВКЛАДКИ -->
                 <button id="nav-cheats-tab" class="nav-link" data-tab="cheats-tab">Читы (Dev)</button>
             </nav>
             <div id="player-status-condensed" class="panel">
@@ -83,6 +82,14 @@
                             <p>Вода на складе (жажда): <span id="overview-base-water">0</span></p>
                         </div>
                     </div>
+                    <!-- НОВЫЙ БЛОК: Обзор строений базы -->
+                    <div class="action-group">
+                        <h3>Обзор Строений Базы</h3>
+                        <div id="base-structures-overview-list" class="structures-overview-grid">
+                            <!-- Содержимое будет генерироваться UIManager.renderBaseStructuresOverview() -->
+                            <p><em>Информация о строениях загружается...</em></p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Вкладка База -->
@@ -139,7 +146,7 @@
                     </div>
                 </div>
 
-                <!-- НОВАЯ ВКЛАДКА ЧИТЫ -->
+                <!-- Вкладка Читы -->
                 <div id="cheats-tab" class="tab-content">
                     <h2>Панель Читов (DEV)</h2>
                     <div class="action-group">
@@ -229,12 +236,11 @@
     </footer>
 
     <script src="items.js"></script>
-    <script src="buildings.js"></script>
+    <script src="buildings.js"></script> <!-- Убедитесь, что getStructureUpgradeCost здесь или глобально -->
     <script src="locations.js"></script>
     <script src="recipes.js"></script>
     <script src="game_state.js"></script>
     <script src="dom_elements.js"></script>
-    <!-- НОВЫЙ ФАЙЛ ДЛЯ ЧИТОВ (перед script.js) -->
     <script src="cheats_manager.js"></script>
     <script src="ui_manager.js"></script>
     <script src="inventory_manager.js"></script>
