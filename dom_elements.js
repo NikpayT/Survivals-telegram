@@ -38,28 +38,38 @@ const domElements = {
     overviewSurvivors: document.getElementById('overview-survivors'),
     overviewBaseFood: document.getElementById('overview-base-food'),
     overviewBaseWater: document.getElementById('overview-base-water'),
-    eventActionsContainer: document.getElementById('event-actions-container'),
-    eventTextDisplay: document.getElementById('event-text-display'),
-    eventActions: document.getElementById('event-actions'),
+    // НОВЫЙ ЭЛЕМЕНТ для обзора строений
+    baseStructuresOverviewList: document.getElementById('base-structures-overview-list'),
 
     // Вкладка "База" (Base Tab)
     buildActions: document.getElementById('build-actions'),
 
     // Вкладка "Склад Базы" (Storage Tab)
-    baseInventoryFilters: document.querySelector('#storage-tab .inventory-filters'), // Уточненный селектор
+    baseInventoryFilters: document.querySelector('#storage-tab .inventory-filters'),
     baseInventoryList: document.getElementById('base-inventory-list'),
 
     // Вкладка "Разведка" (Explore Tab)
     currentLocationNameDisplay: document.getElementById('current-location-name'),
-    currentLocationTimeDisplay: document.getElementById('current-location-time'),
+    currentLocationTimeDisplay: document.getElementById('current-location-time'), // Для отображения времени обыска локации
     currentLocationDescriptionDisplay: document.getElementById('current-location-description'),
     scoutCurrentLocationButton: document.getElementById('scout-current-location-button'),
     discoveredLocationsList: document.getElementById('discovered-locations-list'),
     discoverNewLocationButton: document.getElementById('discover-new-location-button'),
+    // Элементы для событий (теперь на вкладке Разведка)
+    eventActionsContainer: document.getElementById('event-actions-container'),
+    eventTextDisplay: document.getElementById('event-text-display'),
+    eventActions: document.getElementById('event-actions'),
+
 
     // Вкладка "Крафт" (Craft Tab)
     workshopLevelDisplay: document.getElementById('workshop-level-display'),
     craftingRecipesList: document.getElementById('crafting-recipes-list'),
+
+    // Вкладка "Читы" (Cheats Tab)
+    // Элементы для читов, если нужны прямые ссылки, например, для инпутов:
+    cheatSetDayInput: document.getElementById('cheat-set-day-input'),
+    cheatTriggerEventIdInput: document.getElementById('cheat-trigger-event-id-input'),
+
 
     // Панель лога
     logPanelContainer: document.getElementById('log-panel-container'),
@@ -71,11 +81,10 @@ const domElements = {
     inventoryModal: document.getElementById('inventory-modal'),
     inventoryWeight: document.getElementById('inventory-weight'),
     inventoryMaxWeight: document.getElementById('inventory-max-weight'),
-    inventoryFilters: document.querySelector('#inventory-modal .inventory-filters'), // Уточненный селектор
+    inventoryFilters: document.querySelector('#inventory-modal .inventory-filters'),
     inventoryItemsList: document.getElementById('inventory-items-list'),
-    // closeInventoryModalButton: Управляется через onclick в InventoryManager.closeInventoryModal()
 
-    // Модальное окно информации о локации (НОВЫЕ ЭЛЕМЕНТЫ)
+    // Модальное окно информации о локации
     locationInfoModal: document.getElementById('location-info-modal'),
     locationInfoName: document.getElementById('location-info-name'),
     locationInfoDescription: document.getElementById('location-info-description'),
@@ -87,12 +96,15 @@ const domElements = {
 
     // Футер
     gameVersionDisplay: document.getElementById('game-version')
-    // resetGameButton: Управляется через onclick="game.resetGameConfirmation()"
 };
 
-// Проверка на null для всех элементов (полезно для отладки, если ID изменятся)
+// Проверка на null для всех элементов
 for (const key in domElements) {
-    if (domElements[key] === null) {
-        console.warn(`DOM Element not found for key: ${key}. Check ID in index.html.`);
+    if (domElements[key] === null && key !== 'cheatSetDayInput' && key !== 'cheatTriggerEventIdInput') { // Исключаем инпуты читов, т.к. вкладка может быть не активна при старте
+        // Более мягкое предупреждение или только для критичных элементов
+        // console.warn(`DOM Element not found for key: ${key}. Check ID in index.html.`);
     }
 }
+// Для инпутов читов отдельная проверка, если они важны для инициализации
+if (!domElements.cheatSetDayInput) console.warn("DOM Element #cheat-set-day-input not found (Cheats Tab).");
+if (!domElements.cheatTriggerEventIdInput) console.warn("DOM Element #cheat-trigger-event-id-input not found (Cheats Tab).");
