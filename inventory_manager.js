@@ -3,31 +3,49 @@
 // Предполагается, что gameState, domElements, ITEM_DEFINITIONS, UIManager, game
 // доступны глобально.
 
+// НОВЫЙ ОБЪЕКТ: Смайлики для типов предметов
+const ITEM_TYPE_EMOJIS = {
+    food: "🍎",
+    water: "💧",
+    water_source: "💧",
+    medicine: "💊",
+    material: "🧱",
+    tool: "🛠️",
+    weapon: "⚔️",
+    armor: "🛡️",
+    quest_item: "📜",
+    ammo: "💣",
+    junk: "🔩", // Для всякого хлама
+    key: "🔑",  // Для ключей
+    clothing: "👕",
+    book: "📕",
+    note: "📝",
+    default: "📦" // Для неизвестных или общих типов
+};
+
+
 const InventoryManager = {
     addItemToInventory: function(targetInventory, itemId, quantity = 1) {
-        if (typeof ITEM_DEFINITIONS === 'undefined' || !ITEM_DEFINITIONS[itemId]) {
+        if (typeof ITEM_DEFINITIONS === 'undefined' || !ITEM_DEFINITIONS[itemId]) { // ИСПРАВЛЕНО: Проверка существования ITEM_DEFINITIONS перед доступом
             console.error(`Попытка добавить несуществующий предмет: ${itemId}`);
-            if (typeof game !== 'undefined' && game.log) game.log(`Системная ошибка: Попытка добавить несуществующий предмет ${itemId}`, "event-negative");
+            if (typeof game !== 'undefined' && game.log) game.log(`Системная ошибка: Попытка добавить несуществующий предмет ${itemId}. Проверьте определения локаций/событий.`, "event-negative");
             return false;
         }
         const itemDef = ITEM_DEFINITIONS[itemId];
 
-        if (targetInventory === gameState.inventory) { // Проверка веса для инвентаря игрока
+        if (targetInventory === gameState.inventory) { 
             if ((gameState.player.carryWeight + (itemDef.weight * quantity) > gameState.player.maxCarryWeight)) {
                 if (typeof game !== 'undefined' && game.log) game.log(`Недостаточно места в личном инвентаре для ${itemDef.name} (x${quantity}).`, "event-warning");
                 return false;
             }
-        } else if (targetInventory === gameState.baseInventory) { // Проверка вместимости для склада базы
+        } else if (targetInventory === gameState.baseInventory) { 
             const usage = GameStateGetters.getBaseInventoryUsage();
-            // Проверяем по слотам: если предмет новый И склад полон по слотам
             const isNewItemForBase = !targetInventory.some(slot => slot.itemId === itemId && itemDef.stackable);
             if (isNewItemForBase && usage.current >= usage.max) {
                  if (typeof game !== 'undefined' && game.log) game.log(`Склад базы заполнен! Невозможно добавить новый тип предмета: ${itemDef.name}.`, "event-warning");
                 return false;
             }
-            // Если будем считать по общему количеству предметов, то проверка будет другая. Пока по слотам.
         }
-
 
         const existingItemIndex = targetInventory.findIndex(slot => slot.itemId === itemId && itemDef.stackable);
         if (existingItemIndex > -1) {
@@ -43,10 +61,8 @@ const InventoryManager = {
             this.renderPlayerInventoryIfActive();
         } else if (targetInventory === gameState.baseInventory) {
             this.renderBaseInventoryIfActive();
-             if (typeof UIManager !== 'undefined') UIManager.updateDisplay(); // Обновить счетчики склада в UI
+             if (typeof UIManager !== 'undefined') UIManager.updateDisplay(); 
         }
-        
-        // UIManager.updateDisplay(); // Вызывается более специфично выше
         return true;
     },
 
@@ -85,7 +101,7 @@ const InventoryManager = {
                 this.renderPlayerInventoryIfActive();
             } else if (targetInventory === gameState.baseInventory) {
                 this.renderBaseInventoryIfActive();
-                if (typeof UIManager !== 'undefined') UIManager.updateDisplay(); // Обновить счетчики склада в UI
+                if (typeof UIManager !== 'undefined') UIManager.updateDisplay(); 
             }
             return true;
         }
@@ -161,9 +177,6 @@ const InventoryManager = {
         }
 
         let somethingRendered = false;
-        // Сортировка перед отображением (если нужна дефолтная, иначе будет от кнопок)
-        // inventoryToDisplay.sort((a,b) => (ITEM_DEFINITIONS[a.itemId]?.name || '').localeCompare(ITEM_DEFINITIONS[b.itemId]?.name || ''));
-
         inventoryToDisplay.forEach((itemSlot, index) => {
             const itemDef = ITEM_DEFINITIONS[itemSlot.itemId];
             if (!itemDef) {
@@ -187,16 +200,18 @@ const InventoryManager = {
 
             let itemActionsHTML = '';
             if (itemDef.type === 'food' || itemDef.type === 'water' || itemDef.type === 'water_source' || itemDef.type === 'medicine') {
-                itemActionsHTML += `<button onclick="InventoryManager.consumeItem('${itemSlot.itemId}', ${index})">Исп.</button>`; // Сокращено
+                itemActionsHTML += `<button onclick="InventoryManager.consumeItem('${itemSlot.itemId}', ${index})">Исп.</button>`;
             }
             itemActionsHTML += `<button onclick="InventoryManager.transferItem('${itemSlot.itemId}', ${index}, 'player', 'base', 1)">На склад (1)</button>`;
             if (itemSlot.quantity > 1) {
-                 itemActionsHTML += `<button onclick="InventoryManager.transferItem('${itemSlot.itemId}', ${index}, 'player', 'base', ${itemSlot.quantity})">На склад (Все)</button>`; // Кнопка "Переместить все"
+                 itemActionsHTML += `<button onclick="InventoryManager.transferItem('${itemSlot.itemId}', ${index}, 'player', 'base', ${itemSlot.quantity})">На склад (Все)</button>`;
             }
+            
+            const emoji = ITEM_TYPE_EMOJIS[itemDef.type] || ITEM_TYPE_EMOJIS.default; // Получаем смайлик
 
             itemDiv.innerHTML = `
                 <div class="item-info">
-                    <h4>${itemDef.name} <span class="item-quantity">(x${itemSlot.quantity})</span></h4>
+                    <h4><span class="item-emoji">${emoji}</span> ${itemDef.name} <span class="item-quantity">(x${itemSlot.quantity})</span></h4>
                     <p>${itemDef.description} (Вес: ${(itemDef.weight * itemSlot.quantity).toFixed(1)} кг / ${itemDef.weight.toFixed(1)} кг/шт)</p>
                 </div>
                 <div class="item-actions">
@@ -223,10 +238,6 @@ const InventoryManager = {
         }
 
         let somethingRendered = false;
-        // Сортировка перед отображением (если нужна дефолтная)
-        // inventoryToDisplay.sort((a,b) => (ITEM_DEFINITIONS[a.itemId]?.name || '').localeCompare(ITEM_DEFINITIONS[b.itemId]?.name || ''));
-
-
         inventoryToDisplay.forEach((itemSlot, index) => {
             const itemDef = ITEM_DEFINITIONS[itemSlot.itemId];
             if (!itemDef) {
@@ -251,12 +262,14 @@ const InventoryManager = {
             let itemActionsHTML = '';
             itemActionsHTML += `<button onclick="InventoryManager.transferItem('${itemSlot.itemId}', ${index}, 'base', 'player', 1)">Взять (1)</button>`;
             if (itemSlot.quantity > 1) {
-                 itemActionsHTML += `<button onclick="InventoryManager.transferItem('${itemSlot.itemId}', ${index}, 'base', 'player', ${itemSlot.quantity})">Взять (Все)</button>`; // Кнопка "Переместить все"
+                 itemActionsHTML += `<button onclick="InventoryManager.transferItem('${itemSlot.itemId}', ${index}, 'base', 'player', ${itemSlot.quantity})">Взять (Все)</button>`;
             }
+
+            const emoji = ITEM_TYPE_EMOJIS[itemDef.type] || ITEM_TYPE_EMOJIS.default; // Получаем смайлик
 
             itemDiv.innerHTML = `
                 <div class="item-info">
-                    <h4>${itemDef.name} <span class="item-quantity">(x${itemSlot.quantity})</span></h4>
+                    <h4><span class="item-emoji">${emoji}</span> ${itemDef.name} <span class="item-quantity">(x${itemSlot.quantity})</span></h4>
                     <p>${itemDef.description}</p> 
                 </div>
                 <div class="item-actions">
@@ -271,7 +284,10 @@ const InventoryManager = {
     },
 
     transferItem: function(itemId, itemIndexInSource, sourceInventoryType, destinationInventoryType, quantity) {
-        if (typeof ITEM_DEFINITIONS === 'undefined') return;
+        if (typeof ITEM_DEFINITIONS === 'undefined') {
+            console.error("ITEM_DEFINITIONS не определены в transferItem");
+            return;
+        }
         const itemDef = ITEM_DEFINITIONS[itemId];
         if (!itemDef) return;
 
@@ -291,8 +307,7 @@ const InventoryManager = {
 
         const actualQuantity = Math.min(quantity, sourceSlot.quantity);
 
-        // Проверяем, можно ли добавить в целевой инвентарь, ПЕРЕД удалением из источника
-        if (destinationInventory === gameState.inventory) {
+        if (destinationInventory === gameState.inventory) { 
             if (gameState.player.carryWeight + (itemDef.weight * actualQuantity) > gameState.player.maxCarryWeight) {
                 if (typeof game !== 'undefined' && game.log) game.log(`Недостаточно места в личном инвентаре для ${itemDef.name} (x${actualQuantity}).`, "event-warning");
                 return;
@@ -306,31 +321,27 @@ const InventoryManager = {
             }
         }
 
-
-        // Сначала удаляем из источника, затем добавляем в назначение
-        // Это важно, если источник и назначение - один и тот же инвентарь (хотя здесь это не так)
-        // но для консистентности лучше.
-        let itemRemoved = this.removeItemFromInventory(sourceInventory, itemId, actualQuantity, itemIndexInSource);
-        if (itemRemoved) {
-            let itemAdded = this.addItemToInventory(destinationInventory, itemId, actualQuantity);
-            if (!itemAdded) {
-                // Если не удалось добавить, возвращаем предмет в источник (пытаемся)
+        let itemRemovedSuccessfully = this.removeItemFromInventory(sourceInventory, itemId, actualQuantity, itemIndexInSource);
+        if (itemRemovedSuccessfully) {
+            let itemAddedSuccessfully = this.addItemToInventory(destinationInventory, itemId, actualQuantity);
+            if (!itemAddedSuccessfully) {
                 this.addItemToInventory(sourceInventory, itemId, actualQuantity); // Откат
                 if (typeof game !== 'undefined' && game.log) game.log(`Ошибка при добавлении ${itemDef.name} в назначение. Операция отменена.`, "event-negative");
-                return; // Важно! Обновление UI уже произошло в addItemToInventory и removeItemFromInventory
+                // Перерисовка инвентарей после отката
+                if (sourceInventory === gameState.inventory) this.renderPlayerInventoryIfActive();
+                else if (sourceInventory === gameState.baseInventory) this.renderBaseInventoryIfActive();
+                return;
             }
             if (typeof game !== 'undefined' && game.log) game.log(`Перемещено: ${itemDef.name} (x${actualQuantity}) ${sourceInventoryType === 'player' ? 'на склад' : 'в личный инвентарь'}.`, "event-neutral");
         } else {
             if (typeof game !== 'undefined' && game.log) game.log(`Ошибка при удалении ${itemDef.name} из источника.`, "event-negative");
             return;
         }
-        
-        // UIManager.updateDisplay() не нужен здесь, т.к. addItem и removeItem уже его вызывают при необходимости.
     },
 
-    consumeItem: function(itemId, inventoryItemIndex) { // Потребление всегда из инвентаря игрока
+    consumeItem: function(itemId, inventoryItemIndex) { 
         if (typeof ITEM_DEFINITIONS === 'undefined') return;
-        const targetInventory = gameState.inventory;
+        const targetInventory = gameState.inventory; 
         const itemDef = ITEM_DEFINITIONS[itemId];
 
         if (!itemDef || !itemDef.effect) {
@@ -356,45 +367,107 @@ const InventoryManager = {
             gameState.player.health = Math.min(gameState.player.maxHealth, gameState.player.health + itemDef.effect.healing);
             if (typeof game !== 'undefined' && game.log) game.log(`Вы использовали ${itemDef.name}. Здоровье +${itemDef.effect.healing}.`, "event-positive");
             consumed = true;
-        } // Добавить другие типы потребляемых предметов, если нужно
+        }
 
         if (consumed) {
             this.removeItemFromInventory(targetInventory, itemId, 1, inventoryItemIndex);
         }
         if (typeof UIManager !== 'undefined') {
             UIManager.updatePlayerStatus(); 
-            // UIManager.updateDisplay(); // removeItemFromInventory уже вызовет updateDisplay, если нужно
         }
     },
 
-    consumeResourceFromBase: function(resourceType, amountNeeded) { /* ... без изменений ... */ },
+    consumeResourceFromBase: function(resourceType, amountNeeded) {
+        let amountFulfilled = 0;
+        if (!gameState.baseInventory || typeof ITEM_DEFINITIONS === 'undefined') return 0;
+        const inventory = gameState.baseInventory;
+        
+        inventory.sort((aSlot, bSlot) => {
+            const aDef = ITEM_DEFINITIONS[aSlot.itemId];
+            const bDef = ITEM_DEFINITIONS[bSlot.itemId];
+            let aValue = 0; let bValue = 0;
 
-    // НОВАЯ ФУНКЦИЯ СОРТИРОВКИ
+            if (!aDef || !bDef) return 0; // Если определения нет, не участвуем в сортировке
+
+            if (resourceType === 'food') {
+                aValue = (aDef.effect?.hunger || 0) * (aDef.effect?.sickness_chance || aDef.effect?.radiation ? 0.5 : 1);
+                bValue = (bDef.effect?.hunger || 0) * (bDef.effect?.sickness_chance || bDef.effect?.radiation ? 0.5 : 1);
+            } else if (resourceType === 'water') {
+                aValue = (aDef.effect?.thirst || 0) * (aDef.effect?.sickness_chance ? 0.5 : 1);
+                bValue = (bDef.effect?.thirst || 0) * (bDef.effect?.sickness_chance ? 0.5 : 1);
+            }
+            return aValue - bValue; 
+        });
+
+        for (let i = inventory.length - 1; i >= 0 && amountFulfilled < amountNeeded; i--) { 
+            const slot = inventory[i]; 
+            if (!slot) continue; 
+
+            const itemDef = ITEM_DEFINITIONS[slot.itemId];
+            if (!itemDef) continue; // Пропускаем, если нет определения предмета
+
+            let itemValue = 0;
+            let isCorrectType = false;
+
+            if (resourceType === 'food' && itemDef.type === 'food' && itemDef.effect?.hunger) {
+                itemValue = itemDef.effect.hunger;
+                isCorrectType = true;
+                if (itemDef.effect?.radiation && Math.random() < 0.05 * gameState.survivors) { 
+                    if (typeof game !== 'undefined' && game.log) game.log(`Кто-то получил дозу радиации от ${itemDef.name}.`, "event-warning");
+                }
+                 if (itemDef.effect?.sickness_chance && Math.random() < itemDef.effect.sickness_chance * 0.05 * gameState.survivors) { 
+                    if (typeof game !== 'undefined' && game.log) game.log(`Кто-то из выживших почувствовал себя плохо от ${itemDef.name} со склада.`, "event-warning");
+                }
+            } else if (resourceType === 'water' && (itemDef.type === 'water' || itemDef.type === 'water_source') && itemDef.effect?.thirst) {
+                itemValue = itemDef.effect.thirst;
+                isCorrectType = true;
+                 if (itemDef.effect?.sickness_chance && Math.random() < itemDef.effect.sickness_chance * 0.05 * gameState.survivors) { 
+                    if (typeof game !== 'undefined' && game.log) game.log(`Кто-то из выживших заболел, выпив ${itemDef.name} со склада.`, "event-warning");
+                }
+            }
+
+            if (isCorrectType && itemValue > 0) {
+                const neededFromThisSlot = Math.ceil((amountNeeded - amountFulfilled) / itemValue);
+                const canConsumeFromSlot = Math.min(slot.quantity, neededFromThisSlot);
+                
+                amountFulfilled += canConsumeFromSlot * itemValue;
+                this.removeItemFromInventory(gameState.baseInventory, slot.itemId, canConsumeFromSlot, i); 
+                // removeItemFromInventory уже вызовет renderBaseInventoryIfActive и UIManager.updateDisplay
+            }
+        }
+        // if (typeof UIManager !== 'undefined') UIManager.updateDisplay(); // Дополнительно, чтобы обновить общие счетчики в UI
+        return Math.min(amountFulfilled, amountNeeded); 
+    },
+
     sortInventory: function(targetInventory, sortBy = 'name') {
         if (!targetInventory || !Array.isArray(targetInventory) || typeof ITEM_DEFINITIONS === 'undefined') return;
-        this.logCheat = this.logCheat || ((msg) => console.warn(`CHEAT: ${msg}`)); // Заглушка, если Cheats не загружен
-
-        this.logCheat(`Сортировка инвентаря по: ${sortBy}`);
+        
+        const logFunc = (typeof game !== 'undefined' && game.log) ? game.log : console.log;
+        logFunc(`Сортировка инвентаря по: ${sortBy}`, "event-neutral");
 
         targetInventory.sort((a, b) => {
             const itemDefA = ITEM_DEFINITIONS[a.itemId];
             const itemDefB = ITEM_DEFINITIONS[b.itemId];
 
-            if (!itemDefA || !itemDefB) return 0; // Если нет определения, не двигаем
+            if (!itemDefA && !itemDefB) return 0;
+            if (!itemDefA) return 1; // Неопределенные предметы в конец
+            if (!itemDefB) return -1; // Неопределенные предметы в конец
 
             switch (sortBy) {
                 case 'type':
-                    const typeComparison = (itemDefA.type || '').localeCompare(itemDefB.type || '');
+                    const typeA = itemDefA.type || 'zzzz'; // Неопределенные типы в конец
+                    const typeB = itemDefB.type || 'zzzz';
+                    const typeComparison = typeA.localeCompare(typeB);
                     if (typeComparison !== 0) return typeComparison;
-                    return (itemDefA.name || '').localeCompare(itemDefB.name || ''); // Вторичная по имени
+                    return (itemDefA.name || '').localeCompare(itemDefB.name || ''); 
                 case 'quantity':
-                    const quantityComparison = b.quantity - a.quantity; // От большего к меньшему
+                    const quantityComparison = b.quantity - a.quantity; 
                     if (quantityComparison !== 0) return quantityComparison;
                     return (itemDefA.name || '').localeCompare(itemDefB.name || '');
-                case 'weight': // Сортируем по общему весу стака
+                case 'weight': 
                     const weightA = (itemDefA.weight || 0) * a.quantity;
                     const weightB = (itemDefB.weight || 0) * b.quantity;
-                    const weightComparison = weightA - weightB; // От меньшего к большему
+                    const weightComparison = weightA - weightB; 
                     if (weightComparison !== 0) return weightComparison;
                     return (itemDefA.name || '').localeCompare(itemDefB.name || '');
                 case 'name':
