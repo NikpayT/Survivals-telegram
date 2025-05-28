@@ -22,11 +22,11 @@ body {
 }
 
 #burger-menu-button {
-    display: none; 
+    display: none;
     position: fixed;
     top: 10px;
     left: 10px;
-    z-index: 1005; 
+    z-index: 1005;
     background-color: rgba(0, 70, 130, 0.8);
     color: white;
     border: 1px solid #00AEEF;
@@ -44,7 +44,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    transition: left 0.3s ease-in-out; 
+    transition: left 0.3s ease-in-out;
 }
 
 #sidebar-header { margin-bottom: 20px; text-align: center; }
@@ -86,7 +86,6 @@ body {
 #overview-base-water[title] {
     cursor: help; 
 }
-
 
 .status-bar-container { margin-bottom: 8px; font-size: 0.85em; }
 .status-bar-container .status-label { display: inline-block; width: 70px; color: #aaa; margin-right: 5px; vertical-align: middle; }
@@ -147,16 +146,15 @@ button:disabled {
     box-shadow: none !important; 
 }
 button.action-available {
-    border-color: #2b8a2b; /* Более насыщенный зеленый */
+    border-color: #2b8a2b;
     box-shadow: 0 0 6px rgba(60, 200, 60, 0.6); 
-    background-color: #004d00; /* Темно-зеленый фон для доступных */
+    background-color: #004d00; 
     color: #c8ffc8;
 }
 button.action-available:hover {
     background-color: #006600; 
     border-color: #33cc33;
 }
-
 
 #build-actions.action-grid button {
     min-width: 200px; text-align: left; margin-bottom: 8px;
@@ -201,40 +199,21 @@ button.action-available:hover {
 }
 .close-button:hover, .close-button:focus { color: #fff; text-decoration: none; cursor: pointer; }
 
-.inventory-controls { /* Новый контейнер для фильтров и сортировки */
-    display: flex;
-    flex-wrap: wrap; /* Перенос на мобильных */
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #222;
+.inventory-controls { 
+    display: flex; flex-wrap: wrap; justify-content: space-between;
+    align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #222;
 }
-.inventory-filters { 
-    /* margin-bottom: 15px; убрано, т.к. отступы теперь у .inventory-controls */
-    /* padding-bottom: 10px; убрано */
-    /* border-bottom: 1px solid #222; убрано */
-    text-align: left; /* Или center, если так лучше */
-    flex-grow: 1; /* Фильтры занимают больше места */
+.inventory-filters {
+    text-align: left; flex-grow: 1;
 }
 .inventory-sort-options {
-    text-align: right;
-    font-size: 0.9em;
-    color: #aaa;
+    text-align: right; font-size: 0.9em; color: #aaa;
 }
 .inventory-sort-options button {
-    background-color: #222;
-    color: #00AEEF;
-    font-size: 0.8em;
-    padding: 4px 8px;
-    margin-left: 5px;
-    border: 1px solid #333;
+    background-color: #222; color: #00AEEF; font-size: 0.8em;
+    padding: 4px 8px; margin-left: 5px; border: 1px solid #333;
 }
-.inventory-sort-options button:hover {
-    background-color: #333;
-    color: #fff;
-}
-
+.inventory-sort-options button:hover { background-color: #333; color: #fff; }
 
 .inventory-filters button {
     background-color: #1a1a1a; color: #00AEEF; font-size: 0.85em;
@@ -242,7 +221,7 @@ button.action-available:hover {
 }
 .inventory-filters button.active { background-color: #004488; color: #fff; border-color: #0066CC; }
 .inventory-list-shared-style { max-height: 400px; overflow-y: auto; }
-#base-inventory-list { max-height: calc(100vh - 380px); /* Скорректировано под панель управления */ }
+#base-inventory-list { max-height: calc(100vh - 350px); }
 .inventory-item {
     background-color: #181818; border: 1px solid #2a2a2a; padding: 10px 12px;
     margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 3px;
@@ -252,6 +231,7 @@ button.action-available:hover {
 .item-info h4 { margin: 0 0 3px 0; color: #eee; font-size: 1em; }
 .item-info p { margin: 0; font-size: 0.85em; color: #999; }
 .item-info .item-quantity { color: #00AEEF; font-weight: bold; }
+.item-emoji { margin-right: 5px; font-size: 1.1em; vertical-align: middle; } /* Смайлик в инвентаре */
 .item-actions button { font-size: 0.8em; padding: 5px 8px; margin-left: 8px; }
 
 footer {
@@ -304,7 +284,7 @@ footer button:hover { background-color: #660000; }
 
 .action-time-indicator {
     font-size: 0.8em;
-    color: #FFD700; 
+    color: #FFD700;
     margin-left: 8px;
     font-style: italic;
 }
@@ -389,13 +369,26 @@ footer button:hover { background-color: #660000; }
 .location-info-section strong { color: #00AEEF; }
 .modal-actions { margin-top: 20px; text-align: right; }
 .modal-actions button { margin-left: 10px; }
-
-#pass-day-progress-bar-container .progress-bar-outer {
-    width: 100%; margin-top: 5px;
+/* Давай сюда что-нибудь положим */
+.seasonal-event-new-year {
+    background-color: #1a1a2a; /* Темно-фиолетовый, зимний цвет */
+    border: 1px solid #444466;
+    color: #e0e0ff; /* Светлый, почти белый */
+    border-radius: 5px;
 }
-#pass-day-progress-bar-inner {
-    background-color: #5555aa; 
-    transition: width 0.25s linear; 
+.seasonal-event-new-year h2 {
+    color: #aaccff; /* Чуть более яркий заголовок */
+}
+.seasonal-event-new-year .seasonal-event-story-text {
+    font-style: italic;
+    font-size: 1.05em;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+.seasonal-event-new-year .seasonal-event-choices-container button {
+    background-color: #333355; 
+    border-color: #555577;
+    color: #ccddee;
 }
 
 @media (max-width: 768px) {
@@ -409,12 +402,18 @@ footer button:hover { background-color: #660000; }
     #main-content { width: 100%; padding-top: 60px; box-sizing: border-box; }
     #log-messages { max-height: 100px; }
     .modal-content { width: 95%; margin: 10% auto; }
-    .inventory-controls { flex-direction: column; align-items: stretch; } /* Фильтры и сортировка в столбик */
-    .inventory-filters { margin-bottom: 10px; text-align: center; }
-    .inventory-sort-options { text-align: center; }
-    .inventory-sort-options button { margin: 3px; }
-
+    .inventory-filters button { padding: 5px 8px; font-size: 0.8em; }
     .overview-stats-container { flex-direction: column; }
     .crafting-grid { grid-template-columns: 1fr; }
     .structures-overview-grid { grid-template-columns: 1fr; }
+
+        /* Уменьшенные шрифты и отступы на мобильных */
+    body { font-size: 13px; }
+    h2 { font-size: 1.3em; }
+    p { font-size: 0.85em; }
+    button { font-size: 0.9em; padding: 6px 10px; }
+    /* Дополнительные стили для мобильной версии */
+    .inventory-controls { flex-direction: column; align-items: stretch; } /* Занимает всю ширину */
+    .inventory-controls .inventory-filters,
+    .inventory-controls .inventory-sort-options { text-align: center; }
 }
