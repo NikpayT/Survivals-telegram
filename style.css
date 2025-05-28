@@ -81,6 +81,13 @@ body {
 }
 #player-status-condensed p, #quick-stats p { margin: 5px 0; font-size: 0.9em; }
 #player-status-condensed p span, #quick-stats p span { color: #E0E0E0; float: right; }
+/* Для тултипов на ресурсах */
+#quick-stats p span[title], 
+#overview-base-food[title], 
+#overview-base-water[title] {
+    cursor: help; /* Меняем курсор, чтобы показать, что есть тултип */
+}
+
 
 .status-bar-container { margin-bottom: 8px; font-size: 0.85em; }
 .status-bar-container .status-label { display: inline-block; width: 70px; color: #aaa; margin-right: 5px; vertical-align: middle; }
@@ -138,7 +145,7 @@ button:hover { background-color: #004488; }
 button:disabled {
     background-color: #222222 !important; color: #555555 !important;
     border-color: #333333 !important; cursor: not-allowed;
-    box-shadow: none !important; /* Убираем свечение для заблокированных */
+    box-shadow: none !important; 
 }
 button.action-available {
     border-color: #33aa33; 
@@ -371,6 +378,17 @@ footer button:hover { background-color: #660000; }
 .location-info-section strong { color: #00AEEF; }
 .modal-actions { margin-top: 20px; text-align: right; }
 .modal-actions button { margin-left: 10px; }
+
+/* Стили для прогресс-бара отдыха (НОВЫЕ) */
+#pass-day-progress-bar-container .progress-bar-outer {
+    width: 100%; /* На всю ширину родительского .action-group */
+    margin-top: 5px;
+}
+#pass-day-progress-bar-inner {
+    background-color: #5555aa; /* Нейтральный цвет для отдыха */
+    transition: width 0.25s linear; /* Плавный переход для анимации */
+}
+
 
 @media (max-width: 768px) {
     #game-wrapper { flex-direction: column; }
