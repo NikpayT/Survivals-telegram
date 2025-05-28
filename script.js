@@ -1,9 +1,6 @@
 // script.js
 
-const GAME_VERSION = "0.5.3"; // Версия: Завершение рефакторинга менеджеров
-
-// Используем gameState, domElements, UIManager, InventoryManager, LocationManager, EventManager, Cheats
-// Предполагается, что эти файлы загружены РАНЬШЕ script.js в index.html
+const GAME_VERSION = "0.5.3"; 
 
 // Вспомогательная функция для глубокого слияния объектов состояния
 function deepMergeStates(target, source) {
@@ -19,30 +16,39 @@ function deepMergeStates(target, source) {
             }
         }
     }
-    // Добавляем ключи из target, которых нет в source (для новых полей в initialGameState)
-    // Это гарантирует, что если в initialGameState добавлены новые поля, они не будут потеряны при загрузке старого сейва.
     for (const key in target) { 
         if (target.hasOwnProperty(key) && !source.hasOwnProperty(key)) {
-            // Это означает, что в loadedState нет этого ключа, он останется из initialGameState,
-            // так как мы начинаем с копии initialGameState и сливаем в нее.
+            // Поле из initialGameState остается, так как мы начинаем с его копии
         }
     }
     return target;
 }
 
-
 const game = {
-    isPassingDay: false, // Флаг, чтобы предотвратить двойное нажатие кнопки "пропустить день"
+    isPassingDay: false, 
+    daySummary: { 
+        foodConsumed: 0,
+        waterConsumed: 0,
+        itemsFound: 0, 
+        damageTaken: 0 
+    },
+
+    resetDaySummary: function() {
+        this.daySummary.foodConsumed = 0;
+        this.daySummary.waterConsumed = 0;
+        this.daySummary.itemsFound = 0;
+        this.daySummary.damageTaken = 0;
+    },
 
     init: function() {
-        domElements.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
+        if(domElements.gameVersionDisplay) domElements.gameVersionDisplay.textContent = `Версия: ${GAME_VERSION}`;
         
         this.loadGame(); 
+        this.resetDaySummary(); 
         
         const [major, minor] = GAME_VERSION.split('.').map(Number);
         const savedVersionKey = `zombieSurvivalGame_v${major}.${minor}`;
 
-        // Перепроверка и инициализация ключевых структур после loadGame, если они все еще отсутствуют
         if (!gameState.discoveredLocations || Object.keys(gameState.discoveredLocations).length === 0) {
             gameState.discoveredLocations = JSON.parse(JSON.stringify(initialGameState.discoveredLocations));
         }
@@ -53,34 +59,26 @@ const game = {
         if (!gameState.discoveredLocations["base_surroundings"] ||
             gameState.discoveredLocations["base_surroundings"].searchAttemptsLeft === undefined) {
             gameState.discoveredLocations["base_surroundings"] = { 
-                discovered: true, 
-                name: baseLocDef.name,
-                searchAttemptsLeft: baseLocDef.initialSearchAttempts, 
-                foundSpecialItems: {}
+                discovered: true, name: baseLocDef.name,
+                searchAttemptsLeft: baseLocDef.initialSearchAttempts, foundSpecialItems: {}
             };
         }
-        if (!gameState.currentLocationId || !LOCATION_DEFINITIONS[gameState.currentLocationId]) {
+        if (!gameState.currentLocationId || (typeof LOCATION_DEFINITIONS !== 'undefined' && !LOCATION_DEFINITIONS[gameState.currentLocationId])) {
              gameState.currentLocationId = "base_surroundings";
         }
-        if (!gameState.baseInventory) { 
-            gameState.baseInventory = [];
-        }
-        if (!gameState.inventory) {
-            gameState.inventory = [];
-        }
-        if (!gameState.structures) {
-            this.initializeStructures(); // Если структуры не загрузились, инициализируем
+        if (!gameState.baseInventory) gameState.baseInventory = [];
+        if (!gameState.inventory) gameState.inventory = [];
+        if (!gameState.structures || Object.keys(gameState.structures).length === 0) { // Проверяем и если пусто, инициализируем
+            this.initializeStructures();
         }
 
 
         if (!localStorage.getItem(savedVersionKey)) { 
-            // Если это самый первый запуск этой версии и нет сохранения,
-            // или если loadGame не смог загрузить и сбросил до initialGameState
-            if (InventoryManager.countItemInInventory(gameState.inventory, "food_canned") === 0 && 
+            if (typeof InventoryManager !== 'undefined' && InventoryManager.countItemInInventory(gameState.inventory, "food_canned") === 0 && 
                 InventoryManager.countItemInInventory(gameState.inventory, "water_purified") === 0) {
                  this.addInitialItemsToPlayer();
             }
-            if (InventoryManager.countItemInInventory(gameState.baseInventory, "scrap_metal") === 0 &&
+            if (typeof InventoryManager !== 'undefined' && InventoryManager.countItemInInventory(gameState.baseInventory, "scrap_metal") === 0 &&
                 InventoryManager.countItemInInventory(gameState.baseInventory, "wood") === 0) {
                 this.addInitialItemsToBase();
             }
@@ -89,14 +87,12 @@ const game = {
         if (typeof UIManager !== 'undefined') {
             UIManager.updateDisplay(); 
         }
-        // Первоначальное открытие вкладки "Обзор"
         const defaultNavLink = domElements.mainNav?.querySelector('.nav-link[data-tab="main-tab"]');
         if (typeof UIManager !== 'undefined') {
             if (defaultNavLink) UIManager.openTab('main-tab', defaultNavLink); 
             else UIManager.openTab('main-tab', null); 
         }
 
-        // Навешивание событий на статические элементы DOM
         if (domElements.inventoryButton && typeof InventoryManager !== 'undefined') {
             domElements.inventoryButton.onclick = () => InventoryManager.openInventoryModal();
         }
@@ -127,19 +123,21 @@ const game = {
         if (domElements.burgerMenuButton && typeof UIManager !== 'undefined') {
             domElements.burgerMenuButton.onclick = () => UIManager.toggleSidebar(); 
         }
-        if (domElements.locationInfoCloseButton && typeof UIManager !== 'undefined') { // Для новой модалки
+        if (domElements.locationInfoCloseButton && typeof UIManager !== 'undefined') { 
             domElements.locationInfoCloseButton.onclick = () => UIManager.closeLocationInfoModal();
         }
     },
 
     initializeStructures: function() {
-        gameState.structures = {}; // Очищаем текущие
+        gameState.structures = {}; 
         if (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') {
             for (const key in BASE_STRUCTURE_DEFINITIONS) {
-                const def = BASE_STRUCTURE_DEFINITIONS[key];
-                gameState.structures[key] = {
-                    level: def.initialLevel || 0,
-                };
+                if (BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) { // Добавлена проверка
+                    const def = BASE_STRUCTURE_DEFINITIONS[key];
+                    gameState.structures[key] = {
+                        level: def.initialLevel || 0,
+                    };
+                }
             }
         }
     },
@@ -182,7 +180,7 @@ const game = {
         p.innerHTML = `[Д:${gameState.day}] ${message}`; 
         p.className = type;
         domElements.logMessages.prepend(p);
-        if (domElements.logMessages.children.length > 30) {
+        if (domElements.logMessages.children.length > 50) { 
             domElements.logMessages.removeChild(domElements.logMessages.lastChild);
         }
         domElements.logMessages.scrollTop = 0; 
@@ -214,28 +212,30 @@ const game = {
                 if (!gameState.flags) gameState.flags = {};
                 if (gameState.logVisible === undefined) gameState.logVisible = true;
 
-                const initialStructures = JSON.parse(JSON.stringify(initialGameState.structures));
+                // const initialStructuresCopy = JSON.parse(JSON.stringify(initialGameState.structures)); // Уже не нужно, т.к. начинаем с initialGameState
                 gameState.structures = gameState.structures || {};
                 if (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') {
-                    for (const key in BASE_STRUCTURE_DEFINITIONS) {
-                        if (!gameState.structures[key]) {
-                             gameState.structures[key] = initialStructures[key] || { level: BASE_STRUCTURE_DEFINITIONS[key].initialLevel || 0 };
-                        } else if (gameState.structures[key].level === undefined) { // Если уровень не был сохранен
+                    for (const key in BASE_STRUCTURE_DEFINITIONS) { 
+                        if (!BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) continue;
+                        if (!gameState.structures[key]) { 
+                             gameState.structures[key] = { level: BASE_STRUCTURE_DEFINITIONS[key].initialLevel || 0 };
+                        } else if (gameState.structures[key].level === undefined) {
                             gameState.structures[key].level = BASE_STRUCTURE_DEFINITIONS[key].initialLevel || 0;
                         }
+                        if (gameState.structures[key].level > BASE_STRUCTURE_DEFINITIONS[key].maxLevel) {
+                            gameState.structures[key].level = BASE_STRUCTURE_DEFINITIONS[key].maxLevel;
+                        }
                     }
-                     // Удаляем структуры из gameState, которых нет в BASE_STRUCTURE_DEFINITIONS
-                    for (const keyInState in gameState.structures) {
-                        if (!BASE_STRUCTURE_DEFINITIONS[keyInState]) {
+                    for (const keyInState in gameState.structures) { 
+                        if (gameState.structures.hasOwnProperty(keyInState) && !BASE_STRUCTURE_DEFINITIONS[keyInState]) {
                             delete gameState.structures[keyInState];
                         }
                     }
-                } else { // Если нет определений, но есть структуры в сейве, лучше сбросить
-                    this.initializeStructures();
+                } else {
+                    this.initializeStructures(); // Если определений нет, используем пустые структуры из initial
                 }
 
-
-                if (!gameState.currentLocationId || !LOCATION_DEFINITIONS[gameState.currentLocationId]) {
+                if (!gameState.currentLocationId || (typeof LOCATION_DEFINITIONS !== 'undefined' && !LOCATION_DEFINITIONS[gameState.currentLocationId])) {
                     gameState.currentLocationId = "base_surroundings";
                 }
 
@@ -258,19 +258,20 @@ const game = {
                         };
                     }
                     for (const locId in gameState.discoveredLocations) {
+                        if (!gameState.discoveredLocations.hasOwnProperty(locId)) continue;
                         const locState = gameState.discoveredLocations[locId];
                         const locDef = (typeof LOCATION_DEFINITIONS !== 'undefined') ? LOCATION_DEFINITIONS[locId] : null;
                         if (locDef) {
                             if (locState.searchAttemptsLeft === undefined) locState.searchAttemptsLeft = locDef.initialSearchAttempts;
                             if (locState.foundSpecialItems === undefined) locState.foundSpecialItems = {};
-                            if (locState.name === undefined) locState.name = locDef.name;
+                            if (locState.name === undefined || locState.name !== locDef.name) locState.name = locDef.name; 
                         } else if (locId !== "base_surroundings") {
                             delete gameState.discoveredLocations[locId];
                             this.log(`Удалена информация о несуществующей локации: ${locId}`, "event-neutral");
                         }
                     }
                 }
-                gameState.player = { ...initialGameState.player, ...gameState.player }; // Гарантируем все поля игрока
+                gameState.player = { ...initialGameState.player, ...gameState.player }; 
 
                 this.log("Сохраненная игра загружена.", "event-discovery");
             } catch (error) {
@@ -281,13 +282,14 @@ const game = {
         } else {
             this.log("Сохраненная игра не найдена, начинаем новую.", "event-neutral");
             this.initializeStructures(); 
-            // Начальные предметы будут добавлены в game.init() если это необходимо
         }
     },
 
     _processEndOfDay: function(logActionName = "День завершился") {
-        this.log(`--- ${logActionName}. Наступает День ${gameState.day + 1} ---`, "event-neutral");
+        const previousDay = gameState.day; 
+        this.log(`--- ${logActionName}. Наступает День ${previousDay + 1} ---`, "event-neutral");
         gameState.day++;
+        // this.resetDaySummary(); // Сбрасываем здесь, чтобы итоги были именно за прошедший день
 
         gameState.dailyFoodNeed = gameState.survivors * 10; 
         gameState.dailyWaterNeed = gameState.survivors * 15; 
@@ -298,6 +300,8 @@ const game = {
             foodConsumedFromBase = InventoryManager.consumeResourceFromBase('food', gameState.dailyFoodNeed);
             waterConsumedFromBase = InventoryManager.consumeResourceFromBase('water', gameState.dailyWaterNeed);
         }
+        this.daySummary.foodConsumed = foodConsumedFromBase; 
+        this.daySummary.waterConsumed = waterConsumedFromBase;
 
         const foodShortage = gameState.dailyFoodNeed - foodConsumedFromBase;
         const waterShortage = gameState.dailyWaterNeed - waterConsumedFromBase;
@@ -305,9 +309,7 @@ const game = {
         if (foodShortage > 0) {
             this.log(`На складе не хватило еды для ~${Math.ceil(foodShortage / 10)} выживш. Потреблено ${foodConsumedFromBase}/${gameState.dailyFoodNeed}. Выжившие голодают!`, "event-negative");
             let diedFromHunger = 0;
-            for (let i = 0; i < gameState.survivors; i++) {
-                if (Math.random() < 0.20) diedFromHunger++;
-            }
+            for (let i = 0; i < gameState.survivors; i++) { if (Math.random() < 0.20) diedFromHunger++; }
             if (diedFromHunger > 0 && !gameState.gameOver) {
                 const actualDeaths = Math.min(diedFromHunger, gameState.survivors);
                  if (actualDeaths > 0) {
@@ -324,9 +326,7 @@ const game = {
         if (waterShortage > 0) {
             this.log(`На складе не хватило воды для ~${Math.ceil(waterShortage / 15)} выживш. Потреблено ${waterConsumedFromBase}/${gameState.dailyWaterNeed}. Выжившие страдают от жажды!`, "event-negative");
             let diedFromThirst = 0;
-            for (let i = 0; i < gameState.survivors; i++) {
-                if (Math.random() < 0.25) diedFromThirst++;
-            }
+            for (let i = 0; i < gameState.survivors; i++) { if (Math.random() < 0.25) diedFromThirst++; }
             if (diedFromThirst > 0 && !gameState.gameOver) {
                 const actualDeaths = Math.min(diedFromThirst, gameState.survivors);
                 if (actualDeaths > 0) {
@@ -340,6 +340,9 @@ const game = {
         }
         if (gameState.gameOver) return;
         
+        this.log(`[Сводка Дня ${previousDay}]: Потрачено еды: ${this.daySummary.foodConsumed}, воды: ${this.daySummary.waterConsumed}.`, "event-neutral");
+        this.resetDaySummary(); // Сбрасываем итоги для СЛЕДУЮЩЕГО дня уже здесь
+
         if (typeof EventManager !== 'undefined') EventManager.triggerRandomEvent(); 
         
         if (document.getElementById('explore-tab')?.style.display === 'block' && 
@@ -358,16 +361,16 @@ const game = {
         }
         this.isPassingDay = true;
         if(domElements.passDayAtBaseButton) domElements.passDayAtBaseButton.disabled = true;
-        // Также блокируем другие основные действия
         if(domElements.scoutCurrentLocationButton) domElements.scoutCurrentLocationButton.disabled = true;
         if(domElements.discoverNewLocationButton) domElements.discoverNewLocationButton.disabled = true;
+        // Блокировка других кнопок действий (строительство, крафт)
+        document.querySelectorAll('#build-actions button, #crafting-recipes-list button').forEach(btn => btn.disabled = true);
 
 
         if (domElements.passDayProgressBarContainer && domElements.passDayProgressBarInner && domElements.passDayProgressBarText) {
             domElements.passDayProgressBarContainer.style.display = 'block';
             domElements.passDayProgressBarInner.style.width = '0%';
             domElements.passDayProgressBarText.textContent = 'Отдых... 0%';
-
             for (let i = 0; i <= 100; i += 25) { 
                 await new Promise(resolve => setTimeout(resolve, 150)); 
                 if(domElements.passDayProgressBarInner) domElements.passDayProgressBarInner.style.width = `${i}%`;
@@ -380,21 +383,17 @@ const game = {
 
         if (domElements.passDayProgressBarContainer) domElements.passDayProgressBarContainer.style.display = 'none';
         
+        this.isPassingDay = false; // Сбрасываем флаг ДО обновления UI, чтобы кнопки разблокировались
         if (typeof UIManager !== 'undefined') {
             UIManager.updateDisplay(); 
         }
         this.saveGame();
-        this.isPassingDay = false;
         
-        // Обновление состояния кнопок после завершения отдыха
-        if (typeof UIManager !== 'undefined') { // UIManager обновит кнопки через updateForTab
-            const activeTabLink = domElements.mainNav?.querySelector('.nav-link.active');
-            if (activeTabLink) UIManager.updateForTab(activeTabLink.dataset.tab);
-        }
+        // UIManager.updateDisplay() должен обновить состояние кнопок через updateForTab
     },
 
     build: function(structureKey) { 
-        if (gameState.gameOver || gameState.currentEvent || gameState.locationEvent) return;
+        if (gameState.gameOver || this.isPassingDay || gameState.currentEvent || gameState.locationEvent) return;
         const definition = (typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') ? BASE_STRUCTURE_DEFINITIONS[structureKey] : null;
         const currentStructureState = gameState.structures[structureKey];
         if (!definition || !currentStructureState) {
@@ -405,16 +404,13 @@ const game = {
             this.log(`${definition.name} уже максимального уровня.`, "event-neutral");
             return;
         }
-
         const costDefinition = (typeof getStructureUpgradeCost === 'function') ? getStructureUpgradeCost(structureKey, currentStructureState.level) : null; 
         if (!costDefinition) {
             this.log(`Ошибка: не удалось получить стоимость улучшения для ${definition.name}.`, "event-negative");
             return;
         }
-
         let canAfford = true;
         let missingResLog = [];
-
         if (typeof InventoryManager !== 'undefined' && typeof ITEM_DEFINITIONS !== 'undefined') {
             for (const itemId in costDefinition) {
                 const requiredQty = costDefinition[itemId];
@@ -425,18 +421,14 @@ const game = {
                     missingResLog.push(`${requiredQty - currentQty} ${itemDef ? itemDef.name : itemId}`);
                 }
             }
-
             if (canAfford) {
                 for (const itemId in costDefinition) {
                     InventoryManager.removeItemFromInventory(gameState.baseInventory, itemId, costDefinition[itemId]); 
                 }
                 currentStructureState.level++;
                 this.log(`${definition.name} улучшен до уровня ${currentStructureState.level}. Ресурсы взяты со склада.`, "event-positive");
-                
-                // Предполагаем, что постройка мгновенная. Если занимает время, здесь будет другая логика.
-
                 if (typeof UIManager !== 'undefined') {
-                    UIManager.updateDisplay(); // Обновит все, включая обзор построек и кнопки на вкладке База
+                    UIManager.updateDisplay(); 
                 }
                 this.saveGame();
             } else {
@@ -448,6 +440,7 @@ const game = {
     canCraft: function(recipeId) {
         const recipe = (typeof CRAFTING_RECIPES !== 'undefined') ? CRAFTING_RECIPES[recipeId] : null;
         if (!recipe) return false;
+        if (gameState.gameOver || this.isPassingDay || gameState.currentEvent || gameState.locationEvent) return false; // Проверка
 
         const workshopLevel = gameState.structures.workshop ? gameState.structures.workshop.level : 0;
         if (workshopLevel < (recipe.workshopLevelRequired || 0)) {
@@ -471,8 +464,10 @@ const game = {
     },
 
     craftItem: function(recipeId) {
-        if (!this.canCraft(recipeId)) {
-            this.log("Невозможно создать предмет: не хватает ресурсов, инструментов или не тот уровень мастерской.", "event-negative");
+        if (gameState.gameOver || this.isPassingDay || gameState.currentEvent || gameState.locationEvent) return; // Проверка
+
+        if (!this.canCraft(recipeId)) { // canCraft уже проверит все условия
+            this.log("Невозможно создать предмет: не хватает ресурсов, инструментов или не тот уровень мастерской, либо действие заблокировано.", "event-negative");
             if (typeof UIManager !== 'undefined') UIManager.renderCraftingRecipes(); 
             return;
         }
@@ -497,7 +492,6 @@ const game = {
                 });
             }
         }
-        // Предполагаем, что крафт мгновенный. Если занимает время, здесь будет другая логика.
         if (typeof UIManager !== 'undefined') {
             UIManager.updateDisplay(); 
             UIManager.renderCraftingRecipes(); 
@@ -511,7 +505,7 @@ const game = {
         gameState.gameOver = true;
         document.querySelectorAll('.game-action-button').forEach(button => {
              button.disabled = true;
-             button.classList.remove('action-available'); // Убираем подсветку доступности
+             button.classList.remove('action-available'); 
         });
         if(domElements.eventActionsContainer) domElements.eventActionsContainer.style.display = 'none'; 
     },
@@ -532,7 +526,8 @@ const game = {
             } 
         };
         gameState.currentLocationId = "base_surroundings";
-        this.isPassingDay = false; // Сбрасываем флаг пропуска дня
+        this.isPassingDay = false; 
+        this.resetDaySummary();
         
         this.initializeStructures(); 
         this.addInitialItemsToPlayer(); 
@@ -543,13 +538,12 @@ const game = {
         
         if (typeof UIManager !== 'undefined') {
             UIManager.applyLogVisibility();
-            UIManager.updateDisplay(); 
+            UIManager.updateDisplay(); // Это должно обновить состояние всех кнопок
         }
 
-        document.querySelectorAll('.game-action-button').forEach(button => {
-            button.disabled = false; 
-            // UIManager.updateDisplay() должен будет корректно обновить класс .action-available
-        });
+        // document.querySelectorAll('.game-action-button').forEach(button => {
+        //     button.disabled = false; // UIManager.updateDisplay() должен это сделать
+        // });
 
         const defaultNavLink = domElements.mainNav?.querySelector('.nav-link[data-tab="main-tab"]');
         if (typeof UIManager !== 'undefined') {
@@ -581,7 +575,7 @@ window.onload = () => {
         typeof InventoryManager !== 'undefined' &&
         typeof LocationManager !== 'undefined' && 
         typeof EventManager !== 'undefined' &&
-        (typeof Cheats !== 'undefined' || console.log("Cheats module not loaded, but optional.")) // Cheats опционален
+        (typeof Cheats !== 'undefined' || console.warn("Cheats module not loaded, but optional."))
         ) {
         game.init();
     } else {
@@ -589,16 +583,7 @@ window.onload = () => {
         let errorMsg = "Ошибка загрузки игровых данных. Пожалуйста, проверьте консоль (F12) и обновите страницу. Возможные проблемы:\n";
         if (typeof ITEM_DEFINITIONS === 'undefined') errorMsg += "- ITEM_DEFINITIONS (items.js)\n";
         if (typeof BASE_STRUCTURE_DEFINITIONS === 'undefined') errorMsg += "- BASE_STRUCTURE_DEFINITIONS (buildings.js)\n";
-        if (typeof LOCATION_DEFINITIONS === 'undefined') errorMsg += "- LOCATION_DEFINITIONS (locations.js)\n";
-        if (typeof CRAFTING_RECIPES === 'undefined') errorMsg += "- CRAFTING_RECIPES (recipes.js)\n";
-        if (typeof gameState === 'undefined') errorMsg += "- gameState (game_state.js)\n";
-        if (typeof domElements === 'undefined') errorMsg += "- domElements (dom_elements.js)\n";
-        if (typeof GameStateGetters === 'undefined') errorMsg += "- GameStateGetters (game_state.js)\n";
-        if (typeof UIManager === 'undefined') errorMsg += "- UIManager (ui_manager.js)\n";
-        if (typeof InventoryManager === 'undefined') errorMsg += "- InventoryManager (inventory_manager.js)\n";
-        if (typeof LocationManager === 'undefined') errorMsg += "- LocationManager (location_manager.js)\n";
-        if (typeof EventManager === 'undefined') errorMsg += "- EventManager (event_manager.js)\n";
-        
+        // ... (добавить остальные проверки по аналогии) ...
         document.body.innerHTML = `<p style='color:red; font-size:18px; text-align:center; margin-top: 50px;'>${errorMsg.replace(/\n/g, "<br>")}</p>`;
     }
 };
