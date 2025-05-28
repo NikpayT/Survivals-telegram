@@ -25,7 +25,6 @@
             <div id="player-status-condensed" class="panel">
                 <h4>Состояние Игрока</h4>
                 <p>День: <span id="day">1</span></p>
-
                 <div class="status-bar-container">
                     <span class="status-label">Здоровье:</span>
                     <div class="progress-bar-outer" id="health-bar-outer">
@@ -33,7 +32,6 @@
                         <span class="progress-bar-text" id="health-bar-text">100/100</span>
                     </div>
                 </div>
-
                 <div class="status-bar-container">
                     <span class="status-label">Сытость:</span>
                     <div class="progress-bar-outer" id="hunger-bar-outer">
@@ -41,7 +39,6 @@
                         <span class="progress-bar-text" id="hunger-bar-text">Норма</span>
                     </div>
                 </div>
-
                 <div class="status-bar-container">
                      <span class="status-label">Жажда:</span>
                     <div class="progress-bar-outer" id="thirst-bar-outer">
@@ -49,7 +46,6 @@
                         <span class="progress-bar-text" id="thirst-bar-text">Норма</span>
                     </div>
                 </div>
-
                 <p style="margin-top: 10px;">Выжившие: <span id="survivors">1</span> / <span id="max-survivors">1</span></p>
             </div>
              <div id="quick-stats" class="panel">
@@ -66,9 +62,9 @@
             </header>
 
             <div id="tab-content-area">
+                <!-- Вкладка Обзор -->
                 <div id="main-tab" class="tab-content" style="display: block;">
                     <h2>Обзор и События</h2>
-
                     <div class="overview-stats-container">
                         <div class="overview-panel">
                             <h3>Статус Игрока</h3>
@@ -85,27 +81,24 @@
                             <p>Вода на складе (жажда): <span id="overview-base-water">0</span></p>
                         </div>
                     </div>
-
                     <div class="action-group">
                         <h3>Действия Дня</h3>
-                        <button class="game-action-button" onclick="game.nextDay()">Завершить день</button>
+                        <button id="next-day-button" class="game-action-button" onclick="game.nextDay()">Завершить день</button>
                     </div>
-                    <div id="event-actions-container" class="action-group">
+                    <div id="event-actions-container" class="action-group" style="display: none;">
                         <h3>Текущее Событие</h3>
                         <div id="event-text-display"></div>
-                        <div id="event-actions">
-                            <!-- Кнопки для событий генерируются EventManager -->
-                        </div>
+                        <div id="event-actions"></div>
                     </div>
                 </div>
 
+                <!-- Вкладка База -->
                 <div id="base-tab" class="tab-content">
                     <h2>Управление Базой</h2>
-                    <div id="build-actions" class="action-grid">
-                        <!-- Кнопки для построек генерируются UIManager с классом game-action-button -->
-                    </div>
+                    <div id="build-actions" class="action-grid"></div>
                 </div>
 
+                <!-- Вкладка Склад -->
                 <div id="storage-tab" class="tab-content">
                     <h2>Склад Базы</h2>
                     <div class="inventory-filters base-storage-filters">
@@ -119,12 +112,10 @@
                         <button data-filter="armor">Броня</button>
                         <button data-filter="quest_item">Особое</button>
                     </div>
-                    <div id="base-inventory-list" class="inventory-list-shared-style">
-                        <!-- Содержимое генерируется InventoryManager (или UIManager) -->
-                    </div>
+                    <div id="base-inventory-list" class="inventory-list-shared-style"></div>
                 </div>
 
-
+                <!-- Вкладка Разведка -->
                 <div id="explore-tab" class="tab-content">
                     <h2>Разведка Местности</h2>
                     <div class="action-group">
@@ -132,7 +123,6 @@
                         <button id="scout-current-location-button" class="game-action-button" onclick="LocationManager.exploreCurrentLocationAction('search')">Обыскать (<span id="current-location-time">1</span> д.)</button>
                         <p id="current-location-description">Это ваша база и ближайшие окрестности.</p>
                     </div>
-
                     <div class="action-group">
                         <h3>Известные Локации</h3>
                         <div id="discovered-locations-list">
@@ -142,16 +132,17 @@
                     </div>
                 </div>
 
+                <!-- Вкладка Крафт -->
                 <div id="craft-tab" class="tab-content">
                     <h2>Изготовление Предметов</h2>
                     <p>Мастерская Ур: <span id="workshop-level-display">0</span></p>
                     <div id="crafting-recipes-list" class="crafting-grid">
-                        <!-- Рецепты и кнопки "Создать" генерируются UIManager с классом game-action-button -->
                         <p><em>Рецепты не найдены или не выполнены условия.</em></p>
                     </div>
                 </div>
             </div>
 
+            <!-- Панель лога -->
             <div id="log-panel-container">
                  <div id="log-panel" class="panel">
                     <div class="log-header">
@@ -166,6 +157,7 @@
         </main>
     </div>
 
+    <!-- Модальное окно инвентаря игрока -->
     <div id="inventory-modal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="InventoryManager.closeInventoryModal()">×</span>
@@ -181,11 +173,26 @@
                 <button data-filter="armor">Броня</button>
                 <button data-filter="quest_item">Особое</button>
             </div>
-            <div id="inventory-items-list" class="inventory-list-shared-style">
-                <!-- Содержимое генерируется InventoryManager (или UIManager) -->
+            <div id="inventory-items-list" class="inventory-list-shared-style"></div>
+        </div>
+    </div>
+
+    <!-- НОВОЕ: Модальное окно информации о локации -->
+    <div id="location-info-modal" class="modal" style="display: none;">
+        <div class="modal-content location-modal-content"> <!-- Добавлен класс location-modal-content для специфичных стилей, если понадобятся -->
+            <span id="location-info-close-button" class="close-button" onclick="UIManager.closeLocationInfoModal()">×</span>
+            <h2 id="location-info-name">Название Локации</h2>
+            <p id="location-info-description">Описание локации здесь...</p>
+            <p><strong>Уровень опасности:</strong> <span id="location-info-danger">Средний</span></p>
+            <div id="location-info-preview-loot" class="location-info-section">
+                <!-- <strong>Возможная добыча:</strong> Информация о добыче скрыта... -->
+            </div>
+            <div class="modal-actions"> <!-- Контейнер для кнопок в модалке -->
+                <button id="location-info-travel-button" class="game-action-button">Перейти сюда</button>
             </div>
         </div>
     </div>
+
 
     <footer>
         <button onclick="game.resetGameConfirmation()">Начать игру заново</button>
@@ -194,13 +201,13 @@
 
     <!-- Файлы определений -->
     <script src="items.js"></script>
-    <script src="buildings.js"></script> <!-- Убедитесь, что здесь есть getStructureUpgradeCost или он глобален -->
-    <script src="locations.js"></script>
+    <script src="buildings.js"></script>
+    <script src="locations.js"></script> <!-- Убедись, что здесь есть previewLootText -->
     <script src="recipes.js"></script>
 
     <!-- Файлы состояния и DOM -->
     <script src="game_state.js"></script>
-    <script src="dom_elements.js"></script>
+    <script src="dom_elements.js"></script> <!-- Должен быть загружен до менеджеров -->
 
     <!-- Файлы менеджеров (ПОРЯДОК ВАЖЕН!) -->
     <script src="ui_manager.js"></script>
