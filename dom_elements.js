@@ -39,15 +39,15 @@ const domElements = {
     overviewSurvivors: document.getElementById('overview-survivors'),
     overviewBaseFood: document.getElementById('overview-base-food'),
     overviewBaseWater: document.getElementById('overview-base-water'),
-    overviewBaseCapacityUsage: document.getElementById('overview-base-capacity-usage'),
+    overviewBaseCapacityUsage: document.getElementById('overview-base-capacity-usage'), 
     baseStructuresOverviewList: document.getElementById('base-structures-overview-list'),
 
     // Вкладка "База" (Base Tab)
     buildActions: document.getElementById('build-actions'),
-    passDayAtBaseButton: document.getElementById('pass-day-at-base-button'),
-    passDayProgressBarContainer: document.getElementById('pass-day-progress-bar-container'),
-    passDayProgressBarInner: document.getElementById('pass-day-progress-bar-inner'),
-    passDayProgressBarText: document.getElementById('pass-day-progress-bar-text'),
+    passDayAtBaseButton: document.getElementById('pass-day-at-base-button'), 
+    passDayProgressBarContainer: document.getElementById('pass-day-progress-bar-container'), 
+    passDayProgressBarInner: document.getElementById('pass-day-progress-bar-inner'),     
+    passDayProgressBarText: document.getElementById('pass-day-progress-bar-text'),       
 
     // Вкладка "Склад Базы" (Storage Tab)
     baseInventoryFilters: document.querySelector('#storage-tab .inventory-filters'),
@@ -101,7 +101,7 @@ const domElements = {
     locationInfoTravelButton: document.getElementById('location-info-travel-button'),
     locationInfoCloseButton: document.getElementById('location-info-close-button'),
 
-    // НОВЫЕ ЭЛЕМЕНТЫ: Модальное окно сезонного события
+    // НОВЫЕ ЭЛЕМЕНТЫ для модального окна сезонного события
     seasonalEventModal: document.getElementById('seasonal-event-modal'),
     seasonalEventTitle: document.getElementById('seasonal-event-title'),
     seasonalEventImageContainer: document.getElementById('seasonal-event-image-container'),
@@ -119,9 +119,11 @@ for (const key in domElements) {
         const optionalKeys = [
             'cheatSetDayInput', 'cheatTriggerEventIdInput', 
             'passDayProgressBarContainer', 'passDayProgressBarInner', 'passDayProgressBarText',
-            'sortBaseNameButton', 'sortBaseTypeButton', 'sortBaseQuantityButton',
+            'sortBaseNameButton', 'sortBaseTypeButton', 'sortBaseQuantityButton', 
             'sortPlayerNameButton', 'sortPlayerTypeButton', 'sortPlayerWeightButton',
-            'currentLocationTimeDisplay' // Этот элемент больше не используется напрямую
+            // Добавляем новые элементы сезонного события в опциональные, т.к. они могут быть не всегда нужны при первой загрузке
+            'seasonalEventModal', 'seasonalEventTitle', 'seasonalEventImageContainer', 
+            'seasonalEventText', 'seasonalEventChoices', 'seasonalEventReturnBaseButton'
         ];
         if (!optionalKeys.includes(key)) {
              console.warn(`DOM Element not found for key: ${key}. Check ID in index.html.`);
