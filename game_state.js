@@ -9,34 +9,34 @@ const initialGameState = {
     day: 1,
     survivors: 1,
     gameOver: false,
-    currentEvent: null, 
+    currentEvent: null,
     structures: {}, // Будет инициализировано из BASE_STRUCTURE_DEFINITIONS
-    
+
     inventory: [], // Личный инвентарь игрока
     baseInventory: [], // Склад базы (общаг)
 
     player: {
         health: 100, maxHealth: 100,
-        hunger: 100, maxHunger: 100, 
-        thirst: 100, maxThirst: 100, 
-        carryWeight: 0, maxCarryWeight: 25, 
-        condition: "В порядке", 
+        hunger: 100, maxHunger: 100,
+        thirst: 100, maxThirst: 100,
+        carryWeight: 0, maxCarryWeight: 25,
+        condition: "В порядке",
     },
-    dailyFoodNeed: 0, 
-    dailyWaterNeed: 0, 
+    dailyFoodNeed: 0,
+    dailyWaterNeed: 0,
 
-    currentLocationId: "base_surroundings", 
-    discoveredLocations: { 
-        "base_surroundings": { 
-            discovered: true, 
+    currentLocationId: "base_surroundings",
+    discoveredLocations: {
+        "base_surroundings": {
+            discovered: true,
             name: baseSurroundingsName,
             searchAttemptsLeft: baseSurroundingsInitialAttempts,
-            foundSpecialItems: {} 
-        } 
+            foundSpecialItems: {}
+        }
     },
-    locationEvent: null, 
-    logVisible: true, 
-    flags: {}, 
+    locationEvent: null,
+    logVisible: true,
+    flags: {},
 };
 
 // Глобальный объект состояния, который будет модифицироваться игрой
@@ -51,15 +51,15 @@ const GameStateGetters = {
         if (gameState.structures.shelter && gameState.structures.shelter.level > 0 && typeof BASE_STRUCTURE_DEFINITIONS !== 'undefined') {
             max += BASE_STRUCTURE_DEFINITIONS.shelter.effect(gameState.structures.shelter.level).maxSurvivors;
         }
-        return max || 1;
+        return max || 1; // Гарантируем, что хотя бы 1 место есть (для игрока)
     },
-    getHungerThresholds: function() { return { critical: 20, low: 40, normal: 100 }; },
-    getThirstThresholds: function() { return { critical: 15, low: 35, normal: 100 }; },
-    
-    getTotalPlayerResourceValue: function(type) { 
+    getHungerThresholds: function() { return { critical: 20, low: 40, normal: 100 }; }, // normal тут скорее max
+    getThirstThresholds: function() { return { critical: 15, low: 35, normal: 100 }; }, // normal тут скорее max
+
+    getTotalPlayerResourceValue: function(type) {
         let totalValue = 0;
         gameState.inventory.forEach(itemSlot => {
-            const itemDef = ITEM_DEFINITIONS[itemSlot.itemId];
+            const itemDef = (typeof ITEM_DEFINITIONS !== 'undefined') ? ITEM_DEFINITIONS[itemSlot.itemId] : null;
             if (itemDef && itemDef.effect) {
                 if (type === 'food' && itemDef.type === 'food' && itemDef.effect.hunger) {
                     totalValue += itemDef.effect.hunger * itemSlot.quantity;
@@ -73,9 +73,9 @@ const GameStateGetters = {
     countBaseFoodItems: function() {
         let count = 0;
         gameState.baseInventory.forEach(slot => {
-            const itemDef = ITEM_DEFINITIONS[slot.itemId];
+            const itemDef = (typeof ITEM_DEFINITIONS !== 'undefined') ? ITEM_DEFINITIONS[slot.itemId] : null;
             if (itemDef && itemDef.type === 'food') {
-                count += slot.quantity * (itemDef.effect?.hunger || 0); 
+                count += slot.quantity * (itemDef.effect?.hunger || 0);
             }
         });
         return count;
@@ -83,9 +83,9 @@ const GameStateGetters = {
     countBaseWaterItems: function() {
         let count = 0;
         gameState.baseInventory.forEach(slot => {
-            const itemDef = ITEM_DEFINITIONS[slot.itemId];
+            const itemDef = (typeof ITEM_DEFINITIONS !== 'undefined') ? ITEM_DEFINITIONS[slot.itemId] : null;
             if (itemDef && (itemDef.type === 'water' || itemDef.type === 'water_source')) {
-                 count += slot.quantity * (itemDef.effect?.thirst || 0); 
+                 count += slot.quantity * (itemDef.effect?.thirst || 0);
             }
         });
         return count;
