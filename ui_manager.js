@@ -17,6 +17,7 @@ const UIManager = {
         this.updatePlayerStatus();
         this.updateInventoryWeightDisplay();
 
+        // Обновление информации о ресурсах и вместимости склада в сайдбаре
         if (domElements.totalFoodValue) {
             domElements.totalFoodValue.textContent = GameStateGetters.countBaseFoodItems();
             domElements.totalFoodValue.title = GameStateGetters.getBaseFoodBreakdown(); 
@@ -24,6 +25,11 @@ const UIManager = {
         if (domElements.totalWaterValue) {
             domElements.totalWaterValue.textContent = GameStateGetters.countBaseWaterItems();
             domElements.totalWaterValue.title = GameStateGetters.getBaseWaterBreakdown(); 
+        }
+        if (domElements.sidebarBaseCapacityUsage) {
+            const usage = GameStateGetters.getBaseInventoryUsage();
+            domElements.sidebarBaseCapacityUsage.textContent = `${usage.current}/${usage.max}`;
+            domElements.sidebarBaseCapacityUsage.title = `Заполнено: ${usage.percentage.toFixed(0)}%`;
         }
         
         const activeTabLink = domElements.mainNav?.querySelector('.nav-link.active');
@@ -44,51 +50,45 @@ const UIManager = {
              console.warn("UIManager.updatePlayerStatus: Missing critical elements (dom, gameState, getters, or player).");
              return;
         }
-        // Здоровье
-        const healthPercent = Math.max(0, (gameState.player.health / gameState.player.maxHealth) * 100);
+        const player = gameState.player;
+        const healthPercent = Math.max(0, (player.health / player.maxHealth) * 100);
         if (domElements.healthBarInner) domElements.healthBarInner.style.width = `${healthPercent}%`;
-        if (domElements.healthBarText) domElements.healthBarText.textContent = `${gameState.player.health}/${gameState.player.maxHealth}`;
+        if (domElements.healthBarText) domElements.healthBarText.textContent = `${player.health}/${player.maxHealth}`;
         if (domElements.healthBarInner) {
             domElements.healthBarInner.classList.remove('critical', 'low', 'normal');
             if (healthPercent <= 25) domElements.healthBarInner.classList.add('critical');
             else if (healthPercent <= 50) domElements.healthBarInner.classList.add('low');
             else domElements.healthBarInner.classList.add('normal');
         }
-
-        // Сытость
         const hungerTh = GameStateGetters.getHungerThresholds();
         let hungerStatusText = "Сыт"; let hungerBarPercent = 100;
         if(domElements.hungerBarInner) domElements.hungerBarInner.classList.remove('critical', 'low', 'normal');
-        if (gameState.player.hunger <= 0) {
+        if (player.hunger <= 0) {
             hungerStatusText = "Смерть"; hungerBarPercent = 0; if(domElements.hungerBarInner) domElements.hungerBarInner.classList.add('critical');
-        } else if (gameState.player.hunger <= hungerTh.critical) {
-            hungerStatusText = "Истощение"; hungerBarPercent = (gameState.player.hunger / hungerTh.critical) * 25; if(domElements.hungerBarInner) domElements.hungerBarInner.classList.add('critical');
-        } else if (gameState.player.hunger <= hungerTh.low) {
-            hungerStatusText = "Голод"; hungerBarPercent = 25 + ((gameState.player.hunger - hungerTh.critical) / (hungerTh.low - hungerTh.critical)) * 25; if(domElements.hungerBarInner) domElements.hungerBarInner.classList.add('low');
+        } else if (player.hunger <= hungerTh.critical) {
+            hungerStatusText = "Истощение"; hungerBarPercent = (player.hunger / hungerTh.critical) * 25; if(domElements.hungerBarInner) domElements.hungerBarInner.classList.add('critical');
+        } else if (player.hunger <= hungerTh.low) {
+            hungerStatusText = "Голод"; hungerBarPercent = 25 + ((player.hunger - hungerTh.critical) / (hungerTh.low - hungerTh.critical)) * 25; if(domElements.hungerBarInner) domElements.hungerBarInner.classList.add('low');
         } else {
-            hungerStatusText = "Сыт"; hungerBarPercent = 50 + Math.min(50, ((gameState.player.hunger - hungerTh.low) / (gameState.player.maxHunger - hungerTh.low)) * 50); if(domElements.hungerBarInner) domElements.hungerBarInner.classList.add('normal');
+            hungerStatusText = "Сыт"; hungerBarPercent = 50 + Math.min(50, ((player.hunger - hungerTh.low) / (player.maxHunger - hungerTh.low)) * 50); if(domElements.hungerBarInner) domElements.hungerBarInner.classList.add('normal');
         }
         if (domElements.hungerBarText) domElements.hungerBarText.textContent = hungerStatusText;
         if (domElements.hungerBarInner) domElements.hungerBarInner.style.width = `${Math.max(0, Math.min(100, hungerBarPercent))}%`;
-
-        // Жажда
         const thirstTh = GameStateGetters.getThirstThresholds();
         let thirstStatusText = "Норма"; let thirstBarPercent = 100;
         if(domElements.thirstBarInner) domElements.thirstBarInner.classList.remove('critical', 'low', 'normal');
-        if (gameState.player.thirst <= 0) {
+        if (player.thirst <= 0) {
             thirstStatusText = "Смерть"; thirstBarPercent = 0; if(domElements.thirstBarInner) domElements.thirstBarInner.classList.add('critical');
-        } else if (gameState.player.thirst <= thirstTh.critical) {
-            thirstStatusText = "Сильная жажда"; thirstBarPercent = (gameState.player.thirst / thirstTh.critical) * 25; if(domElements.thirstBarInner) domElements.thirstBarInner.classList.add('critical');
-        } else if (gameState.player.thirst <= thirstTh.low) {
-            thirstStatusText = "Жажда"; thirstBarPercent = 25 + ((gameState.player.thirst - thirstTh.critical) / (thirstTh.low - thirstTh.critical)) * 25; if(domElements.thirstBarInner) domElements.thirstBarInner.classList.add('low');
+        } else if (player.thirst <= thirstTh.critical) {
+            thirstStatusText = "Сильная жажда"; thirstBarPercent = (player.thirst / thirstTh.critical) * 25; if(domElements.thirstBarInner) domElements.thirstBarInner.classList.add('critical');
+        } else if (player.thirst <= thirstTh.low) {
+            thirstStatusText = "Жажда"; thirstBarPercent = 25 + ((player.thirst - thirstTh.critical) / (thirstTh.low - thirstTh.critical)) * 25; if(domElements.thirstBarInner) domElements.thirstBarInner.classList.add('low');
         } else {
-            thirstStatusText = "Норма"; thirstBarPercent = 50 + Math.min(50, ((gameState.player.thirst - thirstTh.low) / (gameState.player.maxThirst - thirstTh.low)) * 50); if(domElements.thirstBarInner) domElements.thirstBarInner.classList.add('normal');
+            thirstStatusText = "Норма"; thirstBarPercent = 50 + Math.min(50, ((player.thirst - thirstTh.low) / (player.maxThirst - thirstTh.low)) * 50); if(domElements.thirstBarInner) domElements.thirstBarInner.classList.add('normal');
         }
         if (domElements.thirstBarText) domElements.thirstBarText.textContent = thirstStatusText;
         if (domElements.thirstBarInner) domElements.thirstBarInner.style.width = `${Math.max(0, Math.min(100, thirstBarPercent))}%`;
-
-        if (domElements.playerCondition) domElements.playerCondition.textContent = gameState.player.condition;
-        
+        if (domElements.playerCondition) domElements.playerCondition.textContent = player.condition;
         if (typeof InventoryManager !== 'undefined') {
             InventoryManager.renderPlayerInventoryIfActive();
         }
@@ -120,7 +120,6 @@ const UIManager = {
         if(domElements.overviewCondition) domElements.overviewCondition.textContent = gameState.player.condition;
         if(domElements.overviewDay) domElements.overviewDay.textContent = gameState.day;
         if(domElements.overviewSurvivors) domElements.overviewSurvivors.textContent = `${gameState.survivors}/${GameStateGetters.getMaxSurvivors()}`;
-        
         if(domElements.overviewBaseFood) {
             domElements.overviewBaseFood.textContent = GameStateGetters.countBaseFoodItems();
             domElements.overviewBaseFood.title = GameStateGetters.getBaseFoodBreakdown(); 
@@ -129,7 +128,11 @@ const UIManager = {
             domElements.overviewBaseWater.textContent = GameStateGetters.countBaseWaterItems();
             domElements.overviewBaseWater.title = GameStateGetters.getBaseWaterBreakdown(); 
         }
-        
+        if(domElements.overviewBaseCapacityUsage) { // Обновление заполненности склада на вкладке Обзор
+            const usage = GameStateGetters.getBaseInventoryUsage();
+            domElements.overviewBaseCapacityUsage.textContent = `${usage.current}/${usage.max}`;
+            domElements.overviewBaseCapacityUsage.title = `Заполнено слотов: ${usage.percentage.toFixed(0)}%`;
+        }
         this.renderBaseStructuresOverview(); 
     },
 
@@ -165,7 +168,7 @@ const UIManager = {
         if (tabName === 'main-tab') {
             this.updateOverviewTabStats();
         } else if (tabName === 'base-tab') {
-            this.updateBuildActions(); // Также обновит состояние кнопки "пропустить день"
+            this.updateBuildActions();
         } else if (tabName === 'explore-tab') {
             if (typeof LocationManager !== 'undefined') LocationManager.updateExploreTab();
             if (domElements.eventActionsContainer && domElements.eventTextDisplay && domElements.eventActions) {
@@ -179,12 +182,17 @@ const UIManager = {
                     EventManager.displayLocationEventChoices();
                 } else {
                     domElements.eventActionsContainer.style.display = 'none';
-                    if (domElements.eventTextDisplay) domElements.eventTextDisplay.textContent = ''; // Проверка на null
-                    if (domElements.eventActions) domElements.eventActions.innerHTML = ''; // Проверка на null
+                    if (domElements.eventTextDisplay) domElements.eventTextDisplay.textContent = '';
+                    if (domElements.eventActions) domElements.eventActions.innerHTML = '';
                 }
             }
         } else if (tabName === 'storage-tab' && typeof InventoryManager !== 'undefined') {
-            InventoryManager.filterBaseInventory('all');
+            InventoryManager.filterBaseInventory('all'); // Рендерит инвентарь
+            if (domElements.storageTabBaseCapacityUsage && typeof GameStateGetters !== 'undefined') { // Обновление заполненности на вкладке Склад
+                const usage = GameStateGetters.getBaseInventoryUsage();
+                domElements.storageTabBaseCapacityUsage.textContent = `${usage.current}/${usage.max}`;
+                domElements.storageTabBaseCapacityUsage.title = `Заполнено слотов: ${usage.percentage.toFixed(0)}%`;
+            }
         } else if (tabName === 'craft-tab') {
             this.renderCraftingRecipes();
         } else if (tabName === 'cheats-tab') {
@@ -211,7 +219,6 @@ const UIManager = {
     updateExploreTabDisplay: function() {
         if (!domElements || typeof gameState === 'undefined' || typeof LOCATION_DEFINITIONS === 'undefined' ||
             !domElements.currentLocationNameDisplay || !domElements.currentLocationDescriptionDisplay ||
-            /* !domElements.currentLocationTimeDisplay || */ // Удаляем, так как время теперь в кнопке
             !domElements.scoutCurrentLocationButton || !domElements.discoverNewLocationButton) {
             console.warn("UIManager.updateExploreTabDisplay: Missing critical DOM elements for explore tab.");
             return;
@@ -324,13 +331,12 @@ const UIManager = {
         domElements.baseStructuresOverviewList.innerHTML = '';
         let hasStructures = false;
 
-        for (const key in BASE_STRUCTURE_DEFINITIONS) { // Итерация по определениям для сохранения порядка
+        for (const key in BASE_STRUCTURE_DEFINITIONS) { 
             if (!BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) continue;
 
             const structureDef = BASE_STRUCTURE_DEFINITIONS[key];
             const currentStructureState = gameState.structures[key] || { level: structureDef.initialLevel || 0 };
-             if (!gameState.structures[key]) gameState.structures[key] = currentStructureState; // Убедимся, что структура есть в gameState
-
+             if (!gameState.structures[key]) gameState.structures[key] = currentStructureState; 
 
             hasStructures = true;
             const itemDiv = document.createElement('div');
@@ -391,18 +397,16 @@ const UIManager = {
             return;
         }
         domElements.buildActions.innerHTML = '';
-        let structuresAvailableForBuild = false; // Флаг для проверки, есть ли что строить
+        let structuresAvailableForBuild = false;
         for (const key in BASE_STRUCTURE_DEFINITIONS) { 
             if (!BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) continue;
 
             const definition = BASE_STRUCTURE_DEFINITIONS[key];
-            // Убедимся, что структура есть в gameState, если нет - инициализируем
             if (!gameState.structures[key]) {
                 gameState.structures[key] = { level: definition.initialLevel || 0 };
             }
             const currentStructureState = gameState.structures[key];
             structuresAvailableForBuild = true;
-
 
             const btn = document.createElement('button');
             btn.classList.add('tooltip-host', 'game-action-button');
@@ -445,13 +449,11 @@ const UIManager = {
             domElements.buildActions.appendChild(btn);
         }
 
-        // Обновление состояния кнопки "Пропустить день на базе"
-        if (domElements.passDayAtBaseButton) {
+        if (domElements.passDayAtBaseButton) { // Обновление кнопки "Пропустить день"
             const passDayDisabled = gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver || game.isPassingDay;
             domElements.passDayAtBaseButton.disabled = passDayDisabled;
             domElements.passDayAtBaseButton.classList.toggle('action-available', !passDayDisabled);
         }
-
 
         if (!structuresAvailableForBuild && domElements.buildActions) {
             domElements.buildActions.innerHTML = '<p><em>Нет доступных для строительства объектов или определения не загружены.</em></p>';
