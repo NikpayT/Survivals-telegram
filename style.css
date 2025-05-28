@@ -81,11 +81,10 @@ body {
 }
 #player-status-condensed p, #quick-stats p { margin: 5px 0; font-size: 0.9em; }
 #player-status-condensed p span, #quick-stats p span { color: #E0E0E0; float: right; }
-/* Для тултипов на ресурсах */
 #quick-stats p span[title], 
 #overview-base-food[title], 
 #overview-base-water[title] {
-    cursor: help; /* Меняем курсор, чтобы показать, что есть тултип */
+    cursor: help; 
 }
 
 
@@ -148,12 +147,14 @@ button:disabled {
     box-shadow: none !important; 
 }
 button.action-available {
-    border-color: #33aa33; 
-    box-shadow: 0 0 5px rgba(50, 180, 50, 0.5); 
+    border-color: #2b8a2b; /* Более насыщенный зеленый */
+    box-shadow: 0 0 6px rgba(60, 200, 60, 0.6); 
+    background-color: #004d00; /* Темно-зеленый фон для доступных */
+    color: #c8ffc8;
 }
 button.action-available:hover {
-    background-color: #005599; 
-    border-color: #44bb44;
+    background-color: #006600; 
+    border-color: #33cc33;
 }
 
 
@@ -200,14 +201,48 @@ button.action-available:hover {
 }
 .close-button:hover, .close-button:focus { color: #fff; text-decoration: none; cursor: pointer; }
 
-.inventory-filters { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #222; text-align: center; }
+.inventory-controls { /* Новый контейнер для фильтров и сортировки */
+    display: flex;
+    flex-wrap: wrap; /* Перенос на мобильных */
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #222;
+}
+.inventory-filters { 
+    /* margin-bottom: 15px; убрано, т.к. отступы теперь у .inventory-controls */
+    /* padding-bottom: 10px; убрано */
+    /* border-bottom: 1px solid #222; убрано */
+    text-align: left; /* Или center, если так лучше */
+    flex-grow: 1; /* Фильтры занимают больше места */
+}
+.inventory-sort-options {
+    text-align: right;
+    font-size: 0.9em;
+    color: #aaa;
+}
+.inventory-sort-options button {
+    background-color: #222;
+    color: #00AEEF;
+    font-size: 0.8em;
+    padding: 4px 8px;
+    margin-left: 5px;
+    border: 1px solid #333;
+}
+.inventory-sort-options button:hover {
+    background-color: #333;
+    color: #fff;
+}
+
+
 .inventory-filters button {
     background-color: #1a1a1a; color: #00AEEF; font-size: 0.85em;
     padding: 6px 10px; margin: 3px; border: 1px solid #333;
 }
 .inventory-filters button.active { background-color: #004488; color: #fff; border-color: #0066CC; }
 .inventory-list-shared-style { max-height: 400px; overflow-y: auto; }
-#base-inventory-list { max-height: calc(100vh - 350px); }
+#base-inventory-list { max-height: calc(100vh - 380px); /* Скорректировано под панель управления */ }
 .inventory-item {
     background-color: #181818; border: 1px solid #2a2a2a; padding: 10px 12px;
     margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 3px;
@@ -318,43 +353,19 @@ footer button:hover { background-color: #660000; }
     border-radius: 3px;
     font-size: 0.9em;
 }
-.structure-overview-item h4 {
-    color: #00AEEF;
-    margin: 0 0 5px 0;
-    font-size: 1.05em;
-}
-.structure-overview-item p {
-    margin: 3px 0;
-    color: #aaa;
-}
-.structure-overview-item .current-effect {
-    font-style: italic;
-    color: #ccc;
-}
+.structure-overview-item h4 { color: #00AEEF; margin: 0 0 5px 0; font-size: 1.05em; }
+.structure-overview-item p { margin: 3px 0; color: #aaa; }
+.structure-overview-item .current-effect { font-style: italic; color: #ccc; }
 .structure-overview-item .upgrade-cost {
-    font-size: 0.85em;
-    color: #888;
-    margin-top: 8px;
-    border-top: 1px dotted #333;
-    padding-top: 5px;
+    font-size: 0.85em; color: #888; margin-top: 8px;
+    border-top: 1px dotted #333; padding-top: 5px;
 }
-.structure-overview-item .upgrade-cost strong {
-    color: #aaa;
-}
-.structure-overview-item .upgrade-cost ul {
-    list-style-type: none;
-    padding-left: 0;
-    margin: 3px 0 0 0;
-}
-.structure-overview-item .upgrade-cost li {
-    color: #999;
-}
+.structure-overview-item .upgrade-cost strong { color: #aaa; }
+.structure-overview-item .upgrade-cost ul { list-style-type: none; padding-left: 0; margin: 3px 0 0 0; }
+.structure-overview-item .upgrade-cost li { color: #999; }
 .structure-overview-item .upgrade-cost li.has-enough { color: #77aa77; }
 .structure-overview-item .upgrade-cost li.not-enough { color: #aa7777; }
-.structure-overview-item .max-level {
-    color: #FFC107;
-    font-weight: bold;
-}
+.structure-overview-item .max-level { color: #FFC107; font-weight: bold; }
 
 .event-positive { color: #88CC88; } .event-negative { color: #FF6666; }
 .event-neutral { color: #AAAAAA; } .event-discovery { color: #88AAFF; }
@@ -379,16 +390,13 @@ footer button:hover { background-color: #660000; }
 .modal-actions { margin-top: 20px; text-align: right; }
 .modal-actions button { margin-left: 10px; }
 
-/* Стили для прогресс-бара отдыха (НОВЫЕ) */
 #pass-day-progress-bar-container .progress-bar-outer {
-    width: 100%; /* На всю ширину родительского .action-group */
-    margin-top: 5px;
+    width: 100%; margin-top: 5px;
 }
 #pass-day-progress-bar-inner {
-    background-color: #5555aa; /* Нейтральный цвет для отдыха */
-    transition: width 0.25s linear; /* Плавный переход для анимации */
+    background-color: #5555aa; 
+    transition: width 0.25s linear; 
 }
-
 
 @media (max-width: 768px) {
     #game-wrapper { flex-direction: column; }
@@ -401,7 +409,11 @@ footer button:hover { background-color: #660000; }
     #main-content { width: 100%; padding-top: 60px; box-sizing: border-box; }
     #log-messages { max-height: 100px; }
     .modal-content { width: 95%; margin: 10% auto; }
-    .inventory-filters button { padding: 5px 8px; font-size: 0.8em; }
+    .inventory-controls { flex-direction: column; align-items: stretch; } /* Фильтры и сортировка в столбик */
+    .inventory-filters { margin-bottom: 10px; text-align: center; }
+    .inventory-sort-options { text-align: center; }
+    .inventory-sort-options button { margin: 3px; }
+
     .overview-stats-container { flex-direction: column; }
     .crafting-grid { grid-template-columns: 1fr; }
     .structures-overview-grid { grid-template-columns: 1fr; }
