@@ -2,7 +2,8 @@
 
 // Предполагается, что gameState, domElements, GameStateGetters, ITEM_DEFINITIONS,
 // BASE_STRUCTURE_DEFINITIONS, LOCATION_DEFINITIONS, InventoryManager,
-// LocationManager, EventManager, game (для game.build) и getStructureUpgradeCost (глобальная функция) доступны.
+// LocationManager, EventManager, game (для game.build), getStructureUpgradeCost (глобальная функция)
+// и NewYearEvent (для сезонного события) доступны.
 
 const UIManager = {
     updateDisplay: function() {
@@ -17,11 +18,11 @@ const UIManager = {
         this.updatePlayerStatus();
         this.updateInventoryWeightDisplay();
 
-        if (domElements.totalFoodValue) {
+        if (domElements.totalFoodValue && typeof GameStateGetters !== 'undefined') {
             domElements.totalFoodValue.textContent = GameStateGetters.countBaseFoodItems();
             domElements.totalFoodValue.title = GameStateGetters.getBaseFoodBreakdown(); 
         }
-        if (domElements.totalWaterValue) {
+        if (domElements.totalWaterValue && typeof GameStateGetters !== 'undefined') {
             domElements.totalWaterValue.textContent = GameStateGetters.countBaseWaterItems();
             domElements.totalWaterValue.title = GameStateGetters.getBaseWaterBreakdown(); 
         }
@@ -120,11 +121,11 @@ const UIManager = {
         if(domElements.overviewCondition) domElements.overviewCondition.textContent = gameState.player.condition;
         if(domElements.overviewDay) domElements.overviewDay.textContent = gameState.day;
         if(domElements.overviewSurvivors) domElements.overviewSurvivors.textContent = `${gameState.survivors}/${GameStateGetters.getMaxSurvivors()}`;
-        if(domElements.overviewBaseFood) {
+        if(domElements.overviewBaseFood && typeof GameStateGetters !== 'undefined') {
             domElements.overviewBaseFood.textContent = GameStateGetters.countBaseFoodItems();
             domElements.overviewBaseFood.title = GameStateGetters.getBaseFoodBreakdown(); 
         }
-        if(domElements.overviewBaseWater) {
+        if(domElements.overviewBaseWater && typeof GameStateGetters !== 'undefined') {
             domElements.overviewBaseWater.textContent = GameStateGetters.countBaseWaterItems();
             domElements.overviewBaseWater.title = GameStateGetters.getBaseWaterBreakdown(); 
         }
@@ -165,25 +166,30 @@ const UIManager = {
     },
 
     updateForTab: function(tabName) {
+        // Скрываем обычный контейнер событий, если активна не вкладка "Разведка"
         if (tabName !== 'explore-tab' && domElements.eventActionsContainer) {
             domElements.eventActionsContainer.style.display = 'none';
         }
+        // Скрываем модальное окно сезонного события при переключении вкладок, если оно не должно быть поверх всего
+        // this.closeSeasonalEventModal(); // Раскомментировать, если нужно принудительно закрывать
+
         if (tabName === 'main-tab') {
             this.updateOverviewTabStats();
         } else if (tabName === 'base-tab') {
             this.updateBuildActions();
         } else if (tabName === 'explore-tab') {
             if (typeof LocationManager !== 'undefined') LocationManager.updateExploreTab();
+            // Отображение обычных событий на вкладке "Разведка"
             if (domElements.eventActionsContainer && domElements.eventTextDisplay && domElements.eventActions) {
-                if (gameState.currentEvent && typeof EventManager !== 'undefined') {
+                if (gameState.currentEvent && typeof EventManager !== 'undefined' && !gameState.seasonalEvents?.newYear?.isActive) { // Показываем, только если не активно сезонное
                     domElements.eventTextDisplay.textContent = gameState.currentEvent.text;
                     domElements.eventActionsContainer.style.display = 'block';
                     EventManager.displayEventChoices();
-                } else if (gameState.locationEvent && typeof EventManager !== 'undefined') {
+                } else if (gameState.locationEvent && typeof EventManager !== 'undefined' && !gameState.seasonalEvents?.newYear?.isActive) {
                     domElements.eventTextDisplay.textContent = gameState.locationEvent.text;
                     domElements.eventActionsContainer.style.display = 'block';
                     EventManager.displayLocationEventChoices();
-                } else {
+                } else if (!gameState.seasonalEvents?.newYear?.isActive) { // Скрываем, только если не активно сезонное
                     domElements.eventActionsContainer.style.display = 'none';
                     if (domElements.eventTextDisplay) domElements.eventTextDisplay.textContent = '';
                     if (domElements.eventActions) domElements.eventActions.innerHTML = '';
@@ -199,7 +205,7 @@ const UIManager = {
         } else if (tabName === 'craft-tab') {
             this.renderCraftingRecipes();
         } else if (tabName === 'cheats-tab') {
-            // No specific update needed on tab open for cheats, buttons handle their own logic.
+            // No specific update
         }
     },
 
@@ -241,7 +247,7 @@ const UIManager = {
             }
             
             const canSearch = (currentLocationState.searchAttemptsLeft || 0) > 0;
-            const scoutDisabled = !canSearch || gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null || game.isPassingDay;
+            const scoutDisabled = !canSearch || gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null || game.isPassingDay || gameState.seasonalEvents?.newYear?.isActive;
             domElements.scoutCurrentLocationButton.disabled = scoutDisabled;
             domElements.scoutCurrentLocationButton.innerHTML = canSearch ? scoutButtonHTML : "Локация обыскана";
             domElements.scoutCurrentLocationButton.classList.toggle('action-available', canSearch && !scoutDisabled);
@@ -255,7 +261,7 @@ const UIManager = {
         }
         
         const discoverTime = 1; 
-        const discoverDisabled = gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null || game.isPassingDay;
+        const discoverDisabled = gameState.gameOver || gameState.currentEvent !== null || gameState.locationEvent !== null || game.isPassingDay || gameState.seasonalEvents?.newYear?.isActive;
         domElements.discoverNewLocationButton.disabled = discoverDisabled;
         domElements.discoverNewLocationButton.innerHTML = `Разведать новые территории <span class="action-time-indicator">⏱️${discoverTime}д.</span>`;
         domElements.discoverNewLocationButton.classList.toggle('action-available', !discoverDisabled);
@@ -313,7 +319,7 @@ const UIManager = {
         domElements.locationInfoTravelButton.onclick = () => {
             if (typeof LocationManager !== 'undefined') LocationManager.moveToLocation(locationId);
         };
-        const travelDisabled = gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver || game.isPassingDay;
+        const travelDisabled = gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver || game.isPassingDay || gameState.seasonalEvents?.newYear?.isActive;
         domElements.locationInfoTravelButton.disabled = travelDisabled;
         domElements.locationInfoTravelButton.classList.toggle('action-available', !travelDisabled);
 
@@ -329,7 +335,6 @@ const UIManager = {
     renderBaseStructuresOverview: function() {
         if (!domElements.baseStructuresOverviewList || typeof gameState === 'undefined' || typeof BASE_STRUCTURE_DEFINITIONS === 'undefined' || typeof InventoryManager === 'undefined' || typeof ITEM_DEFINITIONS === 'undefined' || typeof getStructureUpgradeCost !== 'function') {
             if (domElements.baseStructuresOverviewList) domElements.baseStructuresOverviewList.innerHTML = '<p><em>Ошибка загрузки информации о строениях. Проверьте консоль.</em></p>';
-            console.warn("renderBaseStructuresOverview: Missing dependencies. gameState:", !!gameState, "BASE_STRUCTURE_DEFINITIONS:", !!BASE_STRUCTURE_DEFINITIONS, "InventoryManager:", !!InventoryManager, "ITEM_DEFINITIONS:", !!ITEM_DEFINITIONS, "getStructureUpgradeCost:", typeof getStructureUpgradeCost);
             return;
         }
         domElements.baseStructuresOverviewList.innerHTML = '';
@@ -406,7 +411,7 @@ const UIManager = {
             if (!BASE_STRUCTURE_DEFINITIONS.hasOwnProperty(key)) continue;
 
             const definition = BASE_STRUCTURE_DEFINITIONS[key];
-            if (!gameState.structures[key]) { // Инициализируем структуру в gameState, если ее нет
+            if (!gameState.structures[key]) {
                 gameState.structures[key] = { level: definition.initialLevel || 0 };
             }
             const currentStructureState = gameState.structures[key];
@@ -419,11 +424,6 @@ const UIManager = {
             let atMaxLevel = currentStructureState.level >= definition.maxLevel;
             
             let buttonHTML = `${definition.name} [${currentStructureState.level}]`; 
-
-            // const buildTime = (typeof definition.buildTime === 'function') ? definition.buildTime(currentStructureState.level + 1) : (definition.buildTimePerLevel || 0) ; 
-            // if (buildTime > 0 && !atMaxLevel) {
-            //     buttonHTML += ` <span class="action-time-indicator">⏱️${buildTime}д.</span>`;
-            // }
 
             if (!atMaxLevel) {
                 const costDef = getStructureUpgradeCost(key, currentStructureState.level);
@@ -446,7 +446,7 @@ const UIManager = {
             btn.appendChild(tooltipSpan);
             
             btn.onclick = () => game.build(key);
-            const isActionAvailable = canAffordAll && !atMaxLevel && !gameState.currentEvent && !gameState.locationEvent && !gameState.gameOver && !game.isPassingDay;
+            const isActionAvailable = canAffordAll && !atMaxLevel && !gameState.currentEvent && !gameState.locationEvent && !gameState.gameOver && !game.isPassingDay && !gameState.seasonalEvents?.newYear?.isActive;
             btn.disabled = !isActionAvailable;
             btn.classList.toggle('action-available', isActionAvailable);
             
@@ -454,7 +454,7 @@ const UIManager = {
         }
 
         if (domElements.passDayAtBaseButton) { 
-            const passDayDisabled = gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver || game.isPassingDay;
+            const passDayDisabled = gameState.currentEvent !== null || gameState.locationEvent !== null || gameState.gameOver || game.isPassingDay || gameState.seasonalEvents?.newYear?.isActive;
             domElements.passDayAtBaseButton.disabled = passDayDisabled;
             domElements.passDayAtBaseButton.classList.toggle('action-available', !passDayDisabled);
         }
@@ -506,16 +506,11 @@ const UIManager = {
             }
             
             let buttonHTML = `Создать`; 
-            // const craftTime = recipe.craftTime || 0; 
-            // if (craftTime > 0) {
-            //    buttonHTML += ` <span class="action-time-indicator">⏱️${craftTime}д.</span>`;
-            // }
-
             const craftButton = document.createElement('button');
             craftButton.classList.add('game-action-button'); 
             craftButton.innerHTML = buttonHTML; 
             craftButton.onclick = () => game.craftItem(recipeId);
-            const isActionAvailable = canCraftThis && !gameState.gameOver && !gameState.currentEvent && !gameState.locationEvent && !game.isPassingDay;
+            const isActionAvailable = canCraftThis && !gameState.gameOver && !gameState.currentEvent && !gameState.locationEvent && !game.isPassingDay && !gameState.seasonalEvents?.newYear?.isActive;
             craftButton.disabled = !isActionAvailable;
             craftButton.classList.toggle('action-available', isActionAvailable);
 
@@ -526,18 +521,76 @@ const UIManager = {
         if (recipesAvailableToDisplay === 0 && domElements.craftingRecipesList) domElements.craftingRecipesList.innerHTML = '<p><em>Нет доступных рецептов или не выполнены условия. Улучшите Мастерскую или соберите больше ресурсов/инструментов.</em></p>';
     },
 
-    finalizeEventUI: function() {
+    finalizeEventUI: function() { // Для обычных событий
         if (!domElements || !domElements.eventActionsContainer || !domElements.eventTextDisplay || !domElements.eventActions) return;
         domElements.eventActions.innerHTML = '';
         domElements.eventTextDisplay.textContent = '';
         domElements.eventActionsContainer.style.display = 'none';
-        this.updateAllUI();
+        // Кнопки действий на вкладках (разведка, база и т.д.) должны разблокироваться через updateAllUI -> updateForTab -> ...
+        this.updateAllUI(); 
         if (typeof game !== 'undefined' && typeof game.saveGame === 'function') {
             game.saveGame();
         }
     },
 
-    updateAllUI: function() {
-        this.updateDisplay();
+    // --- Новые функции для сезонного события ---
+    showSeasonalEventModal: function() {
+        if (domElements.seasonalEventModal) {
+            // Блокируем основной интерфейс игры (делаем его полупрозрачным и некликабельным)
+            if (domElements.gameWrapper) domElements.gameWrapper.classList.add('blurred-background');
+            domElements.seasonalEventModal.style.display = 'block';
+        } else {
+            console.error("Seasonal event modal DOM element not found!");
+        }
+    },
+
+    closeSeasonalEventModal: function() {
+        if (domElements.seasonalEventModal) {
+            domElements.seasonalEventModal.style.display = 'none';
+            if (domElements.gameWrapper) domElements.gameWrapper.classList.remove('blurred-background');
+        }
+    },
+
+    renderSeasonalEventStage: function() {
+        if (!domElements.seasonalEventModal || !domElements.seasonalEventText || !domElements.seasonalEventChoices ||
+            typeof NewYearEvent === 'undefined' || !gameState.seasonalEvents?.newYear?.isActive) {
+            this.closeSeasonalEventModal(); // Если что-то не так, просто закрываем
+            return;
+        }
+
+        const stageData = NewYearEvent.getCurrentStageData();
+        if (!stageData) {
+            console.error("Could not get current seasonal event stage data.");
+            NewYearEvent.endEvent(false); // Завершаем событие, если нет данных об этапе
+            return;
+        }
+
+        domElements.seasonalEventText.innerHTML = typeof stageData.text === 'function' ? stageData.text() : stageData.text;
+        domElements.seasonalEventChoices.innerHTML = ''; // Очищаем старые выборы
+
+        stageData.choices.forEach((choice, index) => {
+            const btn = document.createElement('button');
+            btn.innerHTML = typeof choice.text === 'function' ? choice.text() : choice.text; // Текст кнопки может быть функцией
+
+            let choiceIsAvailable = true;
+            if (typeof choice.condition === 'function') {
+                try {
+                    choiceIsAvailable = choice.condition();
+                } catch (e) {
+                    console.error(`Error in seasonal event choice condition for stage ${gameState.seasonalEvents.newYear.currentStage}, choice "${choice.text}":`, e);
+                    choiceIsAvailable = false;
+                }
+            }
+            btn.disabled = !choiceIsAvailable;
+            btn.classList.toggle('action-available', choiceIsAvailable); // Можно использовать тот же класс
+
+            btn.onclick = () => NewYearEvent.processChoice(index);
+            domElements.seasonalEventChoices.appendChild(btn);
+        });
+    },
+    // --- Конец новых функций для сезонного события ---
+
+    updateAllUI: function() { // Основной метод обновления всего UI
+        this.updateDisplay(); // Обновляет все основные элементы и активную вкладку
     }
 };
