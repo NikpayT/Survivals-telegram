@@ -64,7 +64,7 @@
             <div id="tab-content-area">
                 <!-- Вкладка Обзор -->
                 <div id="main-tab" class="tab-content" style="display: block;">
-                    <h2>Обзор и События</h2>
+                    <h2>Обзор Базы и Игрока</h2> <!-- Изменено название для ясности -->
                     <div class="overview-stats-container">
                         <div class="overview-panel">
                             <h3>Статус Игрока</h3>
@@ -81,21 +81,19 @@
                             <p>Вода на складе (жажда): <span id="overview-base-water">0</span></p>
                         </div>
                     </div>
-                    <div class="action-group">
-                        <h3>Действия Дня</h3>
-                        <button id="next-day-button" class="game-action-button" onclick="game.nextDay()">Завершить день</button>
-                    </div>
-                    <div id="event-actions-container" class="action-group" style="display: none;">
-                        <h3>Текущее Событие</h3>
-                        <div id="event-text-display"></div>
-                        <div id="event-actions"></div>
-                    </div>
+                    <!-- Кнопка "Завершить день" УДАЛЕНА отсюда -->
+                    <!-- Блок событий ПЕРЕМЕЩЕН во вкладку "Разведка" -->
                 </div>
 
                 <!-- Вкладка База -->
                 <div id="base-tab" class="tab-content">
                     <h2>Управление Базой</h2>
                     <div id="build-actions" class="action-grid"></div>
+                     <!-- Возможно, здесь стоит добавить кнопку "Отдыхать / Пропустить день", если нет других действий -->
+                     <!-- <div class="action-group">
+                        <h3>Действия на Базе</h3>
+                        <button id="pass-day-base-button" class="game-action-button" onclick="game.passDayOnBase()">Провести день на базе (Отдых)</button>
+                    </div> -->
                 </div>
 
                 <!-- Вкладка Склад -->
@@ -117,7 +115,7 @@
 
                 <!-- Вкладка Разведка -->
                 <div id="explore-tab" class="tab-content">
-                    <h2>Разведка Местности</h2>
+                    <h2>Разведка и События в Пустоши</h2> <!-- Изменено название -->
                     <div class="action-group">
                         <h3>Действия на текущей локации: <span id="current-location-name">Окрестности Базы</span></h3>
                         <button id="scout-current-location-button" class="game-action-button" onclick="LocationManager.exploreCurrentLocationAction('search')">Обыскать (<span id="current-location-time">1</span> д.)</button>
@@ -129,6 +127,13 @@
                             <p><em>Используйте "Разведать новые территории", чтобы найти новые места.</em></p>
                         </div>
                          <button id="discover-new-location-button" class="game-action-button" onclick="LocationManager.discoverNewLocationAction()">Разведать новые территории (1 д.)</button>
+                    </div>
+
+                    <!-- Блок событий ПЕРЕМЕЩЕН СЮДА из вкладки "Обзор" -->
+                    <div id="event-actions-container" class="action-group" style="display: none;">
+                        <h3>Текущее Событие в Пустоши</h3> <!-- Изменено название -->
+                        <div id="event-text-display"></div>
+                        <div id="event-actions"></div>
                     </div>
                 </div>
 
@@ -177,17 +182,16 @@
         </div>
     </div>
 
-    <!-- НОВОЕ: Модальное окно информации о локации -->
+    <!-- Модальное окно информации о локации -->
     <div id="location-info-modal" class="modal" style="display: none;">
-        <div class="modal-content location-modal-content"> <!-- Добавлен класс location-modal-content для специфичных стилей, если понадобятся -->
+        <div class="modal-content location-modal-content">
             <span id="location-info-close-button" class="close-button" onclick="UIManager.closeLocationInfoModal()">×</span>
             <h2 id="location-info-name">Название Локации</h2>
             <p id="location-info-description">Описание локации здесь...</p>
             <p><strong>Уровень опасности:</strong> <span id="location-info-danger">Средний</span></p>
             <div id="location-info-preview-loot" class="location-info-section">
-                <!-- <strong>Возможная добыча:</strong> Информация о добыче скрыта... -->
             </div>
-            <div class="modal-actions"> <!-- Контейнер для кнопок в модалке -->
+            <div class="modal-actions">
                 <button id="location-info-travel-button" class="game-action-button">Перейти сюда</button>
             </div>
         </div>
@@ -202,12 +206,12 @@
     <!-- Файлы определений -->
     <script src="items.js"></script>
     <script src="buildings.js"></script>
-    <script src="locations.js"></script> <!-- Убедись, что здесь есть previewLootText -->
+    <script src="locations.js"></script>
     <script src="recipes.js"></script>
 
     <!-- Файлы состояния и DOM -->
     <script src="game_state.js"></script>
-    <script src="dom_elements.js"></script> <!-- Должен быть загружен до менеджеров -->
+    <script src="dom_elements.js"></script>
 
     <!-- Файлы менеджеров (ПОРЯДОК ВАЖЕН!) -->
     <script src="ui_manager.js"></script>
